@@ -1,0 +1,63 @@
+name: Build and Latest Release
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build
+        shell: pwsh
+        run: |
+          flutter config --enable-windows-desktop
+          flutter build windows --release
+          $release = Join-Path $env:GITHUB_WORKSPACE "build\windows\x64\runner\Release"
+          $exe = Join-Path $release "voxel_panel.exe"
+          if (-not (Test-Path -LiteralPath $exe)) { throw "Missing artifact $exe" }
+          $zip = Join-Path $env:GITHUB_WORKSPACE "build\voxel_panel-windows.zip"
+          if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip }
+          Compress-Archive -Path (Join-Path $release "*") -DestinationPath $zip
+
+      - name: Publish Latest GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $sha = "${{ github.sha }}"
+          $run = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          $notes = @"
+          Automated build.
+
+          - Commit: ``$sha``
+          - Workflow run: $run
+          "@
+          $files = @(
+            (Join-Path $env:GITHUB_WORKSPACE "build\voxel_panel-windows.zip")
+          )
+          foreach ($f in $files) {
+            if (-not (Test-Path -LiteralPath $f)) { throw "Missing artifact $f" }
+          }
+          gh release delete latest --yes --cleanup-tag 2>$null
+          gh release create latest @files `
+            --title "Latest" `
+            --notes $notes `
+            --latest `
+            --target $sha
