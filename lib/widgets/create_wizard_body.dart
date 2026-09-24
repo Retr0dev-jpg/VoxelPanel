@@ -1,3 +1,7 @@
+// Copyright (C) 2026 Marco Simone Cannizzaro
+// Licensed under the GNU Affero General Public License v3.0 or later.
+// See the LICENSE file in the project root.
+
 import 'package:flutter/material.dart';
 import 'package:voxel_panel/src/rust/api/types.dart';
 
