@@ -59,6 +59,8 @@ Forge e NeoForge moderni vengono avviati con il file di argomenti creato dall’
 
 Gli elenchi delle versioni vengono salvati nella cartella della cache: se la rete non risponde il wizard usa l’ultima copia scaricata.
 
+Le icone in `assets/providers/` sono i loghi dei rispettivi progetti (avatar GitHub delle organizzazioni, asset del sito PaperMC, icone dei repository; per Vanilla il blocco d’erba di Minecraft) e restano dei loro proprietari. Velocity, Waterfall, Folia e BungeeCord usano il simbolo ufficiale in bianco su un colore di sfondo.
+
 ## Piattaforme
 
 | Sistema | Cartella dati | Pacchetto di release |
