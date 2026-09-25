@@ -115,30 +115,48 @@ fn read_or_stub(entry: &CatalogEntry) -> PanelResult<ServerRecord> {
     let path = entry.root.join("server.json");
     if path.exists() {
         let text = std::fs::read_to_string(&path)?;
-        let mut record: ServerRecord = serde_json::from_str(&text)
+        let value: serde_json::Value = serde_json::from_str(&text)
+            .map_err(|error| PanelError::invalid(format!("{} non valido: {error}", path.display())))?;
+        let (value, migrated) = migrate_record(value, &entry.root);
+        let mut record: ServerRecord = serde_json::from_value(value)
             .map_err(|error| PanelError::invalid(format!("{} non valido: {error}", path.display())))?;
         record.root = entry.root.clone();
+        if migrated {
+            write_json(&path, &record)?;
+        }
         return Ok(record);
     }
-    Ok(ServerRecord {
-        id: entry.id.clone(),
-        name: entry
-            .root
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or("Server")
-            .to_string(),
-        root: entry.root.clone(),
-        paper_version: None,
-        java_major: None,
-        java_home: None,
-        jar_path: None,
-        ram_min: "2G".into(),
-        ram_max: "4G".into(),
-        jvm_flags: Vec::new(),
-        eula_accepted: false,
-        created_unix: crate::paths::unix_now(),
-    })
+    let name = entry.root.file_name().and_then(|name| name.to_str()).unwrap_or("Server").to_string();
+    Ok(ServerRecord::new(entry.id.clone(), name, entry.root.clone()))
+}
+
+/// Schema 1 (Paper only) stored `paper_version` and `jar_path`; schema 2 adds the provider,
+/// the build and a launch spec.
+pub fn migrate_record(mut value: serde_json::Value, root: &Path) -> (serde_json::Value, bool) {
+    let Some(object) = value.as_object_mut() else {
+        return (value, false);
+    };
+    let version = object.get("schema_version").and_then(serde_json::Value::as_u64).unwrap_or(1) as u32;
+    if version >= crate::RECORD_SCHEMA {
+        return (value, false);
+    }
+    let paper_version = object.remove("paper_version").filter(|value| !value.is_null());
+    let jar = object
+        .remove("jar_path")
+        .and_then(|value| value.as_str().map(std::path::PathBuf::from));
+    let (detected, detected_version) = crate::providers::detect(root, jar.as_deref());
+    let provider = if detected == crate::ProviderKind::Custom && paper_version.is_some() {
+        crate::ProviderKind::Paper
+    } else {
+        detected
+    };
+    object.insert("provider".into(), serde_json::to_value(provider).unwrap_or_default());
+    let mc_version = paper_version.or_else(|| detected_version.map(serde_json::Value::from)).unwrap_or(serde_json::Value::Null);
+    object.insert("mc_version".into(), mc_version);
+    let launch = jar.map(|path| crate::LaunchSpec::Jar { path }).unwrap_or_default();
+    object.insert("launch".into(), serde_json::to_value(launch).unwrap_or_default());
+    object.insert("schema_version".into(), serde_json::Value::from(crate::RECORD_SCHEMA));
+    (value, true)
 }
 
 fn read_catalog(path: &Path) -> PanelResult<CatalogFile> {
@@ -169,20 +187,8 @@ mod tests {
     fn saves_and_lists_a_server() {
         let layout = Layout::at(std::env::temp_dir().join(format!("voxel-catalog-{}", uuid::Uuid::new_v4())));
         let root = layout.root.join("srv");
-        let record = ServerRecord {
-            id: "abc".into(),
-            name: "Survival".into(),
-            root: root.clone(),
-            paper_version: Some("1.21.1".into()),
-            java_major: Some(21),
-            java_home: None,
-            jar_path: None,
-            ram_min: "2G".into(),
-            ram_max: "4G".into(),
-            jvm_flags: vec!["-XX:+UseG1GC".into()],
-            eula_accepted: true,
-            created_unix: 1,
-        };
+        let mut record = ServerRecord::new("abc".into(), "Survival".into(), root.clone());
+        record.mc_version = Some("1.21.1".into());
         save(&layout, &record).unwrap();
         let listed = list(&layout).unwrap();
         assert_eq!(listed.len(), 1);
@@ -191,6 +197,34 @@ mod tests {
         assert!(again.is_ok());
         let error = get(&layout, "missing").unwrap_err();
         assert_eq!(error.code, crate::ErrorCode::NotFound);
+        remove(&layout, "abc").unwrap();
+        assert!(list(&layout).unwrap().is_empty());
+        let _ = std::fs::remove_dir_all(&layout.root);
+    }
+
+    #[test]
+    fn migrates_schema_one_records() {
+        let root = std::path::Path::new("srv");
+        let old = serde_json::json!({
+            "id": "abc", "name": "Old", "root": "srv", "paper_version": "1.21.1", "java_major": 21,
+            "java_home": null, "jar_path": "srv/paper-1.21.1-10.jar", "ram_min": "2G", "ram_max": "4G",
+            "jvm_flags": [], "eula_accepted": true, "created_unix": 1
+        });
+        let (value, migrated) = migrate_record(old, root);
+        assert!(migrated);
+        let record: ServerRecord = serde_json::from_value(value.clone()).unwrap();
+        assert_eq!(record.provider, crate::ProviderKind::Paper);
+        assert_eq!(record.mc_version.as_deref(), Some("1.21.1"));
+        assert_eq!(record.launch, crate::LaunchSpec::Jar { path: "srv/paper-1.21.1-10.jar".into() });
+        assert_eq!(record.schema_version, crate::RECORD_SCHEMA);
+        assert!(!migrate_record(value, root).1);
+    }
+
+    #[test]
+    fn removes_servers() {
+        let layout = Layout::at(std::env::temp_dir().join(format!("voxel-catalog-{}", uuid::Uuid::new_v4())));
+        let record = ServerRecord::new("abc".into(), "Survival".into(), layout.root.join("srv"));
+        save(&layout, &record).unwrap();
         remove(&layout, "abc").unwrap();
         assert!(list(&layout).unwrap().is_empty());
         let _ = std::fs::remove_dir_all(&layout.root);

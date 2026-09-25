@@ -34,4 +34,5 @@ flutter:
   uses-material-design: true
   generate: true
   assets:
-    - assets/paper.png
+    - assets/providers/
+    - assets/tray/

@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `hash`
 
 class AppPaths {
   final String data;
@@ -48,45 +48,6 @@ class AppPaths {
           logs == other.logs;
 }
 
-class AutoInstallRequest {
-  final String name;
-  final String root;
-  final String paperVersion;
-  final bool acceptEula;
-  final String ramMin;
-  final String ramMax;
-
-  const AutoInstallRequest({
-    required this.name,
-    required this.root,
-    required this.paperVersion,
-    required this.acceptEula,
-    required this.ramMin,
-    required this.ramMax,
-  });
-
-  @override
-  int get hashCode =>
-      name.hashCode ^
-      root.hashCode ^
-      paperVersion.hashCode ^
-      acceptEula.hashCode ^
-      ramMin.hashCode ^
-      ramMax.hashCode;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is AutoInstallRequest &&
-          runtimeType == other.runtimeType &&
-          name == other.name &&
-          root == other.root &&
-          paperVersion == other.paperVersion &&
-          acceptEula == other.acceptEula &&
-          ramMin == other.ramMin &&
-          ramMax == other.ramMax;
-}
-
 class BackupInfo {
   final String fileName;
   final String path;
@@ -118,10 +79,132 @@ class BackupInfo {
           createdMs == other.createdMs;
 }
 
+class BuildEntry {
+  final String id;
+  final bool stable;
+  final String label;
+
+  const BuildEntry({
+    required this.id,
+    required this.stable,
+    required this.label,
+  });
+
+  @override
+  int get hashCode => id.hashCode ^ stable.hashCode ^ label.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BuildEntry &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          stable == other.stable &&
+          label == other.label;
+}
+
+class CreateServerRequest {
+  final String name;
+
+  /// Empty: a new folder inside the servers folder.
+  final String root;
+  final ProviderKind provider;
+  final String mcVersion;
+
+  /// Empty: latest build.
+  final String build;
+
+  /// Local jar used instead of a download (provider `Custom` or a known jar).
+  final String jarPath;
+
+  /// Empty: required Java chosen automatically (preferred runtime or download).
+  final String javaHome;
+  final String ramMin;
+  final String ramMax;
+  final List<String> jvmFlags;
+
+  /// 0: first free port from the launcher settings.
+  final int port;
+  final String motd;
+  final int maxPlayers;
+  final String gamemode;
+  final String difficulty;
+  final bool onlineMode;
+  final String levelSeed;
+  final bool acceptEula;
+
+  const CreateServerRequest({
+    required this.name,
+    required this.root,
+    required this.provider,
+    required this.mcVersion,
+    required this.build,
+    required this.jarPath,
+    required this.javaHome,
+    required this.ramMin,
+    required this.ramMax,
+    required this.jvmFlags,
+    required this.port,
+    required this.motd,
+    required this.maxPlayers,
+    required this.gamemode,
+    required this.difficulty,
+    required this.onlineMode,
+    required this.levelSeed,
+    required this.acceptEula,
+  });
+
+  @override
+  int get hashCode =>
+      name.hashCode ^
+      root.hashCode ^
+      provider.hashCode ^
+      mcVersion.hashCode ^
+      build.hashCode ^
+      jarPath.hashCode ^
+      javaHome.hashCode ^
+      ramMin.hashCode ^
+      ramMax.hashCode ^
+      jvmFlags.hashCode ^
+      port.hashCode ^
+      motd.hashCode ^
+      maxPlayers.hashCode ^
+      gamemode.hashCode ^
+      difficulty.hashCode ^
+      onlineMode.hashCode ^
+      levelSeed.hashCode ^
+      acceptEula.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CreateServerRequest &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          root == other.root &&
+          provider == other.provider &&
+          mcVersion == other.mcVersion &&
+          build == other.build &&
+          jarPath == other.jarPath &&
+          javaHome == other.javaHome &&
+          ramMin == other.ramMin &&
+          ramMax == other.ramMax &&
+          jvmFlags == other.jvmFlags &&
+          port == other.port &&
+          motd == other.motd &&
+          maxPlayers == other.maxPlayers &&
+          gamemode == other.gamemode &&
+          difficulty == other.difficulty &&
+          onlineMode == other.onlineMode &&
+          levelSeed == other.levelSeed &&
+          acceptEula == other.acceptEula;
+}
+
 class ImportPreview {
   final String name;
   final String root;
-  final String paperVersion;
+  final ProviderKind provider;
+  final String mcVersion;
   final int javaMajor;
   final String javaHome;
   final String jarPath;
@@ -135,7 +218,8 @@ class ImportPreview {
   const ImportPreview({
     required this.name,
     required this.root,
-    required this.paperVersion,
+    required this.provider,
+    required this.mcVersion,
     required this.javaMajor,
     required this.javaHome,
     required this.jarPath,
@@ -151,7 +235,8 @@ class ImportPreview {
   int get hashCode =>
       name.hashCode ^
       root.hashCode ^
-      paperVersion.hashCode ^
+      provider.hashCode ^
+      mcVersion.hashCode ^
       javaMajor.hashCode ^
       javaHome.hashCode ^
       jarPath.hashCode ^
@@ -169,7 +254,8 @@ class ImportPreview {
           runtimeType == other.runtimeType &&
           name == other.name &&
           root == other.root &&
-          paperVersion == other.paperVersion &&
+          provider == other.provider &&
+          mcVersion == other.mcVersion &&
           javaMajor == other.javaMajor &&
           javaHome == other.javaHome &&
           jarPath == other.jarPath &&
@@ -234,61 +320,6 @@ class JavaRuntimeInfo {
           path == other.path &&
           managed == other.managed &&
           system == other.system;
-}
-
-class ManualInstallRequest {
-  final String name;
-  final String root;
-  final String paperVersion;
-  final String jarPath;
-  final int javaMajor;
-  final String javaHome;
-  final String ramMin;
-  final String ramMax;
-  final List<String> jvmFlags;
-  final bool acceptEula;
-
-  const ManualInstallRequest({
-    required this.name,
-    required this.root,
-    required this.paperVersion,
-    required this.jarPath,
-    required this.javaMajor,
-    required this.javaHome,
-    required this.ramMin,
-    required this.ramMax,
-    required this.jvmFlags,
-    required this.acceptEula,
-  });
-
-  @override
-  int get hashCode =>
-      name.hashCode ^
-      root.hashCode ^
-      paperVersion.hashCode ^
-      jarPath.hashCode ^
-      javaMajor.hashCode ^
-      javaHome.hashCode ^
-      ramMin.hashCode ^
-      ramMax.hashCode ^
-      jvmFlags.hashCode ^
-      acceptEula.hashCode;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ManualInstallRequest &&
-          runtimeType == other.runtimeType &&
-          name == other.name &&
-          root == other.root &&
-          paperVersion == other.paperVersion &&
-          jarPath == other.jarPath &&
-          javaMajor == other.javaMajor &&
-          javaHome == other.javaHome &&
-          ramMin == other.ramMin &&
-          ramMax == other.ramMax &&
-          jvmFlags == other.jvmFlags &&
-          acceptEula == other.acceptEula;
 }
 
 class ModrinthProject {
@@ -407,6 +438,114 @@ class PropertyEntry {
           value == other.value;
 }
 
+enum ProviderCategory { vanilla, plugins, modded, proxy, hybrid, other }
+
+class ProviderInfo {
+  final ProviderKind kind;
+  final String id;
+  final String name;
+  final ProviderCategory category;
+  final String description;
+  final bool supportsPlugins;
+  final bool supportsMods;
+  final bool hasWorlds;
+  final bool isProxy;
+
+  /// Offers snapshot / pre-release versions.
+  final bool hasSnapshots;
+
+  /// Lets the user pick a specific build or loader version.
+  final bool hasBuilds;
+  final bool deprecated;
+
+  /// Extra requirement shown in the wizard (e.g. Git for BuildTools).
+  final String note;
+
+  /// Config files worth editing for this server type, relative to the server folder.
+  final List<String> configFiles;
+
+  const ProviderInfo({
+    required this.kind,
+    required this.id,
+    required this.name,
+    required this.category,
+    required this.description,
+    required this.supportsPlugins,
+    required this.supportsMods,
+    required this.hasWorlds,
+    required this.isProxy,
+    required this.hasSnapshots,
+    required this.hasBuilds,
+    required this.deprecated,
+    required this.note,
+    required this.configFiles,
+  });
+
+  @override
+  int get hashCode =>
+      kind.hashCode ^
+      id.hashCode ^
+      name.hashCode ^
+      category.hashCode ^
+      description.hashCode ^
+      supportsPlugins.hashCode ^
+      supportsMods.hashCode ^
+      hasWorlds.hashCode ^
+      isProxy.hashCode ^
+      hasSnapshots.hashCode ^
+      hasBuilds.hashCode ^
+      deprecated.hashCode ^
+      note.hashCode ^
+      configFiles.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ProviderInfo &&
+          runtimeType == other.runtimeType &&
+          kind == other.kind &&
+          id == other.id &&
+          name == other.name &&
+          category == other.category &&
+          description == other.description &&
+          supportsPlugins == other.supportsPlugins &&
+          supportsMods == other.supportsMods &&
+          hasWorlds == other.hasWorlds &&
+          isProxy == other.isProxy &&
+          hasSnapshots == other.hasSnapshots &&
+          hasBuilds == other.hasBuilds &&
+          deprecated == other.deprecated &&
+          note == other.note &&
+          configFiles == other.configFiles;
+}
+
+enum ProviderKind {
+  vanilla,
+  paper,
+  folia,
+  purpur,
+  pufferfish,
+  leaf,
+  spigot,
+  fabric,
+  quilt,
+  forge,
+  neoForge,
+  velocity,
+  bungeeCord,
+  waterfall,
+  mohist,
+  arclight,
+  spongeVanilla,
+  spongeForge,
+
+  /// A jar chosen by the user that VoxelPanel does not know how to update.
+  custom;
+
+  static Future<ProviderKind> default_() =>
+      RustLib.instance.api.crateApiTypesProviderKindDefault();
+}
+
 class RamChoice {
   final int megabytes;
   final String label;
@@ -459,7 +598,9 @@ class ServerDetails {
   final String id;
   final String name;
   final String root;
-  final String? paperVersion;
+  final ProviderKind provider;
+  final String? mcVersion;
+  final String? build;
   final int? javaMajor;
   final String javaHome;
   final String jarPath;
@@ -475,7 +616,9 @@ class ServerDetails {
     required this.id,
     required this.name,
     required this.root,
-    this.paperVersion,
+    required this.provider,
+    this.mcVersion,
+    this.build,
     this.javaMajor,
     required this.javaHome,
     required this.jarPath,
@@ -493,7 +636,9 @@ class ServerDetails {
       id.hashCode ^
       name.hashCode ^
       root.hashCode ^
-      paperVersion.hashCode ^
+      provider.hashCode ^
+      mcVersion.hashCode ^
+      build.hashCode ^
       javaMajor.hashCode ^
       javaHome.hashCode ^
       jarPath.hashCode ^
@@ -513,7 +658,9 @@ class ServerDetails {
           id == other.id &&
           name == other.name &&
           root == other.root &&
-          paperVersion == other.paperVersion &&
+          provider == other.provider &&
+          mcVersion == other.mcVersion &&
+          build == other.build &&
           javaMajor == other.javaMajor &&
           javaHome == other.javaHome &&
           jarPath == other.jarPath &&
@@ -584,7 +731,9 @@ class ServerSummary {
   final String id;
   final String name;
   final String root;
-  final String? paperVersion;
+  final ProviderKind provider;
+  final String? mcVersion;
+  final String? build;
   final int? javaMajor;
   final String ramMin;
   final String ramMax;
@@ -595,7 +744,9 @@ class ServerSummary {
     required this.id,
     required this.name,
     required this.root,
-    this.paperVersion,
+    required this.provider,
+    this.mcVersion,
+    this.build,
     this.javaMajor,
     required this.ramMin,
     required this.ramMax,
@@ -608,7 +759,9 @@ class ServerSummary {
       id.hashCode ^
       name.hashCode ^
       root.hashCode ^
-      paperVersion.hashCode ^
+      provider.hashCode ^
+      mcVersion.hashCode ^
+      build.hashCode ^
       javaMajor.hashCode ^
       ramMin.hashCode ^
       ramMax.hashCode ^
@@ -623,12 +776,32 @@ class ServerSummary {
           id == other.id &&
           name == other.name &&
           root == other.root &&
-          paperVersion == other.paperVersion &&
+          provider == other.provider &&
+          mcVersion == other.mcVersion &&
+          build == other.build &&
           javaMajor == other.javaMajor &&
           ramMin == other.ramMin &&
           ramMax == other.ramMax &&
           port == other.port &&
           maxPlayers == other.maxPlayers;
+}
+
+class VersionEntry {
+  final String id;
+  final bool stable;
+
+  const VersionEntry({required this.id, required this.stable});
+
+  @override
+  int get hashCode => id.hashCode ^ stable.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is VersionEntry &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          stable == other.stable;
 }
 
 class WorldInfo {

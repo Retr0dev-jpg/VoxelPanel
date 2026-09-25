@@ -57,9 +57,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AppearanceSettings dco_decode_appearance_settings(dynamic raw);
 
   @protected
-  AutoInstallRequest dco_decode_auto_install_request(dynamic raw);
-
-  @protected
   BackupInfo dco_decode_backup_info(dynamic raw);
 
   @protected
@@ -69,7 +66,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_bool(dynamic raw);
 
   @protected
-  AutoInstallRequest dco_decode_box_autoadd_auto_install_request(dynamic raw);
+  CreateServerRequest dco_decode_box_autoadd_create_server_request(dynamic raw);
 
   @protected
   double dco_decode_box_autoadd_f_64(dynamic raw);
@@ -84,21 +81,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   LauncherSettings dco_decode_box_autoadd_launcher_settings(dynamic raw);
 
   @protected
-  ManualInstallRequest dco_decode_box_autoadd_manual_install_request(
-    dynamic raw,
-  );
-
-  @protected
   int dco_decode_box_autoadd_u_32(dynamic raw);
 
   @protected
   UpdateInfo dco_decode_box_autoadd_update_info(dynamic raw);
 
   @protected
+  BuildEntry dco_decode_build_entry(dynamic raw);
+
+  @protected
   CloseBehavior dco_decode_close_behavior(dynamic raw);
 
   @protected
   ConsoleSettings dco_decode_console_settings(dynamic raw);
+
+  @protected
+  CreateServerRequest dco_decode_create_server_request(dynamic raw);
 
   @protected
   DefaultsSettings dco_decode_defaults_settings(dynamic raw);
@@ -146,6 +144,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<BackupInfo> dco_decode_list_backup_info(dynamic raw);
 
   @protected
+  List<BuildEntry> dco_decode_list_build_entry(dynamic raw);
+
+  @protected
   List<JavaReleaseInfo> dco_decode_list_java_release_info(dynamic raw);
 
   @protected
@@ -170,6 +171,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<PropertyEntry> dco_decode_list_property_entry(dynamic raw);
 
   @protected
+  List<ProviderInfo> dco_decode_list_provider_info(dynamic raw);
+
+  @protected
   List<RamChoice> dco_decode_list_ram_choice(dynamic raw);
 
   @protected
@@ -179,13 +183,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ServerSummary> dco_decode_list_server_summary(dynamic raw);
 
   @protected
+  List<VersionEntry> dco_decode_list_version_entry(dynamic raw);
+
+  @protected
   List<WorldInfo> dco_decode_list_world_info(dynamic raw);
 
   @protected
   ManagedFolder dco_decode_managed_folder(dynamic raw);
-
-  @protected
-  ManualInstallRequest dco_decode_manual_install_request(dynamic raw);
 
   @protected
   ModrinthProject dco_decode_modrinth_project(dynamic raw);
@@ -233,6 +237,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PropertyEntry dco_decode_property_entry(dynamic raw);
 
   @protected
+  ProviderCategory dco_decode_provider_category(dynamic raw);
+
+  @protected
+  ProviderInfo dco_decode_provider_info(dynamic raw);
+
+  @protected
+  ProviderKind dco_decode_provider_kind(dynamic raw);
+
+  @protected
   RamChoice dco_decode_ram_choice(dynamic raw);
 
   @protected
@@ -257,6 +270,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int dco_decode_u_32(dynamic raw);
 
   @protected
+  BigInt dco_decode_u_64(dynamic raw);
+
+  @protected
   int dco_decode_u_8(dynamic raw);
 
   @protected
@@ -264,6 +280,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   UpdateInfo dco_decode_update_info(dynamic raw);
+
+  @protected
+  VersionEntry dco_decode_version_entry(dynamic raw);
 
   @protected
   WorldInfo dco_decode_world_info(dynamic raw);
@@ -304,11 +323,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  AutoInstallRequest sse_decode_auto_install_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   BackupInfo sse_decode_backup_info(SseDeserializer deserializer);
 
   @protected
@@ -318,7 +332,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
-  AutoInstallRequest sse_decode_box_autoadd_auto_install_request(
+  CreateServerRequest sse_decode_box_autoadd_create_server_request(
     SseDeserializer deserializer,
   );
 
@@ -337,21 +351,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  ManualInstallRequest sse_decode_box_autoadd_manual_install_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
 
   @protected
   UpdateInfo sse_decode_box_autoadd_update_info(SseDeserializer deserializer);
 
   @protected
+  BuildEntry sse_decode_build_entry(SseDeserializer deserializer);
+
+  @protected
   CloseBehavior sse_decode_close_behavior(SseDeserializer deserializer);
 
   @protected
   ConsoleSettings sse_decode_console_settings(SseDeserializer deserializer);
+
+  @protected
+  CreateServerRequest sse_decode_create_server_request(
+    SseDeserializer deserializer,
+  );
 
   @protected
   DefaultsSettings sse_decode_defaults_settings(SseDeserializer deserializer);
@@ -399,6 +416,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<BackupInfo> sse_decode_list_backup_info(SseDeserializer deserializer);
 
   @protected
+  List<BuildEntry> sse_decode_list_build_entry(SseDeserializer deserializer);
+
+  @protected
   List<JavaReleaseInfo> sse_decode_list_java_release_info(
     SseDeserializer deserializer,
   );
@@ -435,6 +455,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<ProviderInfo> sse_decode_list_provider_info(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<RamChoice> sse_decode_list_ram_choice(SseDeserializer deserializer);
 
   @protected
@@ -448,15 +473,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<VersionEntry> sse_decode_list_version_entry(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<WorldInfo> sse_decode_list_world_info(SseDeserializer deserializer);
 
   @protected
   ManagedFolder sse_decode_managed_folder(SseDeserializer deserializer);
-
-  @protected
-  ManualInstallRequest sse_decode_manual_install_request(
-    SseDeserializer deserializer,
-  );
 
   @protected
   ModrinthProject sse_decode_modrinth_project(SseDeserializer deserializer);
@@ -508,6 +533,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PropertyEntry sse_decode_property_entry(SseDeserializer deserializer);
 
   @protected
+  ProviderCategory sse_decode_provider_category(SseDeserializer deserializer);
+
+  @protected
+  ProviderInfo sse_decode_provider_info(SseDeserializer deserializer);
+
+  @protected
+  ProviderKind sse_decode_provider_kind(SseDeserializer deserializer);
+
+  @protected
   RamChoice sse_decode_ram_choice(SseDeserializer deserializer);
 
   @protected
@@ -532,6 +566,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int sse_decode_u_32(SseDeserializer deserializer);
 
   @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_u_8(SseDeserializer deserializer);
 
   @protected
@@ -539,6 +576,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   UpdateInfo sse_decode_update_info(SseDeserializer deserializer);
+
+  @protected
+  VersionEntry sse_decode_version_entry(SseDeserializer deserializer);
 
   @protected
   WorldInfo sse_decode_world_info(SseDeserializer deserializer);
@@ -589,12 +629,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_auto_install_request(
-    AutoInstallRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_backup_info(BackupInfo self, SseSerializer serializer);
 
   @protected
@@ -607,8 +641,8 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
-  void sse_encode_box_autoadd_auto_install_request(
-    AutoInstallRequest self,
+  void sse_encode_box_autoadd_create_server_request(
+    CreateServerRequest self,
     SseSerializer serializer,
   );
 
@@ -631,12 +665,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_box_autoadd_manual_install_request(
-    ManualInstallRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
 
   @protected
@@ -646,11 +674,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_build_entry(BuildEntry self, SseSerializer serializer);
+
+  @protected
   void sse_encode_close_behavior(CloseBehavior self, SseSerializer serializer);
 
   @protected
   void sse_encode_console_settings(
     ConsoleSettings self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_create_server_request(
+    CreateServerRequest self,
     SseSerializer serializer,
   );
 
@@ -718,6 +755,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_build_entry(
+    List<BuildEntry> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_java_release_info(
     List<JavaReleaseInfo> self,
     SseSerializer serializer,
@@ -766,6 +809,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_provider_info(
+    List<ProviderInfo> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_ram_choice(
     List<RamChoice> self,
     SseSerializer serializer,
@@ -784,6 +833,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_version_entry(
+    List<VersionEntry> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_world_info(
     List<WorldInfo> self,
     SseSerializer serializer,
@@ -791,12 +846,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_managed_folder(ManagedFolder self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_manual_install_request(
-    ManualInstallRequest self,
-    SseSerializer serializer,
-  );
 
   @protected
   void sse_encode_modrinth_project(
@@ -859,6 +908,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_property_entry(PropertyEntry self, SseSerializer serializer);
 
   @protected
+  void sse_encode_provider_category(
+    ProviderCategory self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_provider_info(ProviderInfo self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_provider_kind(ProviderKind self, SseSerializer serializer);
+
+  @protected
   void sse_encode_ram_choice(RamChoice self, SseSerializer serializer);
 
   @protected
@@ -886,6 +947,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_u_32(int self, SseSerializer serializer);
 
   @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer);
+
+  @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
 
   @protected
@@ -893,6 +957,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_update_info(UpdateInfo self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_version_entry(VersionEntry self, SseSerializer serializer);
 
   @protected
   void sse_encode_world_info(WorldInfo self, SseSerializer serializer);

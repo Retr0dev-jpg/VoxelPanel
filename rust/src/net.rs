@@ -2,7 +2,6 @@
 // Licensed under the GNU Affero General Public License v3.0 or later.
 // See the LICENSE file in the project root.
 
-use crate::Progress;
 use std::path::Path;
 use std::time::Duration;
 
@@ -35,57 +34,93 @@ pub fn reset_client() {
     *client_cache().lock().unwrap_or_else(|error| error.into_inner()) = None;
 }
 
-pub async fn download(
+#[derive(Debug, Clone)]
+pub enum Checksum {
+    Sha256(String),
+    Sha1(String),
+    Md5(String),
+}
+
+impl Checksum {
+    fn hasher(&self) -> Box<dyn sha2::digest::DynDigest + Send> {
+        match self {
+            Checksum::Sha256(_) => Box::new(sha2::Sha256::default()),
+            Checksum::Sha1(_) => Box::new(sha1::Sha1::default()),
+            Checksum::Md5(_) => Box::new(md5::Md5::default()),
+        }
+    }
+
+    fn expected(&self) -> &str {
+        match self {
+            Checksum::Sha256(value) | Checksum::Sha1(value) | Checksum::Md5(value) => value,
+        }
+    }
+}
+
+pub async fn download(url: &str, destination: &Path, stage: &str, progress: &crate::ProgressTx) -> crate::PanelResult<()> {
+    download_checked(url, destination, stage, progress, None).await
+}
+
+/// Streams `url` into `destination` through a `.part` file, verifying the checksum when given,
+/// so an interrupted or corrupted download never leaves a broken jar behind.
+pub async fn download_checked(
     url: &str,
     destination: &Path,
     stage: &str,
     progress: &crate::ProgressTx,
+    checksum: Option<Checksum>,
 ) -> crate::PanelResult<()> {
     if let Some(parent) = destination.parent() {
         crate::paths::ensure_dir(parent)?;
     }
-    let client = http();
-    let mut response = client
+    let mut response = http()
         .get(url)
         .send()
         .await
-        .map_err(|error| format!("Download fallito: {error}"))?
+        .map_err(|error| crate::PanelError::network(format!("Download fallito: {error}")))?
         .error_for_status()
-        .map_err(|error| format!("Download fallito: {error}"))?;
+        .map_err(|error| crate::PanelError::network(format!("Download fallito: {error}")))?;
     let total = response.content_length();
-    let mut file = tokio::fs::File::create(destination)
+    let temp = destination.with_extension("part");
+    let mut file = tokio::fs::File::create(&temp)
         .await
-        .map_err(|error| format!("Impossibile creare il file: {error}"))?;
+        .map_err(|error| crate::PanelError::io(format!("Impossibile creare il file: {error}")))?;
+    let mut hasher = checksum.as_ref().map(Checksum::hasher);
     let mut downloaded = 0u64;
     let mut last_percent = None;
     while let Some(chunk) = response
         .chunk()
         .await
-        .map_err(|error| format!("Download interrotto: {error}"))?
+        .map_err(|error| crate::PanelError::network(format!("Download interrotto: {error}")))?
     {
         downloaded += chunk.len() as u64;
+        if let Some(hasher) = hasher.as_mut() {
+            hasher.update(&chunk);
+        }
         tokio::io::AsyncWriteExt::write_all(&mut file, &chunk)
             .await
-            .map_err(|error| format!("Scrittura file fallita: {error}"))?;
+            .map_err(|error| crate::PanelError::io(format!("Scrittura file fallita: {error}")))?;
         let fraction = total.map(|total| downloaded as f64 / total.max(1) as f64);
         let percent = fraction.map(|value| (value * 100.0) as u8);
         if percent != last_percent {
             last_percent = percent;
             let message = match total {
-                Some(total) => format!(
-                    "{} / {} MB",
-                    downloaded / (1024 * 1024),
-                    total / (1024 * 1024)
-                ),
+                Some(total) => format!("{} / {} MB", downloaded / (1024 * 1024), total / (1024 * 1024)),
                 None => format!("{} MB", downloaded / (1024 * 1024)),
             };
-            progress.send(Progress {
-                stage: stage.to_string(),
-                message,
-                fraction,
-            });
+            progress.emit(stage, message, fraction);
         }
     }
+    tokio::io::AsyncWriteExt::flush(&mut file).await?;
+    drop(file);
+    if let (Some(checksum), Some(hasher)) = (checksum.as_ref(), hasher) {
+        let actual: String = hasher.finalize().iter().map(|byte| format!("{byte:02x}")).collect();
+        if !actual.eq_ignore_ascii_case(checksum.expected()) {
+            let _ = std::fs::remove_file(&temp);
+            return Err(crate::PanelError::invalid(format!("Checksum non valido per {url}: il file scaricato è corrotto.")));
+        }
+    }
+    std::fs::rename(&temp, destination)?;
     Ok(())
 }
 

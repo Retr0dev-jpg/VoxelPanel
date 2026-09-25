@@ -4,6 +4,7 @@
 
 pub mod api;
 mod backup;
+mod cache;
 mod catalog;
 mod frb_generated;
 mod install;
@@ -12,12 +13,12 @@ mod jvm;
 mod launcher_settings;
 mod logging;
 mod net;
-mod paper;
 mod paths;
 mod platform;
 mod plugins;
 mod process;
 mod properties;
+mod providers;
 mod ram;
 mod scan;
 mod script;
@@ -29,20 +30,95 @@ use std::sync::Arc;
 
 pub use api::error::{ErrorCode, PanelError, PanelResult};
 
+pub use api::types::ProviderKind;
+
+pub const RECORD_SCHEMA: u32 = 2;
+
+/// What goes after the JVM options on the command line.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum LaunchSpec {
+    #[default]
+    Unset,
+    /// `-jar <path>`
+    Jar { path: PathBuf },
+    /// `@<path>`: argument files written by the Forge and NeoForge installers.
+    ArgsFile { path: PathBuf },
+}
+
+impl LaunchSpec {
+    pub fn jar(&self) -> Option<&PathBuf> {
+        match self {
+            LaunchSpec::Jar { path } => Some(path),
+            _ => None,
+        }
+    }
+
+    pub fn target(&self) -> Option<&PathBuf> {
+        match self {
+            LaunchSpec::Jar { path } | LaunchSpec::ArgsFile { path } => Some(path),
+            LaunchSpec::Unset => None,
+        }
+    }
+
+    pub fn rebase(&mut self, old: &std::path::Path, new: &std::path::Path) -> bool {
+        match self {
+            LaunchSpec::Jar { path } | LaunchSpec::ArgsFile { path } => match path.strip_prefix(old) {
+                Ok(rest) => {
+                    *path = new.join(rest);
+                    true
+                }
+                Err(_) => false,
+            },
+            LaunchSpec::Unset => false,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerRecord {
+    #[serde(default)]
+    pub schema_version: u32,
     pub id: String,
     pub name: String,
     pub root: PathBuf,
-    pub paper_version: Option<String>,
+    #[serde(default)]
+    pub provider: ProviderKind,
+    #[serde(default)]
+    pub mc_version: Option<String>,
+    #[serde(default)]
+    pub build: Option<String>,
     pub java_major: Option<u32>,
     pub java_home: Option<PathBuf>,
-    pub jar_path: Option<PathBuf>,
+    #[serde(default)]
+    pub launch: LaunchSpec,
     pub ram_min: String,
     pub ram_max: String,
     pub jvm_flags: Vec<String>,
     pub eula_accepted: bool,
     pub created_unix: i64,
+}
+
+impl ServerRecord {
+    pub fn new(id: String, name: String, root: PathBuf) -> Self {
+        Self {
+            schema_version: RECORD_SCHEMA,
+            id,
+            name,
+            root,
+            provider: ProviderKind::Custom,
+            mc_version: None,
+            build: None,
+            java_major: None,
+            java_home: None,
+            launch: LaunchSpec::Unset,
+            ram_min: "2G".into(),
+            ram_max: "4G".into(),
+            jvm_flags: Vec::new(),
+            eula_accepted: false,
+            created_unix: crate::paths::unix_now(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -15,6 +15,7 @@ import 'package:voxel_panel/src/providers.dart';
 import 'package:voxel_panel/src/rust/api/panel.dart';
 import 'package:voxel_panel/src/rust/api/types.dart';
 import 'package:voxel_panel/widgets/app_sidebar.dart';
+import 'package:voxel_panel/widgets/change_version_dialog.dart';
 import 'package:voxel_panel/widgets/common/feedback.dart';
 import 'package:voxel_panel/widgets/delete_server_dialog.dart';
 
@@ -78,7 +79,17 @@ class _ServerScreenState extends ConsumerState<ServerScreen> {
           child: IndexedStack(
             index: _section,
             children: [
-              OverviewTab(details: details, onChanged: _refresh, onDelete: () => _delete(details), onRename: () => _rename(details)),
+              OverviewTab(
+                details: details,
+                onChanged: _refresh,
+                onDelete: () => _delete(details),
+                onRename: () => _rename(details),
+                onChangeVersion: () async {
+                  if (await showChangeVersionDialog(context, details)) {
+                    _refresh();
+                  }
+                },
+              ),
               ConsoleTab(serverId: widget.serverId, running: status == ServerStatus.running || status == ServerStatus.starting),
               PropertiesTab(serverId: widget.serverId),
               PluginsTab(serverId: widget.serverId, running: status.isActive),

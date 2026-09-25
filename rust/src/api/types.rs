@@ -2,6 +2,79 @@
 // Licensed under the GNU Affero General Public License v3.0 or later.
 // See the LICENSE file in the project root.
 
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ProviderKind {
+    Vanilla,
+    #[default]
+    Paper,
+    Folia,
+    Purpur,
+    Pufferfish,
+    Leaf,
+    Spigot,
+    Fabric,
+    Quilt,
+    Forge,
+    NeoForge,
+    Velocity,
+    BungeeCord,
+    Waterfall,
+    Mohist,
+    Arclight,
+    SpongeVanilla,
+    SpongeForge,
+    /// A jar chosen by the user that VoxelPanel does not know how to update.
+    Custom,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProviderCategory {
+    Vanilla,
+    Plugins,
+    Modded,
+    Proxy,
+    Hybrid,
+    Other,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProviderInfo {
+    pub kind: ProviderKind,
+    pub id: String,
+    pub name: String,
+    pub category: ProviderCategory,
+    pub description: String,
+    pub supports_plugins: bool,
+    pub supports_mods: bool,
+    pub has_worlds: bool,
+    pub is_proxy: bool,
+    /// Offers snapshot / pre-release versions.
+    pub has_snapshots: bool,
+    /// Lets the user pick a specific build or loader version.
+    pub has_builds: bool,
+    pub deprecated: bool,
+    /// Extra requirement shown in the wizard (e.g. Git for BuildTools).
+    pub note: String,
+    /// Config files worth editing for this server type, relative to the server folder.
+    pub config_files: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct VersionEntry {
+    pub id: String,
+    pub stable: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct BuildEntry {
+    pub id: String,
+    pub stable: bool,
+    pub label: String,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ServerStatus {
     Stopped,
@@ -15,7 +88,9 @@ pub struct ServerSummary {
     pub id: String,
     pub name: String,
     pub root: String,
-    pub paper_version: Option<String>,
+    pub provider: ProviderKind,
+    pub mc_version: Option<String>,
+    pub build: Option<String>,
     pub java_major: Option<u32>,
     pub ram_min: String,
     pub ram_max: String,
@@ -28,7 +103,9 @@ pub struct ServerDetails {
     pub id: String,
     pub name: String,
     pub root: String,
-    pub paper_version: Option<String>,
+    pub provider: ProviderKind,
+    pub mc_version: Option<String>,
+    pub build: Option<String>,
     pub java_major: Option<u32>,
     pub java_home: String,
     pub jar_path: String,
@@ -75,7 +152,8 @@ pub struct JavaReleaseInfo {
 pub struct ImportPreview {
     pub name: String,
     pub root: String,
-    pub paper_version: String,
+    pub provider: ProviderKind,
+    pub mc_version: String,
     pub java_major: u32,
     pub java_home: String,
     pub jar_path: String,
@@ -88,26 +166,29 @@ pub struct ImportPreview {
 }
 
 #[derive(Debug, Clone)]
-pub struct AutoInstallRequest {
+pub struct CreateServerRequest {
     pub name: String,
+    /// Empty: a new folder inside the servers folder.
     pub root: String,
-    pub paper_version: String,
-    pub accept_eula: bool,
-    pub ram_min: String,
-    pub ram_max: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct ManualInstallRequest {
-    pub name: String,
-    pub root: String,
-    pub paper_version: String,
+    pub provider: ProviderKind,
+    pub mc_version: String,
+    /// Empty: latest build.
+    pub build: String,
+    /// Local jar used instead of a download (provider `Custom` or a known jar).
     pub jar_path: String,
-    pub java_major: u32,
+    /// Empty: required Java chosen automatically (preferred runtime or download).
     pub java_home: String,
     pub ram_min: String,
     pub ram_max: String,
     pub jvm_flags: Vec<String>,
+    /// 0: first free port from the launcher settings.
+    pub port: u32,
+    pub motd: String,
+    pub max_players: u32,
+    pub gamemode: String,
+    pub difficulty: String,
+    pub online_mode: bool,
+    pub level_seed: String,
     pub accept_eula: bool,
 }
 

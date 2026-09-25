@@ -4,16 +4,18 @@
 
 use std::path::{Path, PathBuf};
 
+use crate::api::types::ProviderKind;
 use crate::java_runtime::{self, JavaRuntime};
-use crate::paper::parse_paper_version;
 use crate::script::{self, ParsedStart};
+use crate::LaunchSpec;
 
 #[derive(Debug, Clone, Default)]
 pub struct DetectedServer {
-    pub paper_version: Option<String>,
+    pub provider: ProviderKind,
+    pub mc_version: Option<String>,
     pub java_major: Option<u32>,
     pub java_home: Option<PathBuf>,
-    pub jar_path: Option<PathBuf>,
+    pub launch: LaunchSpec,
     pub ram_min: Option<String>,
     pub ram_max: Option<String>,
     pub jvm_flags: Vec<String>,
@@ -48,11 +50,7 @@ pub fn detect(root: &Path) -> DetectedServer {
         .clone()
         .filter(|path| path.exists())
         .or_else(|| jars.first().cloned());
-    let paper_version = jar_path
-        .as_ref()
-        .and_then(|path| path.file_name())
-        .and_then(|name| name.to_str())
-        .and_then(parse_paper_version);
+    let (provider, mc_version) = crate::providers::detect(root, jar_path.as_deref());
     let java_home = java_home_from_start(root, &start, &runtimes);
     let java_major = java_home.as_ref().and_then(|path| {
         java_runtime::derive_from_home(path).or_else(|| {
@@ -63,10 +61,11 @@ pub fn detect(root: &Path) -> DetectedServer {
         })
     });
     DetectedServer {
-        paper_version,
+        provider,
+        mc_version,
         java_major,
         java_home,
-        jar_path,
+        launch: jar_path.map(|path| LaunchSpec::Jar { path }).unwrap_or_default(),
         ram_min: start.ram_min,
         ram_max: start.ram_max,
         jvm_flags: start.jvm_flags,
@@ -104,21 +103,9 @@ fn scan_jars(root: &Path) -> Vec<PathBuf> {
             jars.push(path);
         }
     }
-    jars.sort_by(|left, right| {
-        let left_paper = left
-            .file_name()
-            .and_then(|name| name.to_str())
-            .and_then(parse_paper_version)
-            .is_some();
-        let right_paper = right
-            .file_name()
-            .and_then(|name| name.to_str())
-            .and_then(parse_paper_version)
-            .is_some();
-        right_paper
-            .cmp(&left_paper)
-            .then_with(|| left.file_name().cmp(&right.file_name()))
-    });
+    // Known server jars first, so installers or unrelated jars are not picked.
+    let known = |path: &PathBuf| crate::providers::detect(root, Some(path)).0 != ProviderKind::Custom;
+    jars.sort_by(|left, right| known(right).cmp(&known(left)).then_with(|| left.file_name().cmp(&right.file_name())));
     jars
 }
 

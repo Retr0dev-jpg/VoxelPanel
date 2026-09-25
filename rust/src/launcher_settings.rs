@@ -224,12 +224,11 @@ fn rebase_records(layout: &Layout, old: &Path, new: &Path) -> PanelResult<()> {
             record.root = root;
             changed = true;
         }
-        for path in [&mut record.java_home, &mut record.jar_path].into_iter().flatten() {
-            if let Some(rebased) = rebase(path, old, new) {
-                *path = rebased;
-                changed = true;
-            }
+        if let Some(rebased) = record.java_home.as_deref().and_then(|home| rebase(home, old, new)) {
+            record.java_home = Some(rebased);
+            changed = true;
         }
+        changed |= record.launch.rebase(old, new);
         if changed {
             crate::catalog::save(layout, &record)?;
         }
@@ -290,7 +289,7 @@ pub fn newer_release(current_version: &str, release: &Value) -> Option<UpdateInf
     let tag = release.get("tag_name")?.as_str()?;
     let version = tag.trim_start_matches('v');
     let current = current_version.split('+').next().unwrap_or(current_version);
-    if crate::paper::compare_versions(version, current) != std::cmp::Ordering::Greater {
+    if crate::providers::compare_versions(version, current) != std::cmp::Ordering::Greater {
         return None;
     }
     Some(UpdateInfo {

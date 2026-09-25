@@ -9,6 +9,7 @@ import 'package:voxel_panel/src/labels.dart';
 import 'package:voxel_panel/src/providers.dart';
 import 'package:voxel_panel/src/rust/api/types.dart';
 import 'package:voxel_panel/src/theme.dart';
+import 'package:voxel_panel/widgets/provider_icon.dart';
 
 class ServerListView extends StatelessWidget {
   const ServerListView({
@@ -102,10 +103,7 @@ class ServerCard extends ConsumerWidget {
               final info = Row(
                 children: [
                   if (selected != null) Checkbox(value: selected, onChanged: (_) => onTap()),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.asset('assets/paper.png', width: 52, height: 52, fit: BoxFit.cover),
-                  ),
+                  ProviderIcon(server.provider),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
@@ -114,7 +112,7 @@ class ServerCard extends ConsumerWidget {
                         Text(server.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
                         const SizedBox(height: 6),
                         Text(
-                          l.serverCardLine(server.paperVersion ?? l.notAvailable, server.port, players, server.maxPlayers),
+                          l.serverCardLine('${providerName(server.provider)} ${server.mcVersion ?? ''}'.trim(), server.port, players, server.maxPlayers),
                           style: TextStyle(color: colors.muted),
                           overflow: TextOverflow.ellipsis,
                         ),

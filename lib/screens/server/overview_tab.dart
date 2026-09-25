@@ -15,15 +15,24 @@ import 'package:voxel_panel/src/rust/api/types.dart';
 import 'package:voxel_panel/src/theme.dart';
 import 'package:voxel_panel/widgets/common/feedback.dart';
 import 'package:voxel_panel/widgets/common/panel_card.dart';
+import 'package:voxel_panel/widgets/provider_icon.dart';
 import 'package:voxel_panel/widgets/sparkline.dart';
 
 class OverviewTab extends ConsumerWidget {
-  const OverviewTab({super.key, required this.details, required this.onChanged, required this.onDelete, required this.onRename});
+  const OverviewTab({
+    super.key,
+    required this.details,
+    required this.onChanged,
+    required this.onDelete,
+    required this.onRename,
+    required this.onChangeVersion,
+  });
 
   final ServerDetails details;
   final VoidCallback onChanged;
   final VoidCallback onDelete;
   final VoidCallback onRename;
+  final VoidCallback onChangeVersion;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -39,7 +48,7 @@ class OverviewTab extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(28, 20, 28, 28),
       children: [
-        _Header(details: details, status: status, crashed: runtime?.crashed ?? false, onDelete: onDelete, onRename: onRename),
+        _Header(details: details, status: status, crashed: runtime?.crashed ?? false, onDelete: onDelete, onRename: onRename, onChangeVersion: onChangeVersion),
         if (runtime?.crashed == true && status == ServerStatus.stopped) ...[
           const SizedBox(height: 16),
           _Banner(icon: Icons.warning_amber, color: colors.danger, text: l.crashBanner(runtime?.lastExitCode ?? -1)),
@@ -116,13 +125,21 @@ class OverviewTab extends ConsumerWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.details, required this.status, required this.crashed, required this.onDelete, required this.onRename});
+  const _Header({
+    required this.details,
+    required this.status,
+    required this.crashed,
+    required this.onDelete,
+    required this.onRename,
+    required this.onChangeVersion,
+  });
 
   final ServerDetails details;
   final ServerStatus status;
   final bool crashed;
   final VoidCallback onDelete;
   final VoidCallback onRename;
+  final VoidCallback onChangeVersion;
 
   @override
   Widget build(BuildContext context) {
@@ -135,10 +152,7 @@ class _Header extends StatelessWidget {
     };
     final info = Row(
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: Image.asset('assets/paper.png', width: 64, height: 64, fit: BoxFit.cover),
-        ),
+        ProviderIcon(details.provider, size: 64),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
@@ -155,7 +169,7 @@ class _Header extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                l.serverInfoLine(details.paperVersion ?? l.notAvailable, details.javaMajor?.toString() ?? l.notAvailable, details.ramMin, details.ramMax, details.port),
+                l.serverInfoLine('${providerName(details.provider)} ${details.mcVersion ?? ''}${details.build == null ? '' : ' #${details.build}'}'.trim(), details.javaMajor?.toString() ?? l.notAvailable, details.ramMin, details.ramMax, details.port),
                 style: TextStyle(color: colors.muted),
               ),
               SelectableText(details.root, style: TextStyle(color: colors.muted, fontSize: 12)),
@@ -192,9 +206,18 @@ class _Header extends StatelessWidget {
         ),
         PopupMenuButton<String>(
           tooltip: l.moreActions,
-          onSelected: (value) => value == 'rename' ? onRename() : onDelete(),
+          onSelected: (value) => switch (value) {
+            'rename' => onRename(),
+            'version' => onChangeVersion(),
+            _ => onDelete(),
+          },
           itemBuilder: (context) => [
             PopupMenuItem(value: 'rename', child: ListTile(leading: const Icon(Icons.edit_outlined), title: Text(l.renameServer))),
+            PopupMenuItem(
+              value: 'version',
+              enabled: !status.isActive && details.provider != ProviderKind.custom,
+              child: ListTile(leading: const Icon(Icons.system_update_alt), title: Text(l.changeVersion)),
+            ),
             PopupMenuItem(
               value: 'delete',
               enabled: !status.isActive,

@@ -43,6 +43,12 @@ pub fn is_memory_value(value: &str) -> bool {
         && matches!(suffix, "G" | "g" | "M" | "m")
 }
 
+pub fn total_mb() -> u64 {
+    let mut system = System::new();
+    system.refresh_memory();
+    system.total_memory() / (1024 * 1024)
+}
+
 pub fn suggest() -> (String, String, String) {
     let mut system = System::new();
     system.refresh_memory();

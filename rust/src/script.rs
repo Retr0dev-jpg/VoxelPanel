@@ -16,7 +16,6 @@ const SCRIPT_NAMES: &[&str] = &["start.bat", "start.sh", "run.bat", "run.sh", "s
 /// and for the start script written next to it.
 pub fn command_line(record: &ServerRecord) -> PanelResult<(PathBuf, Vec<String>)> {
     let java_home = record.java_home.as_ref().ok_or("Runtime Java non configurato")?;
-    let jar = record.jar_path.as_ref().ok_or("Jar server non configurato")?;
     if !is_memory_value(&record.ram_min) || !is_memory_value(&record.ram_max) {
         return Err(PanelError::invalid("RAM non valida. Usa valori come 2G o 4096M."));
     }
@@ -25,16 +24,31 @@ pub fn command_line(record: &ServerRecord) -> PanelResult<(PathBuf, Vec<String>)
     }
     let mut args = vec![format!("-Xms{}", record.ram_min), format!("-Xmx{}", record.ram_max)];
     args.extend(record.jvm_flags.iter().cloned());
-    args.push("-jar".into());
-    args.push(jar.to_string_lossy().to_string());
-    args.push("nogui".into());
+    match &record.launch {
+        crate::LaunchSpec::Jar { path } => {
+            args.push("-jar".into());
+            args.push(path.to_string_lossy().to_string());
+        }
+        crate::LaunchSpec::ArgsFile { path } => args.push(format!("@{}", path.to_string_lossy())),
+        crate::LaunchSpec::Unset => return Err(PanelError::invalid("File di avvio del server non configurato")),
+    }
+    // Proxies reject unknown arguments; game servers need `nogui` to skip the Swing window.
+    if !crate::providers::is_proxy(record.provider) {
+        args.push("nogui".into());
+    }
     Ok((crate::platform::java_executable(java_home), args))
 }
 
 pub fn generate(root: &Path, record: &ServerRecord) -> PanelResult<()> {
     let (java, args) = command_line(record)?;
     let program = relative(root, &java);
-    let args: Vec<String> = args.iter().map(|arg| relative(root, Path::new(arg))).collect();
+    let args: Vec<String> = args
+        .iter()
+        .map(|arg| match arg.strip_prefix('@') {
+            Some(path) => format!("@{}", relative(root, Path::new(path))),
+            None => relative(root, Path::new(arg)),
+        })
+        .collect();
     let content = crate::platform::render_start_script(&crate::platform::ScriptSpec { program: &program, args: &args })?;
     let path = root.join(crate::platform::start_script_name());
     std::fs::write(&path, content)?;
@@ -214,20 +228,14 @@ set "JAVA=%RUNTIME_DIR%\%JAVA_HOME_DIR%\bin\java.exe"
         let root = std::env::temp_dir().join(format!("voxel-script-{}", uuid::Uuid::new_v4()));
         let home = root.join("runtime").join("jdk-21");
         std::fs::create_dir_all(&home).unwrap();
-        let record = ServerRecord {
-            id: "x".into(),
-            name: "x".into(),
-            root: root.clone(),
-            paper_version: None,
-            java_major: Some(21),
-            java_home: Some(home.clone()),
-            jar_path: Some(root.join("paper-1.21.1-1.jar")),
-            ram_min: "1G".into(),
-            ram_max: "2G".into(),
-            jvm_flags: vec!["-XX:+UseG1GC".into()],
-            eula_accepted: true,
-            created_unix: 0,
-        };
+        let mut record = ServerRecord::new("x".into(), "x".into(), root.clone());
+        record.provider = crate::ProviderKind::Paper;
+        record.java_major = Some(21);
+        record.java_home = Some(home.clone());
+        record.launch = crate::LaunchSpec::Jar { path: root.join("paper-1.21.1-1.jar") };
+        record.ram_min = "1G".into();
+        record.ram_max = "2G".into();
+        record.jvm_flags = vec!["-XX:+UseG1GC".into()];
         generate(&root, &record).unwrap();
         let parsed = parse_start_script(&root).unwrap();
         assert_eq!(parsed.java_path.unwrap(), crate::platform::java_executable(&home));

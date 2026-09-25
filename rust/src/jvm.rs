@@ -88,10 +88,6 @@ pub fn sanitize_flags(flags: &[String]) -> PanelResult<Vec<String>> {
     Ok(clean)
 }
 
-pub fn default_flags() -> Vec<String> {
-    preset_flags(crate::launcher_settings::current().defaults.jvm_preset)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

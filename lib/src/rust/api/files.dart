@@ -10,7 +10,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'types.dart';
 
-// These functions are ignored because they are not marked as `pub`: `backup_path`, `manifest_of`
+// These functions are ignored because they are not marked as `pub`: `backup_path`
 
 Future<List<PropertyEntry>> listProperties({required String id}) =>
     RustLib.instance.api.crateApiFilesListProperties(id: id);

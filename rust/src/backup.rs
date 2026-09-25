@@ -14,9 +14,36 @@ use crate::{PanelError, PanelResult};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BackupManifest {
-    pub paper_version: Option<String>,
+    #[serde(alias = "paper_version")]
+    pub mc_version: Option<String>,
+    #[serde(default)]
+    pub provider: Option<String>,
     pub server_name: String,
     pub created_unix: i64,
+}
+
+impl BackupManifest {
+    pub fn of(record: &crate::ServerRecord) -> Self {
+        Self {
+            mc_version: record.mc_version.clone(),
+            provider: Some(crate::providers::id_of(record.provider).to_string()),
+            server_name: record.name.clone(),
+            created_unix: crate::paths::unix_now(),
+        }
+    }
+}
+
+/// Backup taken automatically before a risky operation; returns the archive name.
+pub async fn safety_backup(layout: &crate::paths::Layout, record: &crate::ServerRecord, prefix: &str) -> PanelResult<String> {
+    let directory = layout.backups(&record.id);
+    crate::paths::ensure_dir(&directory)?;
+    let file_name = format!("{prefix}-{}.zip", crate::paths::unix_now());
+    let destination = directory.join(&file_name);
+    let manifest = BackupManifest::of(record);
+    let root = record.root.clone();
+    let options = BackupOptions::from_settings();
+    tokio::task::spawn_blocking(move || create_zip(&root, &manifest, &destination, &options)).await??;
+    Ok(file_name)
 }
 
 #[derive(Debug, Clone)]
@@ -213,7 +240,8 @@ mod tests {
 
     fn manifest() -> BackupManifest {
         BackupManifest {
-            paper_version: Some("1.21.1".into()),
+            mc_version: Some("1.21.1".into()),
+            provider: Some("paper".into()),
             server_name: "Test".into(),
             created_unix: 10,
         }

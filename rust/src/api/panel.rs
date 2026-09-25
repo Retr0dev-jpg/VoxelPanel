@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root.
 
 use crate::frb_generated::StreamSink;
-use crate::install::{self, AutoRequest, ManualRequest};
+use crate::install;
 use crate::paths::Layout;
 use crate::process::{self, RunStatus, RuntimeSnapshot};
 use crate::{PanelError, PanelResult};
@@ -45,7 +45,9 @@ pub async fn list_servers() -> PanelResult<Vec<ServerSummary>> {
                 id: record.id,
                 name: record.name,
                 root: record.root.to_string_lossy().to_string(),
-                paper_version: record.paper_version,
+                provider: record.provider,
+                mc_version: record.mc_version,
+                build: record.build,
                 java_major: record.java_major,
                 ram_min: record.ram_min,
                 ram_max: record.ram_max,
@@ -65,15 +67,13 @@ pub async fn get_server(id: String) -> PanelResult<ServerDetails> {
             .as_ref()
             .map(|path| path.to_string_lossy().to_string())
             .unwrap_or_default(),
-        jar_path: record
-            .jar_path
-            .as_ref()
-            .map(|path| path.to_string_lossy().to_string())
-            .unwrap_or_default(),
+        jar_path: record.launch.target().map(|path| path.to_string_lossy().to_string()).unwrap_or_default(),
         id: record.id,
         name: record.name,
         root: record.root.to_string_lossy().to_string(),
-        paper_version: record.paper_version,
+        provider: record.provider,
+        mc_version: record.mc_version,
+        build: record.build,
         java_major: record.java_major,
         ram_min: record.ram_min,
         ram_max: record.ram_max,
@@ -145,6 +145,12 @@ pub fn ram_presets() -> Vec<RamChoice> {
         .collect()
 }
 
+/// Physical memory in MiB, used to cap the RAM a server can get.
+#[flutter_rust_bridge::frb(sync)]
+pub fn system_memory_mb() -> u64 {
+    crate::ram::total_mb()
+}
+
 #[flutter_rust_bridge::frb(sync)]
 pub fn suggest_ram() -> RamSuggestion {
     let (ram_min, ram_max, total) = crate::ram::suggest();
@@ -179,8 +185,28 @@ pub async fn list_java_releases() -> PanelResult<Vec<JavaReleaseInfo>> {
         .collect())
 }
 
-pub async fn list_paper_versions() -> PanelResult<Vec<String>> {
-    crate::paper::fetch_versions().await
+/// Providers that VoxelPanel can install, in wizard order.
+#[flutter_rust_bridge::frb(sync)]
+pub fn list_providers() -> Vec<ProviderInfo> {
+    crate::providers::all().into_iter().map(|provider| crate::providers::meta(provider.kind())).collect()
+}
+
+/// Metadata of any provider, also those only detected on import.
+#[flutter_rust_bridge::frb(sync)]
+pub fn provider_info(kind: ProviderKind) -> ProviderInfo {
+    crate::providers::meta(kind)
+}
+
+pub async fn list_versions(provider: ProviderKind, include_snapshots: bool) -> PanelResult<Vec<VersionEntry>> {
+    crate::providers::get(provider)?.versions(include_snapshots).await
+}
+
+pub async fn list_builds(provider: ProviderKind, version: String) -> PanelResult<Vec<BuildEntry>> {
+    crate::providers::get(provider)?.builds(&version).await
+}
+
+pub async fn required_java(provider: ProviderKind, version: String) -> PanelResult<u32> {
+    crate::providers::get(provider)?.required_java(&version).await
 }
 
 pub async fn preview_import(path: String) -> PanelResult<ImportPreview> {
@@ -196,16 +222,14 @@ pub async fn preview_import(path: String) -> PanelResult<ImportPreview> {
             .unwrap_or("Server")
             .to_string(),
         root: path,
-        paper_version: detected.paper_version.unwrap_or_default(),
+        provider: detected.provider,
+        mc_version: detected.mc_version.unwrap_or_default(),
         java_major: detected.java_major.unwrap_or(0),
         java_home: detected
             .java_home
             .map(|value| value.to_string_lossy().to_string())
             .unwrap_or_default(),
-        jar_path: detected
-            .jar_path
-            .map(|value| value.to_string_lossy().to_string())
-            .unwrap_or_default(),
+        jar_path: detected.launch.target().map(|value| value.to_string_lossy().to_string()).unwrap_or_default(),
         ram_min: detected.ram_min.unwrap_or_else(|| "2G".into()),
         ram_max: detected.ram_max.unwrap_or_else(|| "4G".into()),
         jvm_flags: detected.jvm_flags,
@@ -265,46 +289,19 @@ pub async fn shutdown_all() -> PanelResult<()> {
     Ok(())
 }
 
-pub async fn install_auto(request: AutoInstallRequest, sink: StreamSink<ProgressEvent>) -> PanelResult<()> {
-    report(sink, "Fatto", created_message, |tx| async move {
-        install::install_auto(
-            &Layout::app(),
-            AutoRequest {
-                name: request.name,
-                root: request.root,
-                paper_version: request.paper_version,
-                accept_eula: request.accept_eula,
-                ram_min: request.ram_min,
-                ram_max: request.ram_max,
-            },
-            &tx,
-        )
-        .await
-    })
-    .await
+pub async fn create_server(request: CreateServerRequest, sink: StreamSink<ProgressEvent>) -> PanelResult<()> {
+    report(sink, "Fatto", created_message, |tx| async move { install::create_server(&Layout::app(), request, &tx).await }).await
 }
 
-pub async fn install_manual(request: ManualInstallRequest, sink: StreamSink<ProgressEvent>) -> PanelResult<()> {
-    let java_major = (request.java_major != 0).then_some(request.java_major);
-    report(sink, "Fatto", created_message, |tx| async move {
-        install::install_manual(
-            &Layout::app(),
-            ManualRequest {
-                name: request.name,
-                root: request.root,
-                paper_version: empty_to_none(request.paper_version),
-                jar_path: empty_to_none(request.jar_path),
-                java_major,
-                java_home: empty_to_none(request.java_home),
-                ram_min: request.ram_min,
-                ram_max: request.ram_max,
-                jvm_flags: request.jvm_flags,
-                accept_eula: request.accept_eula,
-            },
-            &tx,
-        )
-        .await
-    })
+/// Installs another version or build of the same software, after an automatic backup.
+pub async fn change_server_version(id: String, mc_version: String, build: String, sink: StreamSink<ProgressEvent>) -> PanelResult<()> {
+    let server_id = id.clone();
+    report(
+        sink,
+        "Versione",
+        move |version: &String| (format!("Server aggiornato a {version}."), Some(server_id)),
+        |tx| async move { install::change_version(&Layout::app(), &id, &mc_version, &build, &tx).await },
+    )
     .await
 }
 
@@ -344,7 +341,3 @@ fn created_message(id: &String) -> (String, Option<String>) {
     ("Operazione completata.".into(), Some(id.to_string()))
 }
 
-fn empty_to_none(value: String) -> Option<String> {
-    let value = value.trim();
-    (!value.is_empty()).then(|| value.to_string())
-}

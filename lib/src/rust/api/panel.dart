@@ -10,7 +10,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'types.dart';
 
-// These functions are ignored because they are not marked as `pub`: `created_message`, `empty_to_none`, `to_runtime`, `to_status`
+// These functions are ignored because they are not marked as `pub`: `created_message`, `to_runtime`, `to_status`
 
 Future<List<ServerSummary>> listServers() =>
     RustLib.instance.api.crateApiPanelListServers();
@@ -32,6 +32,9 @@ AppPaths appPaths() => RustLib.instance.api.crateApiPanelAppPaths();
 
 List<RamChoice> ramPresets() => RustLib.instance.api.crateApiPanelRamPresets();
 
+/// Physical memory in MiB, used to cap the RAM a server can get.
+BigInt systemMemoryMb() => RustLib.instance.api.crateApiPanelSystemMemoryMb();
+
 RamSuggestion suggestRam() => RustLib.instance.api.crateApiPanelSuggestRam();
 
 Future<List<JavaRuntimeInfo>> listRuntimes() =>
@@ -40,8 +43,37 @@ Future<List<JavaRuntimeInfo>> listRuntimes() =>
 Future<List<JavaReleaseInfo>> listJavaReleases() =>
     RustLib.instance.api.crateApiPanelListJavaReleases();
 
-Future<List<String>> listPaperVersions() =>
-    RustLib.instance.api.crateApiPanelListPaperVersions();
+/// Providers that VoxelPanel can install, in wizard order.
+List<ProviderInfo> listProviders() =>
+    RustLib.instance.api.crateApiPanelListProviders();
+
+/// Metadata of any provider, also those only detected on import.
+ProviderInfo providerInfo({required ProviderKind kind}) =>
+    RustLib.instance.api.crateApiPanelProviderInfo(kind: kind);
+
+Future<List<VersionEntry>> listVersions({
+  required ProviderKind provider,
+  required bool includeSnapshots,
+}) => RustLib.instance.api.crateApiPanelListVersions(
+  provider: provider,
+  includeSnapshots: includeSnapshots,
+);
+
+Future<List<BuildEntry>> listBuilds({
+  required ProviderKind provider,
+  required String version,
+}) => RustLib.instance.api.crateApiPanelListBuilds(
+  provider: provider,
+  version: version,
+);
+
+Future<int> requiredJava({
+  required ProviderKind provider,
+  required String version,
+}) => RustLib.instance.api.crateApiPanelRequiredJava(
+  provider: provider,
+  version: version,
+);
 
 Future<ImportPreview> previewImport({required String path}) =>
     RustLib.instance.api.crateApiPanelPreviewImport(path: path);
@@ -100,11 +132,19 @@ Future<void> sendCommand({required String id, required String command}) =>
 
 Future<void> shutdownAll() => RustLib.instance.api.crateApiPanelShutdownAll();
 
-Stream<ProgressEvent> installAuto({required AutoInstallRequest request}) =>
-    RustLib.instance.api.crateApiPanelInstallAuto(request: request);
+Stream<ProgressEvent> createServer({required CreateServerRequest request}) =>
+    RustLib.instance.api.crateApiPanelCreateServer(request: request);
 
-Stream<ProgressEvent> installManual({required ManualInstallRequest request}) =>
-    RustLib.instance.api.crateApiPanelInstallManual(request: request);
+/// Installs another version or build of the same software, after an automatic backup.
+Stream<ProgressEvent> changeServerVersion({
+  required String id,
+  required String mcVersion,
+  required String build,
+}) => RustLib.instance.api.crateApiPanelChangeServerVersion(
+  id: id,
+  mcVersion: mcVersion,
+  build: build,
+);
 
 Stream<ProgressEvent> installJava({required int major}) =>
     RustLib.instance.api.crateApiPanelInstallJava(major: major);

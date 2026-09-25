@@ -91,9 +91,9 @@ pub async fn install_modrinth_project(
     process::ensure_stopped(&id)?;
     let record = crate::catalog::get(&Layout::app(), &id)?;
     let version = record
-        .paper_version
+        .mc_version
         .clone()
-        .ok_or("Versione Paper sconosciuta: impossibile filtrare i plugin")?;
+        .ok_or("Versione di Minecraft sconosciuta: impossibile filtrare i plugin")?;
     report(
         sink,
         "Plugin",
@@ -180,7 +180,7 @@ pub async fn create_backup(id: String, sink: StreamSink<ProgressEvent>) -> Panel
             crate::paths::ensure_dir(&directory)?;
             let file_name = format!("{}.zip", crate::paths::unix_now());
             let destination = directory.join(&file_name);
-            let manifest = manifest_of(&record);
+            let manifest = crate::backup::BackupManifest::of(&record);
             let root = record.root.clone();
             let options = crate::backup::BackupOptions::from_settings();
             tokio::task::spawn_blocking(move || crate::backup::create_zip(&root, &manifest, &destination, &options))
@@ -206,13 +206,7 @@ pub async fn restore_backup(id: String, file_name: String, sink: StreamSink<Prog
         move |_: &()| ("Backup ripristinato.".into(), Some(id)),
         |tx| async move {
             tx.emit("Backup", "Creo una copia di sicurezza prima del ripristino...", None);
-            let safety = Layout::app()
-                .backups(&record.id)
-                .join(format!("pre-restore-{}.zip", crate::paths::unix_now()));
-            let manifest = manifest_of(&record);
-            let root = record.root.clone();
-            let options = crate::backup::BackupOptions::from_settings();
-            tokio::task::spawn_blocking(move || crate::backup::create_zip(&root, &manifest, &safety, &options)).await??;
+            crate::backup::safety_backup(&Layout::app(), &record, "pre-restore").await?;
             tx.emit("Backup", "Ripristino in corso...", None);
             let root = record.root.clone();
             tokio::task::spawn_blocking(move || crate::backup::restore_zip(&root, &archive)).await??;
@@ -239,13 +233,6 @@ fn backup_path(id: &str, file_name: &str) -> PanelResult<std::path::PathBuf> {
     Ok(path)
 }
 
-fn manifest_of(record: &crate::ServerRecord) -> crate::backup::BackupManifest {
-    crate::backup::BackupManifest {
-        paper_version: record.paper_version.clone(),
-        server_name: record.name.clone(),
-        created_unix: crate::paths::unix_now(),
-    }
-}
 
 #[cfg(test)]
 mod tests {

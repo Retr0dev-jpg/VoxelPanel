@@ -70,7 +70,7 @@
       }
     }
   },
-  "serverInfoLine": "Versione {version}  ·  Java {java}  ·  RAM {ramMin} / {ramMax}  ·  Porta {port}",
+  "serverInfoLine": "{version}  ·  Java {java}  ·  RAM {ramMin} / {ramMax}  ·  Porta {port}",
   "@serverInfoLine": {
     "placeholders": {
       "version": {
@@ -228,14 +228,6 @@
   "importModeSubtitle": "Importa da una cartella esistente",
   "serverFolder": "Cartella del server",
   "serverJarTitle": "Jar del server",
-  "importDetectedPaper": "Paper: {value}",
-  "@importDetectedPaper": {
-    "placeholders": {
-      "value": {
-        "type": "String"
-      }
-    }
-  },
   "importDetectedJava": "Java: {value}",
   "@importDetectedJava": {
     "placeholders": {
@@ -272,11 +264,7 @@
   "serverNameHint": "Es. Il mio server",
   "destinationFolder": "Cartella di destinazione",
   "destinationFolderHint": "Vuota: VoxelPanel ne crea una nei dati locali",
-  "installMethod": "Metodo di installazione",
-  "methodAutomatic": "Automatica",
-  "methodManual": "Manuale",
   "memoryRam": "Memoria RAM",
-  "paperVersion": "Versione Paper",
   "latestVersion": "{version} (ultima)",
   "@latestVersion": {
     "placeholders": {
@@ -285,8 +273,6 @@
       }
     }
   },
-  "installedJava": "Runtime Java installato",
-  "downloadOtherJava": "Scarica un altro Java",
   "noLocalJar": "Nessun jar locale",
   "chooseJar": "Scegli jar",
   "ramMin": "RAM minima",
@@ -298,8 +284,6 @@
   "issueMissingName": "Inserisci un nome.",
   "issueEula": "Accetta l'EULA di Minecraft per continuare.",
   "issueMissingVersion": "Seleziona una versione.",
-  "issueMissingVersionOrJar": "Seleziona una versione oppure un jar.",
-  "issueMissingJava": "Seleziona un runtime Java.",
   "errorServerRunning": "Ferma il server prima di continuare.",
   "errorServerStopped": "Il server non è in esecuzione.",
   "errorEulaRequired": "Accetta l'EULA di Minecraft prima di avviare il server.",
@@ -504,5 +488,66 @@
         "type": "String"
       }
     }
-  }
+  },
+  "next": "Avanti",
+  "loading": "Caricamento...",
+  "stepSoftware": "Software",
+  "stepVersion": "Versione",
+  "stepRuntime": "Java e memoria",
+  "stepSettings": "Impostazioni",
+  "stepSummary": "Riepilogo",
+  "categoryAll": "Tutti",
+  "categoryVanilla": "Vanilla",
+  "categoryPlugins": "Plugin",
+  "categoryModded": "Mod",
+  "categoryProxy": "Proxy",
+  "categoryHybrid": "Ibridi",
+  "categoryOther": "Altro",
+  "searchVersion": "Cerca una versione",
+  "showSnapshots": "Mostra snapshot e pre-release",
+  "buildLabel": "Build",
+  "latestBuild": "Ultima build disponibile",
+  "requiresJava": "Richiede Java {major}",
+  "@requiresJava": {
+    "placeholders": {
+      "major": {
+        "type": "int"
+      }
+    }
+  },
+  "customVersionLabel": "Versione di Minecraft (facoltativa)",
+  "customVersionHint": "Serve per scegliere Java e filtrare plugin e mod. Se vuota viene letta dal nome del jar.",
+  "javaRuntime": "Runtime Java",
+  "javaAutoHint": "Automatico: runtime preferito per la versione richiesta, oppure download da Adoptium.",
+  "systemMemory": "Memoria del sistema: {total}",
+  "@systemMemory": {
+    "placeholders": {
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "ramWarning": "Lasci poca memoria al sistema operativo: il server potrebbe rallentare il computer.",
+  "autoPort": "Porta automatica",
+  "autoPortHint": "La prima porta libera tra i tuoi server.",
+  "seedHint": "Vuoto: casuale",
+  "onlineModeHint": "Verifica gli account con Mojang. Disattivalo solo dietro un proxy.",
+  "proxySettingsHint": "I proxy si configurano dopo la creazione dal file velocity.toml o config.yml. Puoi passare al riepilogo.",
+  "issueMissingProvider": "Scegli il software del server.",
+  "issueMissingJar": "Scegli il jar del server.",
+  "issueInvalidRam": "La RAM minima deve essere almeno 256 MB e non superare la massima.",
+  "issueInvalidPort": "La porta deve essere tra 1024 e 65535.",
+  "issueInvalidPlayers": "Numero di giocatori non valido.",
+  "importNoJar": "Nessun jar del server trovato: potrai sceglierlo dopo l'importazione.",
+  "changeVersion": "Cambia versione",
+  "changeVersionTitle": "Cambia versione di {name}",
+  "@changeVersionTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "changeVersionHint": "Prima del cambio viene creato un backup automatico. Tornare a una versione precedente può danneggiare i mondi.",
+  "changeVersionConfirm": "Installa"
 }
