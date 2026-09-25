@@ -11,6 +11,7 @@ dirs = "6"
 flate2 = "1"
 flutter_rust_bridge = "=2.13.0"
 futures = "0.3"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif", "bmp"] }
 md-5 = "0.10"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
 serde = { version = "1", features = ["derive"] }

@@ -13,7 +13,14 @@ L’interfaccia è in Flutter (Material 3, italiano e inglese). Il motore è in 
 - Mostra lo stato reale di ogni server: "Avvio" finché il log non segnala la fine del caricamento, poi "Online"; rileva i crash con il codice di uscita.
 - Statistiche live di CPU e RAM, uptime ed elenco dei giocatori collegati, inviati dal motore Rust senza polling.
 - Console con cronologia dei comandi (frecce su e giù), ricerca, filtro per livello, copia e limite di righe.
-- Modifica `server.properties`, gestisce plugin e mod locali o da Modrinth, mondi, backup e ripristino.
+- Configurazione completa di ogni server:
+  - impostazioni: nome, icona (convertita in PNG 64×64), versione, Java, RAM, flag JVM, comando e timeout di arresto, avvio automatico, riavvio dopo un crash, RCON gestito;
+  - `server.properties` con un modulo tipizzato (circa 60 chiavi con descrizione, intervalli e gruppi), ricerca e modalità testo;
+  - editor dei file di configurazione con evidenziazione della sintassi (YAML, TOML, properties, JSON) e file manager limitato alla cartella del server;
+  - giocatori online (via RCON) con espulsione, ban, operatore e modalità di gioco; whitelist, operatori, giocatori e IP bannati, modificati con i comandi a server acceso o nei file a server fermo;
+  - log correnti, archivi `.gz` e crash report con ricerca ed esportazione;
+  - mondi raggruppati per dimensione, con importazione da zip o cartella, rinomina, rigenerazione con nuovo seed e backup del singolo mondo.
+- Gestisce plugin e mod locali o da Modrinth, backup e ripristino.
 - Rinomina ed elimina i server (anche più server insieme), con scelta se cancellare file e backup.
 - Impostazioni del launcher: lingua, tema chiaro o scuro con colore di accento, avvio con il sistema, chiusura nel tray, cartelle di server, backup, runtime e cache (spostabili con migrazione guidata), runtime Java installati e di sistema con versione preferita, valori predefiniti per i nuovi server (RAM, preset JVM Aikar/G1/ZGC, porta), console, backup (conservazione, compressione, esclusioni), proxy e timeout di rete, chiave CurseForge, notifiche desktop, log dell'app, esportazione e importazione.
 
@@ -68,6 +75,7 @@ I backup stanno in `backups/`, fuori dalla cartella del server.
 
 - `rust/src/api/`: funzioni esposte a Flutter. Gli errori sono `PanelError` (codice più messaggio), le operazioni lunghe inviano `ProgressEvent` in tempo reale, `watch_events` trasmette lo stato di runtime di ogni server.
 - `rust/src/providers/`: un modulo per fonte di software (trait `Provider`: versioni, build, Java richiesto, installazione) e rilevamento del software all’import.
+- `rust/src/rcon.rs`, `players.rs`, `server_files.rs`, `server_logs.rs`, `properties_schema.rs`: RCON, liste dei giocatori, file manager sicuro, log e schema di `server.properties`.
 - `rust/src/cache.rs`: cache su disco delle risposte delle API con scadenza e uso offline.
 - `rust/src/process.rs`: supervisor dei processi (stato, giocatori, uscita, campionamento CPU e RAM).
 - `rust/src/platform/`: codice specifico per sistema operativo (eseguibile Java, gruppi di processi e job object, arresto forzato, script di avvio, apertura cartelle).
@@ -115,3 +123,7 @@ flutter test
 ## Release
 
 Ogni push su `main` compila l’app per i tre sistemi. La release `v<versione>` viene pubblicata solo se non esiste già: per rilasciare basta aumentare `version` in `pubspec.yaml`.
+
+## RCON
+
+All’avvio, se il server non ha già un RCON configurato, VoxelPanel lo abilita su una porta libera a partire da 25575 con una password casuale di 32 caratteri e `broadcast-rcon-to-ops=false`. Lo usa per l’elenco dei giocatori e per i comandi con risposta, senza scrivere nella console. Si può disattivare per singolo server nelle sue impostazioni.

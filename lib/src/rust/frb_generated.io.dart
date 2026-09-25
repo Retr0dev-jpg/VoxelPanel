@@ -6,6 +6,8 @@
 import 'api/error.dart';
 import 'api/files.dart';
 import 'api/panel.dart';
+import 'api/players.dart';
+import 'api/server.dart';
 import 'api/settings.dart';
 import 'api/types.dart';
 
@@ -87,6 +89,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   LauncherSettings dco_decode_box_autoadd_launcher_settings(dynamic raw);
 
   @protected
+  ServerConfig dco_decode_box_autoadd_server_config(dynamic raw);
+
+  @protected
   int dco_decode_box_autoadd_u_32(dynamic raw);
 
   @protected
@@ -114,6 +119,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double dco_decode_f_64(dynamic raw);
 
   @protected
+  FileEntry dco_decode_file_entry(dynamic raw);
+
+  @protected
   GeneralSettings dco_decode_general_settings(dynamic raw);
 
   @protected
@@ -124,6 +132,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ImportPreview dco_decode_import_preview(dynamic raw);
+
+  @protected
+  IpBan dco_decode_ip_ban(dynamic raw);
 
   @protected
   JavaReleaseInfo dco_decode_java_release_info(dynamic raw);
@@ -156,6 +167,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<BuildEntry> dco_decode_list_build_entry(dynamic raw);
 
   @protected
+  List<FileEntry> dco_decode_list_file_entry(dynamic raw);
+
+  @protected
+  List<IpBan> dco_decode_list_ip_ban(dynamic raw);
+
+  @protected
   List<JavaReleaseInfo> dco_decode_list_java_release_info(dynamic raw);
 
   @protected
@@ -165,7 +182,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<JvmPresetInfo> dco_decode_list_jvm_preset_info(dynamic raw);
 
   @protected
+  List<LogFileInfo> dco_decode_list_log_file_info(dynamic raw);
+
+  @protected
   List<ModrinthProject> dco_decode_list_modrinth_project(dynamic raw);
+
+  @protected
+  List<PlayerEntry> dco_decode_list_player_entry(dynamic raw);
 
   @protected
   List<PreferredJava> dco_decode_list_preferred_java(dynamic raw);
@@ -175,6 +198,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<PropertyEntry> dco_decode_list_property_entry(dynamic raw);
+
+  @protected
+  List<PropertySchema> dco_decode_list_property_schema(dynamic raw);
 
   @protected
   List<ProviderInfo> dco_decode_list_provider_info(dynamic raw);
@@ -193,6 +219,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<WorldInfo> dco_decode_list_world_info(dynamic raw);
+
+  @protected
+  LogFileInfo dco_decode_log_file_info(dynamic raw);
+
+  @protected
+  LogFileKind dco_decode_log_file_kind(dynamic raw);
 
   @protected
   ManagedFolder dco_decode_managed_folder(dynamic raw);
@@ -231,6 +263,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PathSettings dco_decode_path_settings(dynamic raw);
 
   @protected
+  PlayerEntry dco_decode_player_entry(dynamic raw);
+
+  @protected
+  PlayerListKind dco_decode_player_list_kind(dynamic raw);
+
+  @protected
+  PlayerLists dco_decode_player_lists(dynamic raw);
+
+  @protected
   PreferredJava dco_decode_preferred_java(dynamic raw);
 
   @protected
@@ -238,6 +279,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PropertyEntry dco_decode_property_entry(dynamic raw);
+
+  @protected
+  PropertyGroup dco_decode_property_group(dynamic raw);
+
+  @protected
+  PropertyKind dco_decode_property_kind(dynamic raw);
+
+  @protected
+  PropertySchema dco_decode_property_schema(dynamic raw);
 
   @protected
   ProviderCategory dco_decode_provider_category(dynamic raw);
@@ -253,6 +303,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RamSuggestion dco_decode_ram_suggestion(dynamic raw);
+
+  @protected
+  ServerConfig dco_decode_server_config(dynamic raw);
 
   @protected
   ServerDetails dco_decode_server_details(dynamic raw);
@@ -286,6 +339,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   VersionEntry dco_decode_version_entry(dynamic raw);
+
+  @protected
+  WorldDimension dco_decode_world_dimension(dynamic raw);
 
   @protected
   WorldInfo dco_decode_world_info(dynamic raw);
@@ -360,6 +416,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ServerConfig sse_decode_box_autoadd_server_config(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
 
   @protected
@@ -389,6 +450,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double sse_decode_f_64(SseDeserializer deserializer);
 
   @protected
+  FileEntry sse_decode_file_entry(SseDeserializer deserializer);
+
+  @protected
   GeneralSettings sse_decode_general_settings(SseDeserializer deserializer);
 
   @protected
@@ -399,6 +463,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ImportPreview sse_decode_import_preview(SseDeserializer deserializer);
+
+  @protected
+  IpBan sse_decode_ip_ban(SseDeserializer deserializer);
 
   @protected
   JavaReleaseInfo sse_decode_java_release_info(SseDeserializer deserializer);
@@ -431,6 +498,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<BuildEntry> sse_decode_list_build_entry(SseDeserializer deserializer);
 
   @protected
+  List<FileEntry> sse_decode_list_file_entry(SseDeserializer deserializer);
+
+  @protected
+  List<IpBan> sse_decode_list_ip_ban(SseDeserializer deserializer);
+
+  @protected
   List<JavaReleaseInfo> sse_decode_list_java_release_info(
     SseDeserializer deserializer,
   );
@@ -446,9 +519,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<LogFileInfo> sse_decode_list_log_file_info(SseDeserializer deserializer);
+
+  @protected
   List<ModrinthProject> sse_decode_list_modrinth_project(
     SseDeserializer deserializer,
   );
+
+  @protected
+  List<PlayerEntry> sse_decode_list_player_entry(SseDeserializer deserializer);
 
   @protected
   List<PreferredJava> sse_decode_list_preferred_java(
@@ -460,6 +539,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<PropertyEntry> sse_decode_list_property_entry(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<PropertySchema> sse_decode_list_property_schema(
     SseDeserializer deserializer,
   );
 
@@ -488,6 +572,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<WorldInfo> sse_decode_list_world_info(SseDeserializer deserializer);
+
+  @protected
+  LogFileInfo sse_decode_log_file_info(SseDeserializer deserializer);
+
+  @protected
+  LogFileKind sse_decode_log_file_kind(SseDeserializer deserializer);
 
   @protected
   ManagedFolder sse_decode_managed_folder(SseDeserializer deserializer);
@@ -530,6 +620,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PathSettings sse_decode_path_settings(SseDeserializer deserializer);
 
   @protected
+  PlayerEntry sse_decode_player_entry(SseDeserializer deserializer);
+
+  @protected
+  PlayerListKind sse_decode_player_list_kind(SseDeserializer deserializer);
+
+  @protected
+  PlayerLists sse_decode_player_lists(SseDeserializer deserializer);
+
+  @protected
   PreferredJava sse_decode_preferred_java(SseDeserializer deserializer);
 
   @protected
@@ -537,6 +636,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PropertyEntry sse_decode_property_entry(SseDeserializer deserializer);
+
+  @protected
+  PropertyGroup sse_decode_property_group(SseDeserializer deserializer);
+
+  @protected
+  PropertyKind sse_decode_property_kind(SseDeserializer deserializer);
+
+  @protected
+  PropertySchema sse_decode_property_schema(SseDeserializer deserializer);
 
   @protected
   ProviderCategory sse_decode_provider_category(SseDeserializer deserializer);
@@ -552,6 +660,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RamSuggestion sse_decode_ram_suggestion(SseDeserializer deserializer);
+
+  @protected
+  ServerConfig sse_decode_server_config(SseDeserializer deserializer);
 
   @protected
   ServerDetails sse_decode_server_details(SseDeserializer deserializer);
@@ -585,6 +696,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   VersionEntry sse_decode_version_entry(SseDeserializer deserializer);
+
+  @protected
+  WorldDimension sse_decode_world_dimension(SseDeserializer deserializer);
 
   @protected
   WorldInfo sse_decode_world_info(SseDeserializer deserializer);
@@ -677,6 +791,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_server_config(
+    ServerConfig self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
 
   @protected
@@ -716,6 +836,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_f_64(double self, SseSerializer serializer);
 
   @protected
+  void sse_encode_file_entry(FileEntry self, SseSerializer serializer);
+
+  @protected
   void sse_encode_general_settings(
     GeneralSettings self,
     SseSerializer serializer,
@@ -729,6 +852,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_import_preview(ImportPreview self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_ip_ban(IpBan self, SseSerializer serializer);
 
   @protected
   void sse_encode_java_release_info(
@@ -779,6 +905,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_file_entry(
+    List<FileEntry> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_ip_ban(List<IpBan> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_java_release_info(
     List<JavaReleaseInfo> self,
     SseSerializer serializer,
@@ -797,8 +932,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_log_file_info(
+    List<LogFileInfo> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_modrinth_project(
     List<ModrinthProject> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_player_entry(
+    List<PlayerEntry> self,
     SseSerializer serializer,
   );
 
@@ -817,6 +964,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_property_entry(
     List<PropertyEntry> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_property_schema(
+    List<PropertySchema> self,
     SseSerializer serializer,
   );
 
@@ -855,6 +1008,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     List<WorldInfo> self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_log_file_info(LogFileInfo self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_log_file_kind(LogFileKind self, SseSerializer serializer);
 
   @protected
   void sse_encode_managed_folder(ManagedFolder self, SseSerializer serializer);
@@ -908,6 +1067,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_path_settings(PathSettings self, SseSerializer serializer);
 
   @protected
+  void sse_encode_player_entry(PlayerEntry self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_player_list_kind(
+    PlayerListKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_player_lists(PlayerLists self, SseSerializer serializer);
+
+  @protected
   void sse_encode_preferred_java(PreferredJava self, SseSerializer serializer);
 
   @protected
@@ -915,6 +1086,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_property_entry(PropertyEntry self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_property_group(PropertyGroup self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_property_kind(PropertyKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_property_schema(
+    PropertySchema self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_provider_category(
@@ -933,6 +1116,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_ram_suggestion(RamSuggestion self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_server_config(ServerConfig self, SseSerializer serializer);
 
   @protected
   void sse_encode_server_details(ServerDetails self, SseSerializer serializer);
@@ -969,6 +1155,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_version_entry(VersionEntry self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_world_dimension(
+    WorldDimension self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_world_info(WorldInfo self, SseSerializer serializer);

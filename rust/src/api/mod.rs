@@ -5,7 +5,9 @@
 pub mod error;
 pub mod files;
 pub mod panel;
+pub mod players;
 pub mod progress;
+pub mod server;
 pub mod settings;
 pub mod simple;
 pub mod types;

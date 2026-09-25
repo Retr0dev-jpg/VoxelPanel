@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `hash`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `hash`
 
 class AddonInfo {
   final String fileName;
@@ -226,6 +226,47 @@ class CreateServerRequest {
           acceptEula == other.acceptEula;
 }
 
+class FileEntry {
+  final String name;
+
+  /// Path relative to the server folder, with `/` separators.
+  final String relative;
+  final bool isDir;
+  final PlatformInt64 sizeBytes;
+  final PlatformInt64 modifiedMs;
+  final bool editable;
+
+  const FileEntry({
+    required this.name,
+    required this.relative,
+    required this.isDir,
+    required this.sizeBytes,
+    required this.modifiedMs,
+    required this.editable,
+  });
+
+  @override
+  int get hashCode =>
+      name.hashCode ^
+      relative.hashCode ^
+      isDir.hashCode ^
+      sizeBytes.hashCode ^
+      modifiedMs.hashCode ^
+      editable.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FileEntry &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          relative == other.relative &&
+          isDir == other.isDir &&
+          sizeBytes == other.sizeBytes &&
+          modifiedMs == other.modifiedMs &&
+          editable == other.editable;
+}
+
 class ImportPreview {
   final String name;
   final String root;
@@ -297,6 +338,24 @@ class ImportPreview {
           hasEula == other.hasEula;
 }
 
+class IpBan {
+  final String ip;
+  final String reason;
+
+  const IpBan({required this.ip, required this.reason});
+
+  @override
+  int get hashCode => ip.hashCode ^ reason.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is IpBan &&
+          runtimeType == other.runtimeType &&
+          ip == other.ip &&
+          reason == other.reason;
+}
+
 class JavaReleaseInfo {
   final int major;
   final bool lts;
@@ -352,6 +411,43 @@ class JavaRuntimeInfo {
           system == other.system;
 }
 
+class LogFileInfo {
+  final String name;
+  final String relative;
+  final LogFileKind kind;
+  final PlatformInt64 sizeBytes;
+  final PlatformInt64 modifiedMs;
+
+  const LogFileInfo({
+    required this.name,
+    required this.relative,
+    required this.kind,
+    required this.sizeBytes,
+    required this.modifiedMs,
+  });
+
+  @override
+  int get hashCode =>
+      name.hashCode ^
+      relative.hashCode ^
+      kind.hashCode ^
+      sizeBytes.hashCode ^
+      modifiedMs.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LogFileInfo &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          relative == other.relative &&
+          kind == other.kind &&
+          sizeBytes == other.sizeBytes &&
+          modifiedMs == other.modifiedMs;
+}
+
+enum LogFileKind { latest, archive, crash }
+
 class ModrinthProject {
   final String projectId;
   final String slug;
@@ -385,6 +481,69 @@ class ModrinthProject {
           title == other.title &&
           description == other.description &&
           downloads == other.downloads;
+}
+
+class PlayerEntry {
+  final String name;
+  final String uuid;
+
+  /// Ban reason or operator level.
+  final String detail;
+
+  const PlayerEntry({
+    required this.name,
+    required this.uuid,
+    required this.detail,
+  });
+
+  @override
+  int get hashCode => name.hashCode ^ uuid.hashCode ^ detail.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PlayerEntry &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          uuid == other.uuid &&
+          detail == other.detail;
+}
+
+enum PlayerListKind { whitelist, operators, bannedPlayers, bannedIps }
+
+class PlayerLists {
+  final List<PlayerEntry> whitelist;
+  final List<PlayerEntry> operators;
+  final List<PlayerEntry> bannedPlayers;
+  final List<IpBan> bannedIps;
+  final bool whitelistEnabled;
+
+  const PlayerLists({
+    required this.whitelist,
+    required this.operators,
+    required this.bannedPlayers,
+    required this.bannedIps,
+    required this.whitelistEnabled,
+  });
+
+  @override
+  int get hashCode =>
+      whitelist.hashCode ^
+      operators.hashCode ^
+      bannedPlayers.hashCode ^
+      bannedIps.hashCode ^
+      whitelistEnabled.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PlayerLists &&
+          runtimeType == other.runtimeType &&
+          whitelist == other.whitelist &&
+          operators == other.operators &&
+          bannedPlayers == other.bannedPlayers &&
+          bannedIps == other.bannedIps &&
+          whitelistEnabled == other.whitelistEnabled;
 }
 
 class ProgressEvent {
@@ -442,6 +601,70 @@ class PropertyEntry {
           runtimeType == other.runtimeType &&
           key == other.key &&
           value == other.value;
+}
+
+enum PropertyGroup {
+  general,
+  gameplay,
+  world,
+  network,
+  performance,
+  administration,
+  queryRcon,
+  resourcePack,
+}
+
+enum PropertyKind { boolean, integer, text, choice, secret }
+
+class PropertySchema {
+  final String key;
+  final PropertyKind kind;
+  final PropertyGroup group;
+  final String defaultValue;
+  final PlatformInt64? min;
+  final PlatformInt64? max;
+  final List<String> options;
+  final String descriptionIt;
+  final String descriptionEn;
+
+  const PropertySchema({
+    required this.key,
+    required this.kind,
+    required this.group,
+    required this.defaultValue,
+    this.min,
+    this.max,
+    required this.options,
+    required this.descriptionIt,
+    required this.descriptionEn,
+  });
+
+  @override
+  int get hashCode =>
+      key.hashCode ^
+      kind.hashCode ^
+      group.hashCode ^
+      defaultValue.hashCode ^
+      min.hashCode ^
+      max.hashCode ^
+      options.hashCode ^
+      descriptionIt.hashCode ^
+      descriptionEn.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PropertySchema &&
+          runtimeType == other.runtimeType &&
+          key == other.key &&
+          kind == other.kind &&
+          group == other.group &&
+          defaultValue == other.defaultValue &&
+          min == other.min &&
+          max == other.max &&
+          options == other.options &&
+          descriptionIt == other.descriptionIt &&
+          descriptionEn == other.descriptionEn;
 }
 
 enum ProviderCategory { vanilla, plugins, modded, proxy, hybrid, other }
@@ -598,6 +821,66 @@ class RamSuggestion {
           ramMin == other.ramMin &&
           ramMax == other.ramMax &&
           total == other.total;
+}
+
+/// Per-server options edited in the server settings section.
+class ServerConfig {
+  final String name;
+  final String javaHome;
+  final String ramMin;
+  final String ramMax;
+  final List<String> jvmFlags;
+
+  /// Empty: `stop` (or `end` for proxies).
+  final String stopCommand;
+
+  /// 0: use the launcher-wide timeout.
+  final int stopTimeoutSecs;
+  final bool autostart;
+  final bool autoRestart;
+  final bool manageRcon;
+
+  const ServerConfig({
+    required this.name,
+    required this.javaHome,
+    required this.ramMin,
+    required this.ramMax,
+    required this.jvmFlags,
+    required this.stopCommand,
+    required this.stopTimeoutSecs,
+    required this.autostart,
+    required this.autoRestart,
+    required this.manageRcon,
+  });
+
+  @override
+  int get hashCode =>
+      name.hashCode ^
+      javaHome.hashCode ^
+      ramMin.hashCode ^
+      ramMax.hashCode ^
+      jvmFlags.hashCode ^
+      stopCommand.hashCode ^
+      stopTimeoutSecs.hashCode ^
+      autostart.hashCode ^
+      autoRestart.hashCode ^
+      manageRcon.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ServerConfig &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          javaHome == other.javaHome &&
+          ramMin == other.ramMin &&
+          ramMax == other.ramMax &&
+          jvmFlags == other.jvmFlags &&
+          stopCommand == other.stopCommand &&
+          stopTimeoutSecs == other.stopTimeoutSecs &&
+          autostart == other.autostart &&
+          autoRestart == other.autoRestart &&
+          manageRcon == other.manageRcon;
 }
 
 class ServerDetails {
@@ -810,8 +1093,14 @@ class VersionEntry {
           stable == other.stable;
 }
 
+enum WorldDimension { overworld, nether, end }
+
 class WorldInfo {
   final String name;
+  final WorldDimension dimension;
+
+  /// Overworld folder this world belongs to (`world` for `world_nether`).
+  final String group;
   final String path;
   final PlatformInt64 sizeBytes;
   final PlatformInt64 modifiedMs;
@@ -819,6 +1108,8 @@ class WorldInfo {
 
   const WorldInfo({
     required this.name,
+    required this.dimension,
+    required this.group,
     required this.path,
     required this.sizeBytes,
     required this.modifiedMs,
@@ -828,6 +1119,8 @@ class WorldInfo {
   @override
   int get hashCode =>
       name.hashCode ^
+      dimension.hashCode ^
+      group.hashCode ^
       path.hashCode ^
       sizeBytes.hashCode ^
       modifiedMs.hashCode ^
@@ -839,6 +1132,8 @@ class WorldInfo {
       other is WorldInfo &&
           runtimeType == other.runtimeType &&
           name == other.name &&
+          dimension == other.dimension &&
+          group == other.group &&
           path == other.path &&
           sizeBytes == other.sizeBytes &&
           modifiedMs == other.modifiedMs &&

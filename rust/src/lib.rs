@@ -17,10 +17,15 @@ mod paths;
 mod platform;
 mod addons;
 mod process;
+mod players;
 mod properties;
+mod properties_schema;
+mod rcon;
 mod providers;
 mod ram;
 mod scan;
+mod server_files;
+mod server_logs;
 mod script;
 mod worlds;
 
@@ -97,6 +102,31 @@ pub struct ServerRecord {
     pub jvm_flags: Vec<String>,
     pub eula_accepted: bool,
     pub created_unix: i64,
+    /// Sent to stdin to stop the server; `None` uses `stop` (or `end` for proxies).
+    #[serde(default)]
+    pub stop_command: Option<String>,
+    /// Overrides the launcher-wide stop timeout.
+    #[serde(default)]
+    pub stop_timeout_secs: Option<u32>,
+    #[serde(default)]
+    pub autostart: bool,
+    #[serde(default)]
+    pub auto_restart: bool,
+    /// Let VoxelPanel enable RCON on localhost for player lists and metrics.
+    #[serde(default = "default_true")]
+    pub manage_rcon: bool,
+    #[serde(default)]
+    pub rcon: Option<RconConfig>,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RconConfig {
+    pub port: u32,
+    pub password: String,
 }
 
 impl ServerRecord {
@@ -117,7 +147,20 @@ impl ServerRecord {
             jvm_flags: Vec::new(),
             eula_accepted: false,
             created_unix: crate::paths::unix_now(),
+            stop_command: None,
+            stop_timeout_secs: None,
+            autostart: false,
+            auto_restart: false,
+            manage_rcon: true,
+            rcon: None,
         }
+    }
+
+    pub fn stop_command(&self) -> String {
+        self.stop_command
+            .clone()
+            .filter(|command| !command.trim().is_empty())
+            .unwrap_or_else(|| if crate::providers::is_proxy(self.provider) { "end".into() } else { "stop".into() })
     }
 }
 

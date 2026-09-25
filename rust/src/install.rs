@@ -283,7 +283,7 @@ pub async fn delete_server(layout: &Layout, id: &str, delete_files: bool, delete
 }
 
 pub async fn launch(layout: &Layout, id: &str) -> PanelResult<()> {
-    let record = crate::catalog::get(layout, id)?;
+    let mut record = crate::catalog::get(layout, id)?;
     if !record.eula_accepted && !providers::is_proxy(record.provider) {
         return Err(PanelError::new(ErrorCode::EulaRequired, "Accetta l'EULA prima di avviare il server."));
     }
@@ -296,6 +296,9 @@ pub async fn launch(layout: &Layout, id: &str) -> PanelResult<()> {
     }
     if let Some(target) = record.launch.target().filter(|target| !target.exists()) {
         return Err(PanelError::not_found(format!("File di avvio non trovato: {}", target.display())));
+    }
+    if let Err(error) = crate::rcon::ensure_configured(layout, &mut record) {
+        tracing::warn!(server = id, "RCON non configurato: {}", error.message);
     }
     crate::script::generate(&record.root, &record)?;
     crate::process::start(id, &java, &args, &record.root).await

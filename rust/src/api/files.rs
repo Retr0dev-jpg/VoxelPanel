@@ -104,6 +104,8 @@ pub async fn list_worlds(id: String) -> PanelResult<Vec<WorldInfo>> {
         .into_iter()
         .map(|world| WorldInfo {
             name: world.name,
+            dimension: world.dimension,
+            group: world.group,
             path: world.path.to_string_lossy().to_string(),
             size_bytes: world.size_bytes as i64,
             modified_ms: world.modified_ms,
@@ -126,6 +128,61 @@ pub async fn delete_world(id: String, name: String) -> PanelResult<()> {
     let path = crate::worlds::resolve(&record.root, &name)?;
     tokio::fs::remove_dir_all(path).await?;
     Ok(())
+}
+
+/// Imports a world from a folder or a `.zip` under the given name.
+pub async fn import_world(id: String, source_path: String, name: String) -> PanelResult<()> {
+    process::ensure_stopped(&id)?;
+    let root = crate::catalog::get(&Layout::app(), &id)?.root;
+    tokio::task::spawn_blocking(move || crate::worlds::import(&root, std::path::Path::new(&source_path), name.trim())).await?
+}
+
+/// Renames a world with its dimensions, keeping it active if it was.
+pub async fn rename_world(id: String, name: String, new_name: String) -> PanelResult<()> {
+    process::ensure_stopped(&id)?;
+    let record = crate::catalog::get(&Layout::app(), &id)?;
+    let new_name = new_name.trim().to_string();
+    crate::worlds::rename(&record.root, &name, &new_name)?;
+    let mut settings = crate::properties::read_settings(&record.root);
+    if settings.level_name == name {
+        settings.level_name = new_name;
+        crate::install::save_settings(&Layout::app(), &id, &settings)?;
+    }
+    Ok(())
+}
+
+/// Deletes a world and its dimensions so the next start generates a new one, optionally with a new seed.
+pub async fn reset_world(id: String, name: String, seed: String) -> PanelResult<()> {
+    process::ensure_stopped(&id)?;
+    let record = crate::catalog::get(&Layout::app(), &id)?;
+    let root = record.root.clone();
+    let group = name.clone();
+    tokio::task::spawn_blocking(move || crate::worlds::reset(&root, &group)).await??;
+    let mut settings = crate::properties::read_settings(&record.root);
+    if settings.level_name == name {
+        settings.level_seed = seed.trim().to_string();
+        crate::install::save_settings(&Layout::app(), &id, &settings)?;
+    }
+    Ok(())
+}
+
+pub async fn backup_world(id: String, name: String, sink: StreamSink<ProgressEvent>) -> PanelResult<()> {
+    let record = crate::catalog::get(&Layout::app(), &id)?;
+    report(
+        sink,
+        "Backup",
+        move |file_name: &String| (format!("Backup del mondo {file_name} creato."), Some(id)),
+        |tx| async move {
+            tx.emit("Backup", format!("Backup del mondo {name}..."), None);
+            let directory = Layout::app().backups(&record.id);
+            let file_name = format!("world-{name}-{}.zip", crate::paths::unix_now());
+            let destination = directory.join(&file_name);
+            let root = record.root.clone();
+            tokio::task::spawn_blocking(move || crate::worlds::backup(&root, &name, &destination)).await??;
+            Ok(file_name)
+        },
+    )
+    .await
 }
 
 pub async fn open_in_explorer(path: String) -> PanelResult<()> {

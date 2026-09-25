@@ -7,8 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxel_panel/screens/server/addons_tab.dart';
 import 'package:voxel_panel/screens/server/backups_tab.dart';
 import 'package:voxel_panel/screens/server/console_tab.dart';
+import 'package:voxel_panel/screens/server/files_tab.dart';
+import 'package:voxel_panel/screens/server/logs_tab.dart';
 import 'package:voxel_panel/screens/server/overview_tab.dart';
+import 'package:voxel_panel/screens/server/players_tab.dart';
 import 'package:voxel_panel/screens/server/properties_tab.dart';
+import 'package:voxel_panel/screens/server/server_settings_tab.dart';
 import 'package:voxel_panel/screens/server/worlds_tab.dart';
 import 'package:voxel_panel/src/l10n.dart';
 import 'package:voxel_panel/src/providers.dart';
@@ -28,18 +32,22 @@ class ServerScreen extends ConsumerStatefulWidget {
   ConsumerState<ServerScreen> createState() => _ServerScreenState();
 }
 
-enum ServerSection { overview, console, properties, plugins, mods, worlds, backups }
+enum ServerSection { overview, console, players, settings, properties, files, plugins, mods, worlds, backups, logs }
 
 /// Sections that make sense for a server type: proxies have no worlds or server.properties,
 /// mod loaders get a mods section instead of (or next to) plugins.
 List<ServerSection> sectionsFor(ProviderInfo info) => [
   ServerSection.overview,
   ServerSection.console,
+  if (!info.isProxy) ServerSection.players,
+  ServerSection.settings,
   if (!info.isProxy) ServerSection.properties,
+  ServerSection.files,
   if (info.supportsPlugins) ServerSection.plugins,
   if (info.supportsMods) ServerSection.mods,
   if (info.hasWorlds) ServerSection.worlds,
   ServerSection.backups,
+  ServerSection.logs,
 ];
 
 class _ServerScreenState extends ConsumerState<ServerScreen> {
@@ -50,6 +58,10 @@ class _ServerScreenState extends ConsumerState<ServerScreen> {
   SidebarEntry _entry(AppLocalizations l, ServerSection section) => switch (section) {
     ServerSection.overview => SidebarEntry(label: l.tabOverview, icon: Icons.space_dashboard_outlined),
     ServerSection.console => SidebarEntry(label: l.tabConsole, icon: Icons.terminal_outlined),
+    ServerSection.players => SidebarEntry(label: l.tabPlayers, icon: Icons.people_outline),
+    ServerSection.settings => SidebarEntry(label: l.tabSettings, icon: Icons.settings_applications_outlined),
+    ServerSection.files => SidebarEntry(label: l.tabFiles, icon: Icons.folder_outlined),
+    ServerSection.logs => SidebarEntry(label: l.tabLogs, icon: Icons.receipt_long_outlined),
     ServerSection.properties => SidebarEntry(label: l.tabProperties, icon: Icons.tune),
     ServerSection.plugins => SidebarEntry(label: l.tabPlugins, icon: Icons.extension_outlined),
     ServerSection.mods => SidebarEntry(label: l.tabMods, icon: Icons.widgets_outlined),
@@ -120,7 +132,20 @@ class _ServerScreenState extends ConsumerState<ServerScreen> {
         },
       ),
       ServerSection.console => ConsoleTab(serverId: widget.serverId, running: status == ServerStatus.running || status == ServerStatus.starting),
-      ServerSection.properties => PropertiesTab(serverId: widget.serverId),
+      ServerSection.players => PlayersTab(serverId: widget.serverId, running: status == ServerStatus.running),
+      ServerSection.settings => ServerSettingsTab(
+        details: details,
+        running: status.isActive,
+        onChanged: _refresh,
+        onChangeVersion: () async {
+          if (await showChangeVersionDialog(context, details)) {
+            _refresh();
+          }
+        },
+      ),
+      ServerSection.properties => PropertiesTab(serverId: widget.serverId, running: status.isActive),
+      ServerSection.files => FilesTab(serverId: widget.serverId, running: status.isActive),
+      ServerSection.logs => LogsTab(serverId: widget.serverId),
       ServerSection.plugins => AddonsTab(serverId: widget.serverId, running: status.isActive, kind: AddonKind.plugin),
       ServerSection.mods => AddonsTab(serverId: widget.serverId, running: status.isActive, kind: AddonKind.mod),
       ServerSection.worlds => WorldsTab(serverId: widget.serverId, running: status.isActive),

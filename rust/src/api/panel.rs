@@ -271,12 +271,12 @@ pub async fn start_server(id: String) -> PanelResult<()> {
 }
 
 pub async fn stop_server(id: String) -> PanelResult<()> {
-    process::stop(&id, process::stop_timeout()).await
+    process::stop_server(&id).await
 }
 
 pub async fn restart_server(id: String) -> PanelResult<()> {
     if process::is_running(&id) {
-        process::stop(&id, process::stop_timeout()).await?;
+        process::stop_server(&id).await?;
     }
     install::launch(&Layout::app(), &id).await
 }
@@ -286,7 +286,7 @@ pub async fn send_command(id: String, command: String) -> PanelResult<()> {
 }
 
 pub async fn shutdown_all() -> PanelResult<()> {
-    process::shutdown_all(process::stop_timeout()).await;
+    process::shutdown_all().await;
     Ok(())
 }
 

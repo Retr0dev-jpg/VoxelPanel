@@ -205,26 +205,13 @@ pub fn write_entries(root: &Path, entries: &[(String, String)]) -> crate::PanelR
 
 fn validate_entry(key: &str, value: &str) -> crate::PanelResult<()> {
     if key.is_empty() || key.contains(['\n', '\r', '=']) || value.contains(['\n', '\r']) {
-        return Err(crate::PanelError::from(format!("Proprietà non valida: {key}")));
+        return Err(crate::PanelError::invalid(format!("Proprietà non valida: {key}")));
     }
     match key {
-        "motd" if value.chars().count() > 256 => Err("MOTD non valido".into()),
-        "server-port" => parse_range(value, 1, 65535, "Porta non valida"),
-        "max-players" => parse_range(value, 1, 100_000, "Numero massimo di giocatori non valido"),
-        "view-distance" | "simulation-distance" => parse_range(value, 2, 64, "Distanza di visualizzazione non valida"),
-        "spawn-protection" => parse_range(value, 0, 999, "Spawn protection non valida"),
-        "level-name" if !valid_level_name(value) => Err("Nome mondo non valido".into()),
-        "level-seed" if value.chars().count() > 128 => Err("Seed non valido".into()),
-        _ => Ok(()),
-    }
-}
-
-fn parse_range(value: &str, min: u32, max: u32, message: &str) -> crate::PanelResult<()> {
-    let parsed: u32 = value.parse().map_err(|_| message.to_string())?;
-    if (min..=max).contains(&parsed) {
-        Ok(())
-    } else {
-        Err(message.into())
+        "motd" if value.chars().count() > 256 => Err(crate::PanelError::invalid("MOTD non valido")),
+        "level-name" if !valid_level_name(value) => Err(crate::PanelError::invalid("Nome mondo non valido")),
+        "level-seed" if value.chars().count() > 128 => Err(crate::PanelError::invalid("Seed non valido")),
+        _ => crate::properties_schema::validate(key, value).map_err(crate::PanelError::invalid),
     }
 }
 

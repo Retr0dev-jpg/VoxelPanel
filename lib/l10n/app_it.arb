@@ -158,20 +158,13 @@
   "consoleNotRunning": "Avvia il server per inviare comandi",
   "propertiesSearch": "Cerca una proprietà",
   "propertiesMissing": "server.properties non esiste ancora: verrà creato al primo avvio.",
-  "propertiesSaved": "Proprietà salvate. Riavvia il server per applicarle.",
   "propMotd": "MOTD",
   "propPort": "Porta",
   "propMaxPlayers": "Giocatori massimi",
   "propDifficulty": "Difficoltà",
   "propGamemode": "Modalità di gioco",
-  "propViewDistance": "Distanza di visualizzazione",
-  "propSimulationDistance": "Distanza di simulazione",
-  "propSpawnProtection": "Protezione dello spawn",
-  "propLevelName": "Nome del mondo",
   "propLevelSeed": "Seed",
   "propOnlineMode": "Online mode",
-  "propWhitelist": "Whitelist",
-  "propPvp": "PvP",
   "difficultyPeaceful": "Pacifica",
   "difficultyEasy": "Facile",
   "difficultyNormal": "Normale",
@@ -557,5 +550,122 @@
   "installModJar": "Installa mod (.jar)",
   "stopToEditMods": "Ferma il server prima di modificare le mod.",
   "noMods": "Nessuna mod installata.",
-  "searchMods": "Cerca mod"
+  "searchMods": "Cerca mod",
+  "tabPlayers": "Giocatori",
+  "tabSettings": "Impostazioni",
+  "tabFiles": "File",
+  "tabLogs": "Log",
+  "add": "Aggiungi",
+  "remove": "Rimuovi",
+  "edit": "Modifica",
+  "rename": "Rinomina",
+  "reload": "Ricarica",
+  "discard": "Scarta",
+  "unsaved": "Modifiche non salvate",
+  "serverIdentity": "Identità",
+  "serverIcon": "Icona del server",
+  "serverIconHint": "L'icona viene convertita in PNG 64×64 e mostrata nell'elenco dei server di Minecraft.",
+  "changeIcon": "Cambia icona",
+  "removeIcon": "Rimuovi icona",
+  "serverBehaviour": "Avvio e arresto",
+  "stopCommand": "Comando di arresto",
+  "useLauncherDefault": "Predefinito",
+  "serverAutostart": "Avvia all'apertura di VoxelPanel",
+  "serverAutostartHint": "Richiede l'avvio automatico dei server nelle impostazioni del launcher.",
+  "serverAutoRestart": "Riavvia dopo un crash",
+  "serverAutoRestartHint": "Se il server si chiude in modo inatteso viene riavviato, con attese crescenti tra i tentativi.",
+  "manageRcon": "RCON gestito da VoxelPanel",
+  "manageRconHint": "Abilita RCON con una password casuale per leggere giocatori e prestazioni senza scrivere in console.",
+  "stopToEditRuntime": "Java, RAM e flag si possono cambiare solo a server fermo.",
+  "serverSettingsSaved": "Impostazioni del server salvate.",
+  "propertiesForm": "Modulo",
+  "propertiesRaw": "Testo",
+  "propertiesSavedOk": "Proprietà salvate.",
+  "propertiesSavedRestart": "Proprietà salvate. Riavvia il server per applicarle.",
+  "restartRequired": "Alcune modifiche saranno attive dopo il riavvio del server.",
+  "groupGeneral": "Generale",
+  "groupGameplay": "Gameplay",
+  "groupWorld": "Mondo",
+  "groupNetwork": "Rete",
+  "groupPerformance": "Prestazioni",
+  "groupAdministration": "Amministrazione",
+  "groupQueryRcon": "Query e RCON",
+  "groupResourcePack": "Resource pack",
+  "groupOther": "Altre proprietà",
+  "configFiles": "Configurazione",
+  "fileBrowser": "Esplora file",
+  "noConfigFiles": "Nessun file di configurazione ancora: vengono creati al primo avvio.",
+  "serverFolderShort": "Server",
+  "newFolder": "Nuova cartella",
+  "importFiles": "Importa file",
+  "emptyFolder": "Cartella vuota.",
+  "exportCopy": "Esporta una copia",
+  "exported": "Copia esportata.",
+  "deletePathTitle": "Eliminare {name}?",
+  "@deletePathTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deletePathMessage": "Il file o la cartella verrà eliminato definitivamente.",
+  "discardChangesTitle": "Scartare le modifiche?",
+  "discardChangesMessage": "Le modifiche non salvate andranno perse.",
+  "fileSaved": "File salvato.",
+  "fileSavedRestart": "File salvato. Riavvia il server per applicare le modifiche.",
+  "playersLiveHint": "Il server è acceso: le modifiche vengono applicate con i comandi del server.",
+  "playersOfflineHint": "Il server è fermo: le modifiche vengono scritte nei file e saranno attive al prossimo avvio.",
+  "playersOnline": "Online ({count})",
+  "@playersOnline": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "whitelist": "Whitelist",
+  "whitelistEnabled": "Whitelist attiva",
+  "operators": "Operatori",
+  "opLevel": "Livello {level}",
+  "@opLevel": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "bannedPlayers": "Giocatori bannati",
+  "bannedIps": "IP bannati",
+  "playerNameHint": "Nome del giocatore",
+  "ipHint": "Indirizzo IP",
+  "kick": "Espelli",
+  "ban": "Banna",
+  "makeOp": "Rendi operatore",
+  "removeOp": "Togli operatore",
+  "commandSent": "Comando inviato.",
+  "noLogs": "Nessun log ancora.",
+  "selectLog": "Scegli un file di log.",
+  "importWorld": "Importa mondo",
+  "importWorldZip": "Importa da zip",
+  "importWorldFolder": "Importa da cartella",
+  "worldName": "Nome del mondo",
+  "worldImported": "Mondo importato.",
+  "renameWorld": "Rinomina mondo",
+  "backupWorld": "Backup del mondo",
+  "resetWorldTitle": "Rigenerare il mondo {name}?",
+  "@resetWorldTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "resetWorldMessage": "Il mondo e le sue dimensioni vengono eliminati; al prossimo avvio ne verrà generato uno nuovo.",
+  "newSeed": "Seed del nuovo mondo",
+  "worldReset": "Mondo eliminato: verrà rigenerato al prossimo avvio.",
+  "stopToEditWorlds": "Ferma il server per importare, rinominare o eliminare i mondi.",
+  "dimensionOverworld": "Overworld",
+  "dimensionNether": "Nether",
+  "dimensionEnd": "End"
 }

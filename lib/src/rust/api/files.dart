@@ -88,6 +88,42 @@ Future<void> setActiveWorld({required String id, required String name}) =>
 Future<void> deleteWorld({required String id, required String name}) =>
     RustLib.instance.api.crateApiFilesDeleteWorld(id: id, name: name);
 
+/// Imports a world from a folder or a `.zip` under the given name.
+Future<void> importWorld({
+  required String id,
+  required String sourcePath,
+  required String name,
+}) => RustLib.instance.api.crateApiFilesImportWorld(
+  id: id,
+  sourcePath: sourcePath,
+  name: name,
+);
+
+/// Renames a world with its dimensions, keeping it active if it was.
+Future<void> renameWorld({
+  required String id,
+  required String name,
+  required String newName,
+}) => RustLib.instance.api.crateApiFilesRenameWorld(
+  id: id,
+  name: name,
+  newName: newName,
+);
+
+/// Deletes a world and its dimensions so the next start generates a new one, optionally with a new seed.
+Future<void> resetWorld({
+  required String id,
+  required String name,
+  required String seed,
+}) => RustLib.instance.api.crateApiFilesResetWorld(
+  id: id,
+  name: name,
+  seed: seed,
+);
+
+Stream<ProgressEvent> backupWorld({required String id, required String name}) =>
+    RustLib.instance.api.crateApiFilesBackupWorld(id: id, name: name);
+
 Future<void> openInExplorer({required String path}) =>
     RustLib.instance.api.crateApiFilesOpenInExplorer(path: path);
 

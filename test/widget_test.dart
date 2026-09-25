@@ -1,9 +1,11 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:voxel_panel/screens/create/create_validation.dart';
 import 'package:voxel_panel/screens/server/console_tab.dart';
 import 'package:voxel_panel/screens/server/server_screen.dart';
 import 'package:voxel_panel/src/providers.dart';
 import 'package:voxel_panel/src/rust/api/types.dart';
+import 'package:voxel_panel/widgets/code_editor.dart';
 import 'package:voxel_panel/widgets/provider_icon.dart';
 import 'package:voxel_panel/widgets/server_list_view.dart';
 
@@ -72,9 +74,13 @@ void main() {
     expect(sectionsFor(_info(ProviderKind.velocity, plugins: true, proxy: true)), [
       ServerSection.overview,
       ServerSection.console,
+      ServerSection.settings,
+      ServerSection.files,
       ServerSection.plugins,
       ServerSection.backups,
+      ServerSection.logs,
     ]);
+    expect(sectionsFor(_info(ProviderKind.paper, plugins: true)), containsAll([ServerSection.players, ServerSection.properties]));
     final fabric = sectionsFor(_info(ProviderKind.fabric, mods: true));
     expect(fabric, contains(ServerSection.mods));
     expect(fabric, isNot(contains(ServerSection.plugins)));
@@ -93,6 +99,33 @@ void main() {
     expect(validateStep(WizardStep.summary, _input(eula: false)), CreateIssue.eulaNotAccepted);
     expect(validateStep(WizardStep.summary, _input(eula: false, needsEula: false)), isNull);
     expect(validateAll(_input()), isNull);
+  });
+
+  test('il linguaggio dei file di configurazione viene riconosciuto', () {
+    expect(languageOf('config/paper-global.yml'), CodeLanguage.yaml);
+    expect(languageOf('velocity.toml'), CodeLanguage.toml);
+    expect(languageOf('server.properties'), CodeLanguage.properties);
+    expect(languageOf('ops.json'), CodeLanguage.json);
+    expect(languageOf('start.sh'), CodeLanguage.plain);
+  });
+
+  testWidgets('l\'editor evidenzia chiavi e commenti YAML', (tester) async {
+    final controller = HighlightingController(text: '# nota\nchunks: 8\n', language: CodeLanguage.yaml);
+    late TextSpan span;
+    await pumpApp(
+      tester,
+      Builder(
+        builder: (context) {
+          span = controller.buildTextSpan(context: context, withComposing: false);
+          return const SizedBox();
+        },
+      ),
+    );
+    final parts = span.children!.cast<TextSpan>();
+    expect(parts.first.text, '# nota');
+    expect(parts.first.style?.fontStyle, FontStyle.italic);
+    expect(parts.any((part) => part.text == 'chunks' && part.style?.fontWeight == FontWeight.w600), isTrue);
+    controller.dispose();
   });
 
   test('i valori di memoria si convertono in entrambi i sensi', () {

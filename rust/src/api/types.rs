@@ -248,6 +248,9 @@ pub struct ModrinthProject {
 #[derive(Debug, Clone)]
 pub struct WorldInfo {
     pub name: String,
+    pub dimension: WorldDimension,
+    /// Overworld folder this world belongs to (`world` for `world_nether`).
+    pub group: String,
     pub path: String,
     pub size_bytes: i64,
     pub modified_ms: i64,
@@ -270,4 +273,120 @@ pub struct AppPaths {
     pub backups: String,
     pub cache: String,
     pub logs: String,
+}
+
+/// Per-server options edited in the server settings section.
+#[derive(Debug, Clone)]
+pub struct ServerConfig {
+    pub name: String,
+    pub java_home: String,
+    pub ram_min: String,
+    pub ram_max: String,
+    pub jvm_flags: Vec<String>,
+    /// Empty: `stop` (or `end` for proxies).
+    pub stop_command: String,
+    /// 0: use the launcher-wide timeout.
+    pub stop_timeout_secs: u32,
+    pub autostart: bool,
+    pub auto_restart: bool,
+    pub manage_rcon: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PropertyKind {
+    Boolean,
+    Integer,
+    Text,
+    Choice,
+    Secret,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PropertyGroup {
+    General,
+    Gameplay,
+    World,
+    Network,
+    Performance,
+    Administration,
+    QueryRcon,
+    ResourcePack,
+}
+
+#[derive(Debug, Clone)]
+pub struct PropertySchema {
+    pub key: String,
+    pub kind: PropertyKind,
+    pub group: PropertyGroup,
+    pub default_value: String,
+    pub min: Option<i64>,
+    pub max: Option<i64>,
+    pub options: Vec<String>,
+    pub description_it: String,
+    pub description_en: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct FileEntry {
+    pub name: String,
+    /// Path relative to the server folder, with `/` separators.
+    pub relative: String,
+    pub is_dir: bool,
+    pub size_bytes: i64,
+    pub modified_ms: i64,
+    pub editable: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LogFileKind {
+    Latest,
+    Archive,
+    Crash,
+}
+
+#[derive(Debug, Clone)]
+pub struct LogFileInfo {
+    pub name: String,
+    pub relative: String,
+    pub kind: LogFileKind,
+    pub size_bytes: i64,
+    pub modified_ms: i64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PlayerListKind {
+    Whitelist,
+    Operators,
+    BannedPlayers,
+    BannedIps,
+}
+
+#[derive(Debug, Clone)]
+pub struct PlayerEntry {
+    pub name: String,
+    pub uuid: String,
+    /// Ban reason or operator level.
+    pub detail: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct IpBan {
+    pub ip: String,
+    pub reason: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct PlayerLists {
+    pub whitelist: Vec<PlayerEntry>,
+    pub operators: Vec<PlayerEntry>,
+    pub banned_players: Vec<PlayerEntry>,
+    pub banned_ips: Vec<IpBan>,
+    pub whitelist_enabled: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WorldDimension {
+    Overworld,
+    Nether,
+    End,
 }

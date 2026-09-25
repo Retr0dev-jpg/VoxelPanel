@@ -102,8 +102,18 @@ fn events() -> &'static broadcast::Sender<RuntimeSnapshot> {
     EVENTS.get_or_init(|| broadcast::channel(256).0)
 }
 
-pub fn stop_timeout() -> Duration {
-    Duration::from_secs(u64::from(crate::launcher_settings::current().general.stop_timeout_secs))
+/// Stop command and timeout of a server: its own settings, then the launcher default.
+pub fn stop_params(id: &str) -> (String, Duration) {
+    let fallback = crate::launcher_settings::current().general.stop_timeout_secs;
+    match crate::catalog::get(&crate::paths::Layout::app(), id) {
+        Ok(record) => (record.stop_command(), Duration::from_secs(u64::from(record.stop_timeout_secs.unwrap_or(fallback)))),
+        Err(_) => ("stop".into(), Duration::from_secs(u64::from(fallback))),
+    }
+}
+
+pub async fn stop_server(id: &str) -> PanelResult<()> {
+    let (command, timeout) = stop_params(id);
+    stop(id, timeout, &command).await
 }
 
 pub fn subscribe_events() -> broadcast::Receiver<RuntimeSnapshot> {
@@ -382,13 +392,13 @@ pub async fn send_command(id: &str, command: &str) -> PanelResult<()> {
     Ok(())
 }
 
-pub async fn stop(id: &str, timeout: Duration) -> PanelResult<()> {
+pub async fn stop(id: &str, timeout: Duration, command: &str) -> PanelResult<()> {
     let pid = pid_of(id).ok_or_else(PanelError::stopped)?;
     update(id, |runtime| {
         runtime.status = Some(RunStatus::Stopping);
         runtime.stop_requested = true;
     });
-    let _ = send_command(id, "stop").await;
+    let _ = send_command(id, command).await;
     if wait_exit(id, pid, timeout).await {
         return Ok(());
     }
@@ -412,9 +422,9 @@ async fn wait_exit(id: &str, pid: u32, timeout: Duration) -> bool {
     pid_of(id) != Some(pid)
 }
 
-pub async fn shutdown_all(timeout: Duration) {
+pub async fn shutdown_all() {
     let stops = running_ids().into_iter().map(|id| async move {
-        let _ = stop(&id, timeout).await;
+        let _ = stop_server(&id).await;
     });
     futures::future::join_all(stops).await;
 }
