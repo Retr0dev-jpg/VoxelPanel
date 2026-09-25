@@ -1,4 +1,4 @@
-name: Build and Latest Release
+name: Build and Release
 
 on:
   push:
@@ -9,55 +9,97 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    runs-on: windows-latest
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+          - os: ubuntu-latest
+            platform: linux
+          - os: macos-latest
+            platform: macos
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Linux build dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-14-dev
 
       - name: Build
+        shell: bash
+        run: |
+          flutter config --enable-${{ matrix.platform }}-desktop
+          flutter build ${{ matrix.platform }} --release
+
+      - name: Package Windows
+        if: matrix.platform == 'windows'
         shell: pwsh
         run: |
-          flutter config --enable-windows-desktop
-          flutter build windows --release
-          $release = Join-Path $env:GITHUB_WORKSPACE "build\windows\x64\runner\Release"
-          $exe = Join-Path $release "voxel_panel.exe"
-          if (-not (Test-Path -LiteralPath $exe)) { throw "Missing artifact $exe" }
-          $zip = Join-Path $env:GITHUB_WORKSPACE "build\voxel_panel-windows.zip"
-          if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip }
-          Compress-Archive -Path (Join-Path $release "*") -DestinationPath $zip
+          $release = "build\windows\x64\runner\Release"
+          if (-not (Test-Path -LiteralPath "$release\voxel_panel.exe")) { throw "Missing voxel_panel.exe" }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path "$release\*" -DestinationPath "dist\VoxelPanel-windows-x64.zip"
 
-      - name: Publish Latest GitHub Release
+      - name: Package Linux
+        if: matrix.platform == 'linux'
+        run: |
+          mkdir -p dist
+          tar -czf dist/VoxelPanel-linux-x64.tar.gz -C build/linux/x64/release/bundle .
+
+      - name: Package macOS
+        if: matrix.platform == 'macos'
+        run: |
+          mkdir -p dist
+          app="build/macos/Build/Products/Release/VoxelPanel.app"
+          test -d "$app"
+          hdiutil create -volname VoxelPanel -srcfolder "$app" -ov -format UDZO dist/VoxelPanel-macos.dmg
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: voxelpanel-${{ matrix.platform }}
+          path: dist/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Read version
+        id: version
+        run: |
+          version=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' pubspec.yaml)
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      # Published versions are never overwritten: bump `version` in pubspec.yaml to release.
+      - name: Publish release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: pwsh
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          $sha = "${{ github.sha }}"
-          $run = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          $notes = @"
-          Automated build.
-
-          - Commit: ``$sha``
-          - Workflow run: $run
-          "@
-          $files = @(
-            (Join-Path $env:GITHUB_WORKSPACE "build\voxel_panel-windows.zip")
-          )
-          foreach ($f in $files) {
-            if (-not (Test-Path -LiteralPath $f)) { throw "Missing artifact $f" }
-          }
-          gh release delete latest --yes --cleanup-tag 2>$null
-          gh release create latest @files `
-            --title "Latest" `
-            --notes $notes `
-            --latest `
-            --target $sha
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists, skipping."
+            exit 0
+          fi
+          gh release create "$TAG" dist/* \
+            --title "VoxelPanel $TAG" \
+            --generate-notes \
+            --latest \
+            --target "${{ github.sha }}"

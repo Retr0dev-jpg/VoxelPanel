@@ -259,27 +259,14 @@ pub async fn launch(layout: &Layout, id: &str) -> crate::PanelResult<()> {
         ));
     }
     crate::script::write_eula(&record.root)?;
-    let java_home = record.java_home.as_ref().ok_or("Runtime Java non configurato")?;
-    let java = crate::java_runtime::java_executable(java_home);
+    let (java, args) = crate::script::command_line(&record)?;
     if !java.exists() {
-        return Err(crate::PanelError::from(format!("Java non trovato: {}", java.display())));
+        return Err(crate::PanelError::not_found(format!("Java non trovato: {}", java.display())));
     }
-    let jar = record.jar_path.as_ref().ok_or("Jar server non configurato")?;
-    if !jar.exists() {
-        return Err(crate::PanelError::from(format!("Jar non trovato: {}", jar.display())));
-    }
-    if !crate::ram::is_memory_value(&record.ram_min) || !crate::ram::is_memory_value(&record.ram_max) {
-        return Err("RAM non valida.".into());
+    if let Some(jar) = record.jar_path.as_ref().filter(|jar| !jar.exists()) {
+        return Err(crate::PanelError::not_found(format!("Jar non trovato: {}", jar.display())));
     }
     crate::script::generate(&record.root, &record)?;
-    let mut args = vec![
-        format!("-Xms{}", record.ram_min),
-        format!("-Xmx{}", record.ram_max),
-    ];
-    args.extend(record.jvm_flags.clone());
-    args.push("-jar".into());
-    args.push(jar.to_string_lossy().to_string());
-    args.push("nogui".into());
     crate::process::start(id, &java, &args, &record.root).await
 }
 
@@ -425,6 +412,8 @@ mod tests {
         };
         let server = layout.root.join("old-server");
         let runtime = server.join("runtime").join("jdk-21.0.2").join("bin");
+        fs::create_dir_all(&runtime).unwrap();
+        fs::write(runtime.join(crate::platform::JAVA_BINARY), b"").unwrap();
         fs::create_dir_all(&runtime).unwrap();
         fs::create_dir_all(server.join("plugins")).unwrap();
         fs::create_dir_all(server.join("world")).unwrap();

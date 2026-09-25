@@ -139,50 +139,7 @@ pub async fn open_in_explorer(path: String) -> PanelResult<()> {
     if !path.is_dir() {
         return Err(PanelError::not_found("Cartella non trovata"));
     }
-    // explorer.exe parses its own command line. Rust quotes arguments that contain
-    // spaces (typical under C:\Users\Marco Simone\...), and a quoted directory makes
-    // explorer open Documents instead of that folder. ShellExecuteW passes the path
-    // as a wide string and skips that parser.
-    open_directory(&path)
-}
-
-#[cfg(windows)]
-fn open_directory(path: &std::path::Path) -> PanelResult<()> {
-    use std::os::windows::ffi::OsStrExt;
-    use windows::core::PCWSTR;
-    use windows::Win32::UI::Shell::ShellExecuteW;
-    use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
-
-    let mut file: Vec<u16> = path.as_os_str().encode_wide().collect();
-    file.push(0);
-    let operation: Vec<u16> = "explore".encode_utf16().chain(std::iter::once(0)).collect();
-    let code = unsafe {
-        ShellExecuteW(
-            None,
-            PCWSTR(operation.as_ptr()),
-            PCWSTR(file.as_ptr()),
-            PCWSTR::null(),
-            PCWSTR::null(),
-            SW_SHOWNORMAL,
-        )
-    };
-    // Values <= 32 are Win32 error codes, not an instance handle.
-    if (code.0 as isize) <= 32 {
-        return Err(PanelError::io(format!(
-            "Impossibile aprire la cartella (codice {})",
-            code.0 as isize
-        )));
-    }
-    Ok(())
-}
-
-#[cfg(not(windows))]
-fn open_directory(path: &std::path::Path) -> PanelResult<()> {
-    std::process::Command::new("xdg-open")
-        .arg(path)
-        .spawn()
-        .map_err(|error| PanelError::io(format!("Impossibile aprire la cartella: {error}")))?;
-    Ok(())
+    crate::platform::open_directory(&path)
 }
 
 pub async fn list_backups(id: String) -> PanelResult<Vec<BackupInfo>> {

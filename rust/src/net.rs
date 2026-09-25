@@ -69,27 +69,86 @@ pub async fn download(
     Ok(())
 }
 
+/// Extracts `.zip` or `.tar.gz` archives (Adoptium ships zip on Windows, tar.gz elsewhere).
+pub fn extract_archive(archive: &Path, destination: &Path) -> crate::PanelResult<()> {
+    let name = archive
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default()
+        .to_lowercase();
+    if name.ends_with(".tar.gz") || name.ends_with(".tgz") {
+        extract_tar_gz(archive, destination)
+    } else {
+        extract_zip(archive, destination)
+    }
+}
+
+pub fn extract_tar_gz(archive: &Path, destination: &Path) -> crate::PanelResult<()> {
+    crate::paths::ensure_dir(destination)?;
+    let file = std::fs::File::open(archive)
+        .map_err(|error| crate::PanelError::io(format!("Archivio illeggibile: {error}")))?;
+    let mut tar = tar::Archive::new(flate2::read::GzDecoder::new(file));
+    tar.set_preserve_permissions(true);
+    // `unpack` refuses entries that escape the destination folder.
+    tar.unpack(destination)
+        .map_err(|error| crate::PanelError::io(format!("Estrazione non riuscita: {error}")))
+}
+
 pub fn extract_zip(archive: &Path, destination: &Path) -> crate::PanelResult<()> {
     crate::paths::ensure_dir(destination)?;
-    let file = std::fs::File::open(archive).map_err(|error| format!("Archivio illeggibile: {error}"))?;
-    let mut zip = zip::ZipArchive::new(file).map_err(|error| format!("Zip non valido: {error}"))?;
+    let file = std::fs::File::open(archive)
+        .map_err(|error| crate::PanelError::io(format!("Archivio illeggibile: {error}")))?;
+    let mut zip = zip::ZipArchive::new(file).map_err(|error| crate::PanelError::invalid(format!("Zip non valido: {error}")))?;
     for index in 0..zip.len() {
         let mut entry = zip
             .by_index(index)
-            .map_err(|error| format!("Voce zip illeggibile: {error}"))?;
+            .map_err(|error| crate::PanelError::invalid(format!("Voce zip illeggibile: {error}")))?;
         let Some(name) = entry.enclosed_name() else {
             continue;
         };
         let out = destination.join(name);
         if entry.is_dir() {
-            std::fs::create_dir_all(&out).map_err(|error| crate::PanelError::from(error.to_string()))?;
-        } else {
-            if let Some(parent) = out.parent() {
-                std::fs::create_dir_all(parent).map_err(|error| crate::PanelError::from(error.to_string()))?;
-            }
-            let mut output = std::fs::File::create(&out).map_err(|error| crate::PanelError::from(error.to_string()))?;
-            std::io::copy(&mut entry, &mut output).map_err(|error| crate::PanelError::from(error.to_string()))?;
+            std::fs::create_dir_all(&out)?;
+            continue;
+        }
+        if let Some(parent) = out.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let mut output = std::fs::File::create(&out)?;
+        std::io::copy(&mut entry, &mut output)?;
+        #[cfg(unix)]
+        if let Some(mode) = entry.unix_mode() {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&out, std::fs::Permissions::from_mode(mode))?;
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extracts_tar_gz_archives() {
+        let root = std::env::temp_dir().join(format!("voxel-tar-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&root).unwrap();
+        let archive = root.join("jdk.tar.gz");
+        {
+            let file = std::fs::File::create(&archive).unwrap();
+            let encoder = flate2::write::GzEncoder::new(file, flate2::Compression::fast());
+            let mut builder = tar::Builder::new(encoder);
+            let body = b"JAVA_VERSION=\"21.0.2\"\n";
+            let mut header = tar::Header::new_gnu();
+            header.set_size(body.len() as u64);
+            header.set_mode(0o644);
+            header.set_cksum();
+            builder.append_data(&mut header, "jdk-21/release", &body[..]).unwrap();
+            builder.into_inner().unwrap().finish().unwrap();
+        }
+        let out = root.join("out");
+        extract_archive(&archive, &out).unwrap();
+        assert!(out.join("jdk-21").join("release").is_file());
+        let _ = std::fs::remove_dir_all(&root);
+    }
 }

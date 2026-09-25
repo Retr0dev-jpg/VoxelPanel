@@ -58,7 +58,7 @@ pub fn detect(root: &Path) -> DetectedServer {
         java_runtime::derive_from_home(path).or_else(|| {
             runtimes
                 .iter()
-                .find(|runtime| same_path(&runtime.home, path))
+                .find(|runtime| crate::platform::same_path(&runtime.home, path))
                 .and_then(|runtime| runtime.major)
         })
     });
@@ -120,11 +120,6 @@ fn scan_jars(root: &Path) -> Vec<PathBuf> {
             .then_with(|| left.file_name().cmp(&right.file_name()))
     });
     jars
-}
-
-fn same_path(left: &Path, right: &Path) -> bool {
-    left.to_string_lossy().replace('/', "\\").to_lowercase()
-        == right.to_string_lossy().replace('/', "\\").to_lowercase()
 }
 
 #[cfg(test)]

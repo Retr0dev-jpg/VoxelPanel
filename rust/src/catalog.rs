@@ -67,7 +67,7 @@ pub fn save(layout: &Layout, record: &ServerRecord) -> PanelResult<()> {
         if catalog
             .servers
             .iter()
-            .any(|entry| same_path(&entry.root, &record.root))
+            .any(|entry| crate::platform::same_path(&entry.root, &record.root))
         {
             return Err(PanelError::invalid("Questa cartella è già importata."));
         }
@@ -159,22 +159,6 @@ fn write_json<T: Serialize>(path: &Path, value: &T) -> PanelResult<()> {
     std::fs::write(&temp, text)?;
     std::fs::rename(&temp, path)?;
     Ok(())
-}
-
-fn same_path(left: &Path, right: &Path) -> bool {
-    normalize(left) == normalize(right)
-}
-
-fn normalize(path: &Path) -> String {
-    let text = std::fs::canonicalize(path)
-        .unwrap_or_else(|_| path.to_path_buf())
-        .to_string_lossy()
-        .replace('\\', "/");
-    if cfg!(windows) {
-        text.to_lowercase()
-    } else {
-        text
-    }
 }
 
 #[cfg(test)]

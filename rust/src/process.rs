@@ -7,8 +7,9 @@ use std::path::Path;
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::process::{Child, ChildStdin};
+use std::io::{BufRead, BufReader, Read, Write};
+use std::process::ChildStdin;
+
 use tokio::sync::broadcast;
 
 use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System};
@@ -70,7 +71,7 @@ impl LogHub {
 
 #[derive(Default)]
 struct RuntimeState {
-    stdin: Option<ChildStdin>,
+    stdin: Option<Arc<Mutex<ChildStdin>>>,
     pid: Option<u32>,
     status: Option<RunStatus>,
     started_unix: Option<i64>,
@@ -159,10 +160,6 @@ fn update(id: &str, change: impl FnOnce(&mut RuntimeState)) {
         change(state.servers.entry(id.to_string()).or_default());
     }
     publish(id);
-}
-
-pub fn init_job() {
-    let _ = global_job();
 }
 
 pub fn status_of(id: &str) -> RunStatus {
@@ -312,7 +309,7 @@ pub async fn start(id: &str, program: &Path, args: &[String], cwd: &Path) -> Pan
         }
     };
     update(id, |runtime| {
-        runtime.stdin = Some(spawned.stdin);
+        runtime.stdin = Some(Arc::new(Mutex::new(spawned.stdin)));
         runtime.pid = Some(spawned.pid);
         runtime.started_unix = Some(crate::paths::unix_now());
     });
@@ -354,33 +351,23 @@ pub async fn send_command(id: &str, command: &str) -> PanelResult<()> {
     if command.contains(['\n', '\r']) {
         return Err(PanelError::invalid("Comando non valido"));
     }
-    let mut stdin = {
-        let mut state = lock();
-        let runtime = state
+    let stdin = {
+        let state = lock();
+        state
             .servers
-            .get_mut(id)
+            .get(id)
             .filter(|runtime| runtime.pid.is_some())
-            .ok_or_else(PanelError::stopped)?;
-        runtime
-            .stdin
-            .take()
-            .ok_or_else(|| PanelError::from("Console occupata, riprova"))?
+            .and_then(|runtime| runtime.stdin.clone())
+            .ok_or_else(PanelError::stopped)?
     };
-    let write = async {
-        stdin.write_all(format!("{command}\n").as_bytes()).await?;
-        stdin.flush().await?;
-        Ok::<(), std::io::Error>(())
-    };
-    let result = write.await;
-    {
-        let mut state = lock();
-        if let Some(runtime) = state.servers.get_mut(id) {
-            if runtime.pid.is_some() {
-                runtime.stdin = Some(stdin);
-            }
-        }
-    }
-    result.map_err(|error| PanelError::io(format!("Invio comando fallito: {error}")))?;
+    let line = format!("{command}\n");
+    tokio::task::spawn_blocking(move || {
+        let mut stdin = stdin.lock().unwrap_or_else(|error| error.into_inner());
+        stdin.write_all(line.as_bytes())?;
+        stdin.flush()
+    })
+    .await?
+    .map_err(|error| PanelError::io(format!("Invio comando fallito: {error}")))?;
     LogHub::push(&ensure_logs(id), format!("> {command}"));
     Ok(())
 }
@@ -396,7 +383,7 @@ pub async fn stop(id: &str, timeout: Duration) -> PanelResult<()> {
         return Ok(());
     }
     LogHub::push(&ensure_logs(id), "Arresto oltre il timeout: chiusura forzata.".into());
-    kill_pid(pid).await;
+    crate::platform::kill_tree(pid).await;
     if !wait_exit(id, pid, Duration::from_secs(5)).await {
         mark_exited(id, pid, None);
     }
@@ -492,21 +479,19 @@ async fn spawn_captured(
     logs: Arc<Mutex<LogHub>>,
     id: String,
 ) -> PanelResult<Spawned> {
-    let mut command = tokio::process::Command::new(program);
+    let mut command = std::process::Command::new(program);
     command
         .args(args)
         .current_dir(cwd)
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .kill_on_drop(false);
-    #[cfg(windows)]
-    command.creation_flags(0x0800_0000);
-    let mut child = command
-        .spawn()
+        .stderr(std::process::Stdio::piped());
+    crate::platform::configure_command(&mut command);
+    let mut child = tokio::task::spawn_blocking(move || crate::platform::spawn(command))
+        .await?
         .map_err(|error| PanelError::io(format!("Avvio fallito: {error}")))?;
-    let pid = child.id().ok_or("PID del processo non disponibile")?;
-    if !assign_job(&child) {
+    let pid = child.id();
+    if !crate::platform::attach_child(&child) {
         LogHub::push(
             &logs,
             "Job di sistema non assegnato: lo stop userà la chiusura del processo.".into(),
@@ -519,89 +504,31 @@ async fn spawn_captured(
     if let Some(stderr) = child.stderr.take() {
         spawn_reader(stderr, logs.clone(), id.clone());
     }
-    tokio::spawn(async move {
-        let code = child.wait().await.ok().and_then(|status| status.code());
+    std::thread::spawn(move || {
+        let code = child.wait().ok().and_then(|status| status.code());
         mark_exited(&id, pid, code);
     });
     Ok(Spawned { pid, stdin })
 }
 
-fn spawn_reader<R>(pipe: R, logs: Arc<Mutex<LogHub>>, id: String)
-where
-    R: tokio::io::AsyncRead + Unpin + Send + 'static,
-{
-    tokio::spawn(async move {
-        let mut lines = BufReader::new(pipe).lines();
-        while let Ok(Some(line)) = lines.next_line().await {
-            observe_line(&id, &line);
-            LogHub::push(&logs, line);
+/// Reads raw bytes so that a line with invalid UTF-8 never stops the reader
+/// (a stalled pipe would eventually block the server itself).
+fn spawn_reader<R: Read + Send + 'static>(pipe: R, logs: Arc<Mutex<LogHub>>, id: String) {
+    std::thread::spawn(move || {
+        let mut reader = BufReader::new(pipe);
+        let mut buffer = Vec::new();
+        loop {
+            buffer.clear();
+            match reader.read_until(b'\n', &mut buffer) {
+                Ok(0) | Err(_) => break,
+                Ok(_) => {
+                    let line = String::from_utf8_lossy(&buffer).trim_end_matches(['\r', '\n']).to_string();
+                    observe_line(&id, &line);
+                    LogHub::push(&logs, line);
+                }
+            }
         }
     });
-}
-
-async fn kill_pid(pid: u32) {
-    let mut command = tokio::process::Command::new("taskkill");
-    command.args(["/PID", &pid.to_string(), "/T", "/F"]);
-    #[cfg(windows)]
-    command.creation_flags(0x0800_0000);
-    let _ = command.status().await;
-}
-
-#[cfg(windows)]
-fn assign_job(child: &Child) -> bool {
-    use std::os::windows::io::AsRawHandle;
-    let Some(job) = global_job() else {
-        return false;
-    };
-    let Some(handle) = child.raw_handle() else {
-        return false;
-    };
-    unsafe {
-        windows::Win32::System::JobObjects::AssignProcessToJobObject(
-            windows::Win32::Foundation::HANDLE(job.as_raw_handle()),
-            windows::Win32::Foundation::HANDLE(handle),
-        )
-        .is_ok()
-    }
-}
-
-#[cfg(not(windows))]
-fn assign_job(_child: &Child) -> bool {
-    false
-}
-
-#[cfg(windows)]
-fn global_job() -> Option<&'static std::os::windows::io::OwnedHandle> {
-    use std::os::windows::io::{FromRawHandle, OwnedHandle};
-    use windows::Win32::System::JobObjects::{
-        CreateJobObjectW, JobObjectExtendedLimitInformation, SetInformationJobObject,
-        JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
-    };
-
-    static JOB: OnceLock<Option<OwnedHandle>> = OnceLock::new();
-    JOB.get_or_init(|| {
-        let raw = unsafe { CreateJobObjectW(None, None) }.ok()?;
-        let mut info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
-        info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-        let configured = unsafe {
-            SetInformationJobObject(
-                raw,
-                JobObjectExtendedLimitInformation,
-                &info as *const _ as *const core::ffi::c_void,
-                std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
-            )
-        };
-        if configured.is_err() {
-            return None;
-        }
-        Some(unsafe { OwnedHandle::from_raw_handle(raw.0) })
-    })
-    .as_ref()
-}
-
-#[cfg(not(windows))]
-fn global_job() -> Option<&'static ()> {
-    None
 }
 
 #[cfg(test)]
@@ -628,29 +555,35 @@ mod tests {
         assert_eq!(parse_player_event("[12:00:00 INFO]: <Steve> I joined the game"), None);
     }
 
-    #[cfg(windows)]
     #[tokio::test]
-    async fn captures_command_output() {
+    async fn captures_output_and_exit_code() {
         let logs = LogHub::new();
-        let comspec = std::env::var("COMSPEC").unwrap_or_else(|_| r"C:\Windows\System32\cmd.exe".into());
-        let _spawned = spawn_captured(
-            Path::new(&comspec),
-            &["/c".into(), "echo voxel-panel".into()],
-            &std::env::temp_dir(),
-            logs.clone(),
-            "test".into(),
-        )
-        .await
-        .unwrap();
+        let (program, args): (String, Vec<String>) = if cfg!(windows) {
+            (
+                std::env::var("COMSPEC").unwrap_or_else(|_| r"C:\Windows\System32\cmd.exe".into()),
+                vec!["/c".into(), "echo voxel-panel& exit 3".into()],
+            )
+        } else {
+            ("sh".into(), vec!["-c".into(), "echo voxel-panel; exit 3".into()])
+        };
+        let id = format!("test-{}", uuid::Uuid::new_v4());
+        update(&id, |runtime| runtime.status = Some(RunStatus::Starting));
+        let spawned = spawn_captured(Path::new(&program), &args, &std::env::temp_dir(), logs.clone(), id.clone())
+            .await
+            .unwrap();
+        update(&id, |runtime| runtime.pid = Some(spawned.pid));
         let mut seen = false;
-        for _ in 0..20 {
+        for _ in 0..50 {
             tokio::time::sleep(Duration::from_millis(100)).await;
             let history = logs.lock().unwrap().snapshot().0;
-            if history.iter().any(|line| line.contains("voxel-panel")) {
+            if history.iter().any(|line| line.contains("voxel-panel")) && pid_of(&id).is_none() {
                 seen = true;
                 break;
             }
         }
         assert!(seen);
+        let snapshot = snapshot(&id);
+        assert_eq!(snapshot.last_exit_code, Some(3));
+        assert!(snapshot.crashed);
     }
 }

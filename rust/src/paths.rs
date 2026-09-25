@@ -40,12 +40,7 @@ impl Layout {
     }
 }
 
-pub fn app_data_root() -> PathBuf {
-    let base = std::env::var("LOCALAPPDATA")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .unwrap_or_else(|_| ".".to_string());
-    PathBuf::from(base).join("VoxelPanel")
-}
+pub use crate::platform::app_data_root;
 
 pub fn ensure_dir(path: &std::path::Path) -> crate::PanelResult<()> {
     std::fs::create_dir_all(path).map_err(|error| crate::PanelError::io(format!("Impossibile creare {}: {error}", path.display())))

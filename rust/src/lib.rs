@@ -12,6 +12,7 @@ mod jvm;
 mod net;
 mod paper;
 mod paths;
+mod platform;
 mod plugins;
 mod process;
 mod properties;
