@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `hash`, `hash`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `hash`, `hash`
 
 class AddonInfo {
   final String fileName;
@@ -1021,6 +1021,58 @@ class RamSuggestion {
           total == other.total;
 }
 
+enum ScheduleKind { restart, command, backup, start, stop }
+
+/// A cron-scheduled action, stored in `server.json`.
+class ScheduledTask {
+  final String id;
+  final ScheduleKind kind;
+
+  /// Standard 5-field cron expression (minute hour day month weekday), local time.
+  final String cron;
+
+  /// Console command for `Command` tasks.
+  final String command;
+
+  /// Restarts: warn players 5 minutes, 1 minute and 10 seconds before.
+  final bool warnPlayers;
+  final bool enabled;
+  final PlatformInt64? lastRunUnix;
+
+  const ScheduledTask({
+    required this.id,
+    required this.kind,
+    required this.cron,
+    required this.command,
+    required this.warnPlayers,
+    required this.enabled,
+    this.lastRunUnix,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      kind.hashCode ^
+      cron.hashCode ^
+      command.hashCode ^
+      warnPlayers.hashCode ^
+      enabled.hashCode ^
+      lastRunUnix.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ScheduledTask &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          kind == other.kind &&
+          cron == other.cron &&
+          command == other.command &&
+          warnPlayers == other.warnPlayers &&
+          enabled == other.enabled &&
+          lastRunUnix == other.lastRunUnix;
+}
+
 /// Per-server options edited in the server settings section.
 class ServerConfig {
   final String name;
@@ -1098,6 +1150,9 @@ class ServerDetails {
   final PlatformInt64 createdUnix;
   final int port;
   final int maxPlayers;
+  final bool autostart;
+  final bool autoRestart;
+  final int scheduleCount;
 
   const ServerDetails({
     required this.id,
@@ -1116,6 +1171,9 @@ class ServerDetails {
     required this.createdUnix,
     required this.port,
     required this.maxPlayers,
+    required this.autostart,
+    required this.autoRestart,
+    required this.scheduleCount,
   });
 
   @override
@@ -1135,7 +1193,10 @@ class ServerDetails {
       eulaAccepted.hashCode ^
       createdUnix.hashCode ^
       port.hashCode ^
-      maxPlayers.hashCode;
+      maxPlayers.hashCode ^
+      autostart.hashCode ^
+      autoRestart.hashCode ^
+      scheduleCount.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1157,7 +1218,10 @@ class ServerDetails {
           eulaAccepted == other.eulaAccepted &&
           createdUnix == other.createdUnix &&
           port == other.port &&
-          maxPlayers == other.maxPlayers;
+          maxPlayers == other.maxPlayers &&
+          autostart == other.autostart &&
+          autoRestart == other.autoRestart &&
+          scheduleCount == other.scheduleCount;
 }
 
 /// Live state of one server, pushed by `watch_events` whenever something changes.
@@ -1172,6 +1236,18 @@ class ServerRuntime {
   final int? lastExitCode;
   final bool crashed;
 
+  /// Ticks per second from RCON (`tps` or `tick query`); `None` when not measurable.
+  final double? tps;
+
+  /// Milliseconds per tick from RCON.
+  final double? mspt;
+
+  /// Size of the server folder, refreshed every minute while running.
+  final PlatformInt64? diskBytes;
+
+  /// Automatic restarts after crashes in the current streak.
+  final int restartAttempts;
+
   const ServerRuntime({
     required this.serverId,
     required this.status,
@@ -1182,6 +1258,10 @@ class ServerRuntime {
     required this.memoryBytes,
     this.lastExitCode,
     required this.crashed,
+    this.tps,
+    this.mspt,
+    this.diskBytes,
+    required this.restartAttempts,
   });
 
   @override
@@ -1194,7 +1274,11 @@ class ServerRuntime {
       cpuPercent.hashCode ^
       memoryBytes.hashCode ^
       lastExitCode.hashCode ^
-      crashed.hashCode;
+      crashed.hashCode ^
+      tps.hashCode ^
+      mspt.hashCode ^
+      diskBytes.hashCode ^
+      restartAttempts.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1209,7 +1293,11 @@ class ServerRuntime {
           cpuPercent == other.cpuPercent &&
           memoryBytes == other.memoryBytes &&
           lastExitCode == other.lastExitCode &&
-          crashed == other.crashed;
+          crashed == other.crashed &&
+          tps == other.tps &&
+          mspt == other.mspt &&
+          diskBytes == other.diskBytes &&
+          restartAttempts == other.restartAttempts;
 }
 
 enum ServerStatus { stopped, starting, running, stopping }

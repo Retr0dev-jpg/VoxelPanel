@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:voxel_panel/screens/content/content_browser.dart';
 import 'package:voxel_panel/screens/create/create_validation.dart';
+import 'package:voxel_panel/screens/server/automation_tab.dart';
 import 'package:voxel_panel/screens/server/console_tab.dart';
+import 'package:voxel_panel/screens/server/overview_tab.dart';
 import 'package:voxel_panel/screens/server/server_screen.dart';
 import 'package:voxel_panel/src/providers.dart';
 import 'package:voxel_panel/src/rust/api/types.dart';
+import 'package:voxel_panel/src/theme.dart';
 import 'package:voxel_panel/widgets/code_editor.dart';
 import 'package:voxel_panel/widgets/provider_icon.dart';
 import 'package:voxel_panel/widgets/server_list_view.dart';
@@ -76,6 +79,7 @@ void main() {
       ServerSection.overview,
       ServerSection.console,
       ServerSection.settings,
+      ServerSection.automation,
       ServerSection.files,
       ServerSection.plugins,
       ServerSection.backups,
@@ -127,6 +131,16 @@ void main() {
     expect(parts.first.style?.fontStyle, FontStyle.italic);
     expect(parts.any((part) => part.text == 'chunks' && part.style?.fontWeight == FontWeight.w600), isTrue);
     controller.dispose();
+  });
+
+  test('il colore del TPS segnala il carico del server', () {
+    final colors = VoxelColors.dark(defaultAccent);
+    expect(tpsColor(colors, 19.9), colors.online);
+    expect(tpsColor(colors, 16), colors.warning);
+    expect(tpsColor(colors, 9), colors.danger);
+    expect(tpsColor(colors, null), colors.muted);
+    expect(cronPresets, contains('0 4 * * *'));
+    expect(formatRun(0).length, 11);
   });
 
   test('i contatori dei download sono compatti', () {
@@ -195,6 +209,7 @@ void main() {
       cpuPercent: 10,
       memoryBytes: 1024,
       crashed: false,
+      restartAttempts: 0,
     );
     await pumpApp(
       tester,
@@ -207,7 +222,7 @@ void main() {
   });
 
   testWidgets('un crash viene segnalato nella lista', (tester) async {
-    const runtime = ServerRuntime(serverId: 'abc', status: ServerStatus.stopped, players: [], cpuPercent: 0, memoryBytes: 0, lastExitCode: 1, crashed: true);
+    const runtime = ServerRuntime(serverId: 'abc', status: ServerStatus.stopped, players: [], cpuPercent: 0, memoryBytes: 0, lastExitCode: 1, crashed: true, restartAttempts: 0);
     await pumpApp(
       tester,
       ServerListView(servers: const [_survival], onOpen: (_) {}, onStart: (_) {}, onStop: (_) {}, onRestart: (_) {}),

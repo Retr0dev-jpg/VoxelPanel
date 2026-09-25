@@ -12,6 +12,7 @@ import 'package:tray_manager/tray_manager.dart' as tray;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:voxel_panel/src/l10n.dart';
 import 'package:voxel_panel/src/providers.dart';
+import 'package:voxel_panel/src/rust/api/automation.dart';
 import 'package:voxel_panel/src/rust/api/panel.dart';
 import 'package:voxel_panel/src/rust/api/types.dart';
 import 'package:voxel_panel/src/settings.dart';
@@ -36,6 +37,7 @@ class DesktopIntegration extends ConsumerStatefulWidget {
 class _DesktopIntegrationState extends ConsumerState<DesktopIntegration> with WindowListener {
   tray.TrayIcon? _trayIcon;
   var _updateChecked = false;
+  var _autostartDone = false;
   var _exiting = false;
 
   @override
@@ -52,6 +54,7 @@ class _DesktopIntegrationState extends ConsumerState<DesktopIntegration> with Wi
         _syncTray(next);
         if (next != null) {
           _checkUpdates(next);
+          _autostart();
         }
       });
     }, fireImmediately: true);
@@ -190,6 +193,9 @@ class _DesktopIntegrationState extends ConsumerState<DesktopIntegration> with Wi
       if (settings.crash && now.crashed && before?.crashed != true && now.status == ServerStatus.stopped) {
         _notify(l.notifyCrashTitle(name), l.notifyCrashBody(now.lastExitCode ?? -1));
       }
+      if (settings.crash && now.restartAttempts > (before?.restartAttempts ?? 0)) {
+        _notify(l.notifyRestartTitle(name), l.notifyRestartBody(now.restartAttempts));
+      }
       if (settings.ready && now.status == ServerStatus.running && before?.status == ServerStatus.starting) {
         _notify(l.notifyReadyTitle(name), l.notifyReadyBody);
       }
@@ -198,6 +204,24 @@ class _DesktopIntegrationState extends ConsumerState<DesktopIntegration> with Wi
           _notify(l.notifyPlayerTitle(name), l.notifyPlayerBody(player));
         }
       }
+    }
+  }
+
+  /// Starts the servers flagged for autostart once per launch (Rust checks the launcher setting).
+  Future<void> _autostart() async {
+    if (_autostartDone) {
+      return;
+    }
+    _autostartDone = true;
+    try {
+      final started = await autostartServers();
+      final context = _dialogContext;
+      if (started.isNotEmpty && context != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.autostarted(started.join(', ')))));
+        await ref.read(serverListProvider.notifier).reload();
+      }
+    } catch (_) {
+      // Failures are logged by Rust and shown in each server console.
     }
   }
 

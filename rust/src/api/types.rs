@@ -116,6 +116,9 @@ pub struct ServerDetails {
     pub created_unix: i64,
     pub port: u32,
     pub max_players: u32,
+    pub autostart: bool,
+    pub auto_restart: bool,
+    pub schedule_count: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -215,6 +218,42 @@ pub struct ServerRuntime {
     pub memory_bytes: i64,
     pub last_exit_code: Option<i32>,
     pub crashed: bool,
+    /// Ticks per second from RCON (`tps` or `tick query`); `None` when not measurable.
+    pub tps: Option<f64>,
+    /// Milliseconds per tick from RCON.
+    pub mspt: Option<f64>,
+    /// Size of the server folder, refreshed every minute while running.
+    pub disk_bytes: Option<i64>,
+    /// Automatic restarts after crashes in the current streak.
+    pub restart_attempts: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ScheduleKind {
+    Restart,
+    Command,
+    Backup,
+    Start,
+    Stop,
+}
+
+/// A cron-scheduled action, stored in `server.json`.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct ScheduledTask {
+    pub id: String,
+    pub kind: ScheduleKind,
+    /// Standard 5-field cron expression (minute hour day month weekday), local time.
+    pub cron: String,
+    /// Console command for `Command` tasks.
+    #[serde(default)]
+    pub command: String,
+    /// Restarts: warn players 5 minutes, 1 minute and 10 seconds before.
+    #[serde(default)]
+    pub warn_players: bool,
+    pub enabled: bool,
+    #[serde(default)]
+    pub last_run_unix: Option<i64>,
 }
 
 #[derive(Debug, Clone)]

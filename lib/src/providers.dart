@@ -8,7 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxel_panel/src/rust/api/panel.dart';
 import 'package:voxel_panel/src/rust/api/types.dart';
 
-const statsHistoryLength = 60;
+/// Two-second samples: 180 of them cover the last six minutes.
+const statsHistoryLength = 180;
 
 final serverListProvider = AsyncNotifierProvider<ServerListNotifier, List<ServerSummary>>(ServerListNotifier.new);
 
@@ -24,10 +25,12 @@ class ServerListNotifier extends AsyncNotifier<List<ServerSummary>> {
 final serverDetailsProvider = FutureProvider.autoDispose.family<ServerDetails, String>((ref, id) => getServer(id: id));
 
 class StatSample {
-  const StatSample(this.cpuPercent, this.memoryBytes);
+  const StatSample(this.cpuPercent, this.memoryBytes, {this.tps, this.players = 0});
 
   final double cpuPercent;
   final int memoryBytes;
+  final double? tps;
+  final int players;
 }
 
 class RuntimeState {
@@ -60,7 +63,8 @@ class RuntimeNotifier extends Notifier<RuntimeState> {
       final previous = state.servers[runtime.serverId];
       final changed = previous == null || previous.cpuPercent != runtime.cpuPercent || previous.memoryBytes != runtime.memoryBytes;
       if (changed) {
-        final samples = [...?history[runtime.serverId], StatSample(runtime.cpuPercent, runtime.memoryBytes)];
+        final sample = StatSample(runtime.cpuPercent, runtime.memoryBytes, tps: runtime.tps, players: runtime.players.length);
+        final samples = [...?history[runtime.serverId], sample];
         history[runtime.serverId] = samples.length > statsHistoryLength ? samples.sublist(samples.length - statsHistoryLength) : samples;
       }
     }

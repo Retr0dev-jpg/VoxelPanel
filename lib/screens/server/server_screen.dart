@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxel_panel/screens/server/addons_tab.dart';
+import 'package:voxel_panel/screens/server/automation_tab.dart';
 import 'package:voxel_panel/screens/server/backups_tab.dart';
 import 'package:voxel_panel/screens/server/console_tab.dart';
 import 'package:voxel_panel/screens/server/files_tab.dart';
@@ -32,7 +33,7 @@ class ServerScreen extends ConsumerStatefulWidget {
   ConsumerState<ServerScreen> createState() => _ServerScreenState();
 }
 
-enum ServerSection { overview, console, players, settings, properties, files, plugins, mods, worlds, backups, logs }
+enum ServerSection { overview, console, players, settings, automation, properties, files, plugins, mods, worlds, backups, logs }
 
 /// Sections that make sense for a server type: proxies have no worlds or server.properties,
 /// mod loaders get a mods section instead of (or next to) plugins.
@@ -41,6 +42,7 @@ List<ServerSection> sectionsFor(ProviderInfo info) => [
   ServerSection.console,
   if (!info.isProxy) ServerSection.players,
   ServerSection.settings,
+  ServerSection.automation,
   if (!info.isProxy) ServerSection.properties,
   ServerSection.files,
   if (info.supportsPlugins) ServerSection.plugins,
@@ -61,6 +63,7 @@ class _ServerScreenState extends ConsumerState<ServerScreen> {
     ServerSection.players => SidebarEntry(label: l.tabPlayers, icon: Icons.people_outline),
     ServerSection.settings => SidebarEntry(label: l.tabSettings, icon: Icons.settings_applications_outlined),
     ServerSection.files => SidebarEntry(label: l.tabFiles, icon: Icons.folder_outlined),
+    ServerSection.automation => SidebarEntry(label: l.tabAutomation, icon: Icons.event_repeat),
     ServerSection.logs => SidebarEntry(label: l.tabLogs, icon: Icons.receipt_long_outlined),
     ServerSection.properties => SidebarEntry(label: l.tabProperties, icon: Icons.tune),
     ServerSection.plugins => SidebarEntry(label: l.tabPlugins, icon: Icons.extension_outlined),
@@ -146,6 +149,7 @@ class _ServerScreenState extends ConsumerState<ServerScreen> {
       ServerSection.properties => PropertiesTab(serverId: widget.serverId, running: status.isActive),
       ServerSection.files => FilesTab(serverId: widget.serverId, running: status.isActive),
       ServerSection.logs => LogsTab(serverId: widget.serverId),
+      ServerSection.automation => AutomationTab(serverId: widget.serverId, autoRestart: details.autoRestart, autostart: details.autostart),
       ServerSection.plugins => AddonsTab(serverId: widget.serverId, running: status.isActive, kind: AddonKind.plugin),
       ServerSection.mods => AddonsTab(serverId: widget.serverId, running: status.isActive, kind: AddonKind.mod),
       ServerSection.worlds => WorldsTab(serverId: widget.serverId, running: status.isActive),

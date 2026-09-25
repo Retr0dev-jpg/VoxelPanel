@@ -6,6 +6,7 @@
 // Static analysis wrongly picks the IO variant, thus ignore this
 // ignore_for_file: argument_type_not_assignable
 
+import 'api/automation.dart';
 import 'api/content.dart';
 import 'api/error.dart';
 import 'api/files.dart';
@@ -227,6 +228,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<PreferredJava> dco_decode_list_preferred_java(dynamic raw);
 
   @protected
+  Int64List dco_decode_list_prim_i_64_strict(dynamic raw);
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
@@ -240,6 +244,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<RamChoice> dco_decode_list_ram_choice(dynamic raw);
+
+  @protected
+  List<ScheduledTask> dco_decode_list_scheduled_task(dynamic raw);
 
   @protected
   List<ServerRuntime> dco_decode_list_server_runtime(dynamic raw);
@@ -341,6 +348,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RamSuggestion dco_decode_ram_suggestion(dynamic raw);
+
+  @protected
+  ScheduleKind dco_decode_schedule_kind(dynamic raw);
+
+  @protected
+  ScheduledTask dco_decode_scheduled_task(dynamic raw);
 
   @protected
   ServerConfig dco_decode_server_config(dynamic raw);
@@ -613,6 +626,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  Int64List sse_decode_list_prim_i_64_strict(SseDeserializer deserializer);
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
@@ -632,6 +648,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<RamChoice> sse_decode_list_ram_choice(SseDeserializer deserializer);
+
+  @protected
+  List<ScheduledTask> sse_decode_list_scheduled_task(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<ServerRuntime> sse_decode_list_server_runtime(
@@ -743,6 +764,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RamSuggestion sse_decode_ram_suggestion(SseDeserializer deserializer);
+
+  @protected
+  ScheduleKind sse_decode_schedule_kind(SseDeserializer deserializer);
+
+  @protected
+  ScheduledTask sse_decode_scheduled_task(SseDeserializer deserializer);
 
   @protected
   ServerConfig sse_decode_server_config(SseDeserializer deserializer);
@@ -1093,6 +1120,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_prim_i_64_strict(
+    Int64List self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
     SseSerializer serializer,
@@ -1119,6 +1152,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_ram_choice(
     List<RamChoice> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_scheduled_task(
+    List<ScheduledTask> self,
     SseSerializer serializer,
   );
 
@@ -1259,6 +1298,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_ram_suggestion(RamSuggestion self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_schedule_kind(ScheduleKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_scheduled_task(ScheduledTask self, SseSerializer serializer);
 
   @protected
   void sse_encode_server_config(ServerConfig self, SseSerializer serializer);

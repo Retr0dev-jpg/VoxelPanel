@@ -38,6 +38,10 @@ pub struct RuntimeSnapshot {
     pub memory_bytes: u64,
     pub last_exit_code: Option<i32>,
     pub crashed: bool,
+    pub tps: Option<f64>,
+    pub mspt: Option<f64>,
+    pub disk_bytes: Option<u64>,
+    pub restart_attempts: u32,
 }
 
 pub struct LogHub {
@@ -80,6 +84,10 @@ struct RuntimeState {
     stop_requested: bool,
     last_exit_code: Option<i32>,
     crashed: bool,
+    tps: Option<f64>,
+    mspt: Option<f64>,
+    disk_bytes: Option<u64>,
+    restart_attempts: u32,
 }
 
 #[derive(Default)]
@@ -133,6 +141,10 @@ fn snapshot_of(id: &str, runtime: Option<&RuntimeState>) -> RuntimeSnapshot {
             memory_bytes: runtime.memory_bytes,
             last_exit_code: runtime.last_exit_code,
             crashed: runtime.crashed,
+            tps: runtime.tps,
+            mspt: runtime.mspt,
+            disk_bytes: runtime.disk_bytes,
+            restart_attempts: runtime.restart_attempts,
         },
         None => RuntimeSnapshot {
             id: id.to_string(),
@@ -144,6 +156,10 @@ fn snapshot_of(id: &str, runtime: Option<&RuntimeState>) -> RuntimeSnapshot {
             memory_bytes: 0,
             last_exit_code: None,
             crashed: false,
+            tps: None,
+            mspt: None,
+            disk_bytes: None,
+            restart_attempts: 0,
         },
     }
 }
@@ -165,6 +181,32 @@ pub fn all_snapshots() -> Vec<RuntimeSnapshot> {
 fn publish(id: &str) {
     let snapshot = snapshot(id);
     let _ = events().send(snapshot);
+}
+
+/// Records values measured outside the supervisor (RCON metrics, disk usage, restart attempts).
+pub fn set_metrics(id: &str, tps: Option<f64>, mspt: Option<f64>) {
+    update(id, |runtime| {
+        runtime.tps = tps;
+        runtime.mspt = mspt;
+    });
+}
+
+pub fn set_disk(id: &str, bytes: u64) {
+    update(id, |runtime| runtime.disk_bytes = Some(bytes));
+}
+
+pub fn set_restart_attempts(id: &str, attempts: u32) {
+    update(id, |runtime| runtime.restart_attempts = attempts);
+}
+
+/// Handle of the async runtime, captured on first use: exits are detected on plain threads
+/// and automatic restarts must be scheduled back on the runtime.
+pub fn runtime_handle() -> Option<tokio::runtime::Handle> {
+    static HANDLE: OnceLock<tokio::runtime::Handle> = OnceLock::new();
+    if let Ok(current) = tokio::runtime::Handle::try_current() {
+        let _ = HANDLE.set(current);
+    }
+    HANDLE.get().cloned()
 }
 
 fn update(id: &str, change: impl FnOnce(&mut RuntimeState)) {
@@ -219,6 +261,12 @@ pub fn ensure_logs(id: &str) -> Arc<Mutex<LogHub>> {
         .entry(id.to_string())
         .or_insert_with(LogHub::new)
         .clone()
+}
+
+#[cfg(test)]
+pub fn console_tail(id: &str) -> Vec<String> {
+    let lines = subscribe(id).0;
+    lines[lines.len().saturating_sub(15)..].to_vec()
 }
 
 pub fn subscribe(id: &str) -> (Vec<String>, broadcast::Receiver<String>) {
@@ -300,6 +348,7 @@ fn observe_line(id: &str, line: &str) {
 }
 
 pub async fn start(id: &str, program: &Path, args: &[String], cwd: &Path) -> PanelResult<()> {
+    let _ = runtime_handle();
     {
         let mut state = lock();
         let runtime = state.servers.entry(id.to_string()).or_default();
@@ -308,6 +357,8 @@ pub async fn start(id: &str, program: &Path, args: &[String], cwd: &Path) -> Pan
         }
         *runtime = RuntimeState {
             status: Some(RunStatus::Starting),
+            disk_bytes: runtime.disk_bytes,
+            restart_attempts: runtime.restart_attempts,
             ..RuntimeState::default()
         };
     }
@@ -333,11 +384,13 @@ pub async fn start(id: &str, program: &Path, args: &[String], cwd: &Path) -> Pan
 
 fn mark_exited(id: &str, pid: u32, code: Option<i32>) {
     let mut matched = false;
+    let mut uptime = None;
     update(id, |runtime| {
         if runtime.pid != Some(pid) {
             return;
         }
         matched = true;
+        uptime = runtime.started_unix.map(|started| crate::paths::unix_now() - started);
         runtime.crashed = !runtime.stop_requested && code != Some(0);
         runtime.last_exit_code = code;
         runtime.pid = None;
@@ -347,6 +400,8 @@ fn mark_exited(id: &str, pid: u32, code: Option<i32>) {
         runtime.players.clear();
         runtime.cpu_percent = 0.0;
         runtime.memory_bytes = 0;
+        runtime.tps = None;
+        runtime.mspt = None;
     });
     if matched {
         let crashed = snapshot(id).crashed;
@@ -360,6 +415,12 @@ fn mark_exited(id: &str, pid: u32, code: Option<i32>) {
             None => format!("Processo {pid} terminato."),
         };
         LogHub::push(&ensure_logs(id), text);
+        if crashed {
+            if let Some(handle) = runtime_handle() {
+                let id = id.to_string();
+                handle.spawn(async move { crate::automation::on_crash(&id, uptime).await });
+            }
+        }
     }
 }
 
@@ -479,6 +540,8 @@ fn ensure_sampler() {
     if STARTED.set(()).is_err() {
         return;
     }
+    let _ = runtime_handle();
+    crate::automation::start_background_tasks();
     tokio::spawn(async {
         let mut ticker = tokio::time::interval(SAMPLE_INTERVAL);
         loop {

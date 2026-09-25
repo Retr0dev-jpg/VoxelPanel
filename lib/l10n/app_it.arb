@@ -142,7 +142,6 @@
   "statUptime": "Uptime",
   "statUptimeHint": "Dall'ultimo avvio",
   "liveStats": "Statistiche live",
-  "liveStatsSubtitle": "Dati letti dal processo del server ogni 2 secondi.",
   "serverOnline": "Server online",
   "serverOffline": "Server offline",
   "consoleSearch": "Cerca nella console",
@@ -709,5 +708,100 @@
   "modpackRamHint": "I modpack grandi richiedono spesso 6 GB o più.",
   "modpackChooseSource": "Scegli un file di modpack.",
   "modpackChooseProject": "Scegli un modpack dall'elenco.",
-  "createFromModpack": "Crea dal modpack"
+  "createFromModpack": "Crea dal modpack",
+  "tabAutomation": "Automazione",
+  "statTps": "TPS",
+  "statTpsHint": "In attesa della prima misura via RCON",
+  "statTpsOffline": "Misurato via RCON a server acceso",
+  "statMspt": "{value} ms per tick",
+  "@statMspt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "statDisk": "Disco",
+  "statDiskHint": "Spazio occupato dalla cartella del server",
+  "liveStatsHistory": "Ultimi 6 minuti: CPU e RAM ogni 2 secondi, TPS ogni 10 secondi via RCON.",
+  "autoRestartedBanner": "Il server è stato riavviato automaticamente dopo un crash ({count} volte di seguito).",
+  "@autoRestartedBanner": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "autostarted": "Avviati automaticamente: {names}",
+  "@autostarted": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "notifyRestartTitle": "{name} riavviato",
+  "@notifyRestartTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notifyRestartBody": "Riavvio automatico dopo un crash (tentativo {count}).",
+  "@notifyRestartBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "automationStatus": "Stato",
+  "automationStatusHint": "Avvio automatico e riavvio dopo un crash si cambiano nella sezione Impostazioni del server.",
+  "scheduledTasks": "Attività pianificate",
+  "addTask": "Nuova attività",
+  "editTask": "Modifica attività",
+  "noTasks": "Nessuna attività pianificata.",
+  "taskKind": "Azione",
+  "scheduleRestart": "Riavvio",
+  "scheduleCommand": "Comando",
+  "scheduleBackup": "Backup",
+  "scheduleStart": "Avvio",
+  "scheduleStop": "Arresto",
+  "warnPlayers": "Avvisa i giocatori",
+  "warnPlayersHint": "Messaggi in chat 5 minuti, 1 minuto e 10 secondi prima: il riavvio avviene 5 minuti dopo l'orario.",
+  "cronExpression": "Espressione cron",
+  "cronHelp": "minuto ora giorno mese giorno-settimana, in ora locale (es. 0 4 * * *)",
+  "cronDaily4": "Ogni giorno alle 4:00",
+  "cronEvery6h": "Ogni 6 ore",
+  "cronHourly": "Ogni ora",
+  "cronEvery30m": "Ogni 30 minuti",
+  "cronWeekly": "Ogni lunedì alle 5:00",
+  "nextRun": "Prossima: {time}",
+  "@nextRun": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "lastRun": "Ultima: {time}",
+  "@lastRun": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "nextRuns": "Prossime esecuzioni: {times}",
+  "@nextRuns": {
+    "placeholders": {
+      "times": {
+        "type": "String"
+      }
+    }
+  },
+  "runNow": "Esegui ora",
+  "taskStarted": "Attività eseguita.",
+  "schedulesSaved": "Attività salvate."
 }

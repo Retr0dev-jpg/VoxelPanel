@@ -7,6 +7,8 @@ edition = "2021"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+cron = "0.15"
 dirs = "6"
 flate2 = "1"
 flutter_rust_bridge = "=2.13.0"

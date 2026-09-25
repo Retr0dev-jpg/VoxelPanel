@@ -31,6 +31,10 @@ fn to_runtime(snapshot: RuntimeSnapshot) -> ServerRuntime {
         memory_bytes: snapshot.memory_bytes as i64,
         last_exit_code: snapshot.last_exit_code,
         crashed: snapshot.crashed,
+        tps: snapshot.tps,
+        mspt: snapshot.mspt,
+        disk_bytes: snapshot.disk_bytes.map(|bytes| bytes as i64),
+        restart_attempts: snapshot.restart_attempts,
     }
 }
 
@@ -82,6 +86,9 @@ pub async fn get_server(id: String) -> PanelResult<ServerDetails> {
         created_unix: record.created_unix,
         port: settings.port,
         max_players: settings.max_players,
+        autostart: record.autostart,
+        auto_restart: record.auto_restart,
+        schedule_count: record.schedules.iter().filter(|task| task.enabled).count() as u32,
     })
 }
 

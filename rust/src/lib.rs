@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root.
 
 pub mod api;
+mod automation;
 mod backup;
 mod cache;
 mod catalog;
@@ -25,6 +26,7 @@ mod rcon;
 mod providers;
 mod ram;
 mod scan;
+mod scheduler;
 mod server_files;
 mod server_logs;
 mod script;
@@ -118,6 +120,8 @@ pub struct ServerRecord {
     pub manage_rcon: bool,
     #[serde(default)]
     pub rcon: Option<RconConfig>,
+    #[serde(default)]
+    pub schedules: Vec<api::types::ScheduledTask>,
 }
 
 fn default_true() -> bool {
@@ -154,6 +158,7 @@ impl ServerRecord {
             auto_restart: false,
             manage_rcon: true,
             rcon: None,
+            schedules: Vec::new(),
         }
     }
 

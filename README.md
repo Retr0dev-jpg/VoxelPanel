@@ -11,7 +11,7 @@ L’interfaccia è in Flutter (Material 3, italiano e inglese). Il motore è in 
 - Cambia versione o build di un server esistente, con backup automatico prima dell’aggiornamento.
 - Avvia `java` come processo figlio, con console, stop, riavvio e arresto di tutti i server alla chiusura.
 - Mostra lo stato reale di ogni server: "Avvio" finché il log non segnala la fine del caricamento, poi "Online"; rileva i crash con il codice di uscita.
-- Statistiche live di CPU e RAM, uptime ed elenco dei giocatori collegati, inviati dal motore Rust senza polling.
+- Statistiche live di CPU, RAM, TPS e MSPT (via RCON, sia con i comandi di Paper sia con `tick query` di Vanilla), giocatori, uptime e spazio su disco, con grafici degli ultimi 6 minuti, inviati dal motore Rust senza polling.
 - Console con cronologia dei comandi (frecce su e giù), ricerca, filtro per livello, copia e limite di righe.
 - Configurazione completa di ogni server:
   - impostazioni: nome, icona (convertita in PNG 64×64), versione, Java, RAM, flag JVM, comando e timeout di arresto, avvio automatico, riavvio dopo un crash, RCON gestito;
@@ -24,6 +24,11 @@ L’interfaccia è in Flutter (Material 3, italiano e inglese). Il motore è in 
 - Elenco dei plugin e delle mod installati con nome, versione e autori letti dai jar (`plugin.yml`, `fabric.mod.json`, `mods.toml`...), controllo degli aggiornamenti tramite hash su Modrinth e aggiornamento in blocco.
 - Creazione di server da modpack: `.mrpack` di Modrinth (solo i file lato server, più `overrides` e `server-overrides`) e modpack CurseForge (`manifest.json`), da file locale o dai cataloghi, con download in parallelo.
 - Backup e ripristino.
+- Automazioni per server:
+  - attività pianificate con espressioni cron in ora locale: riavvio con avvisi ai giocatori, comando, backup (a caldo con `save-off`/`save-all`, con pulizia dei backup vecchi), avvio e arresto; anteprima delle prossime esecuzioni ed esecuzione immediata;
+  - riavvio automatico dopo un crash con attese crescenti (5 s, 15 s, 1 min, 3 min, 10 min) e sospensione dopo troppi crash consecutivi;
+  - avvio automatico dei server contrassegnati all’apertura di VoxelPanel;
+  - notifiche desktop e area di notifica collegate agli eventi dei server.
 - Rinomina ed elimina i server (anche più server insieme), con scelta se cancellare file e backup.
 - Impostazioni del launcher: lingua, tema chiaro o scuro con colore di accento, avvio con il sistema, chiusura nel tray, cartelle di server, backup, runtime e cache (spostabili con migrazione guidata), runtime Java installati e di sistema con versione preferita, valori predefiniti per i nuovi server (RAM, preset JVM Aikar/G1/ZGC, porta), console, backup (conservazione, compressione, esclusioni), proxy e timeout di rete, chiave CurseForge, notifiche desktop, log dell'app, esportazione e importazione.
 
@@ -80,6 +85,7 @@ I backup stanno in `backups/`, fuori dalla cartella del server.
 - `rust/src/providers/`: un modulo per fonte di software (trait `Provider`: versioni, build, Java richiesto, installazione) e rilevamento del software all’import.
 - `rust/src/rcon.rs`, `players.rs`, `server_files.rs`, `server_logs.rs`, `properties_schema.rs`: RCON, liste dei giocatori, file manager sicuro, log e schema di `server.properties`.
 - `rust/src/content/`: sorgenti di contenuti (trait `ContentSource`), metadati dei jar, aggiornamenti e modpack.
+- `rust/src/scheduler.rs`, `automation.rs`: espressioni cron e lavori in background (attività pianificate, riavvio dopo crash, avvio automatico, metriche TPS e disco).
 - `rust/src/cache.rs`: cache su disco delle risposte delle API con scadenza e uso offline.
 - `rust/src/process.rs`: supervisor dei processi (stato, giocatori, uscita, campionamento CPU e RAM).
 - `rust/src/platform/`: codice specifico per sistema operativo (eseguibile Java, gruppi di processi e job object, arresto forzato, script di avvio, apertura cartelle).
@@ -114,6 +120,8 @@ I test che contattano le API reali dei provider sono esclusi di default:
 cd rust && cargo test live_ -- --ignored   # provider e cataloghi di contenuti
 # installer veri di Quilt, Forge e NeoForge (serve un Java recente)
 VOXELPANEL_TEST_JAVA=/percorso/java cargo test live_runs_installers -- --ignored
+# server Paper reale: RCON, TPS, backup a caldo e arresto
+VOXELPANEL_DATA_DIR=/tmp/voxel-test VOXELPANEL_TEST_JAVA_HOME=/percorso/jdk cargo test live_runs_paper -- --ignored
 ```
 
 Controlli eseguiti anche dalla CI su ogni pull request (i test Rust girano su Windows, Linux e macOS):

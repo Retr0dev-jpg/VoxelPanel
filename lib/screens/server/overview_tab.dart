@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxel_panel/src/l10n.dart';
 import 'package:voxel_panel/src/labels.dart';
+import 'package:voxel_panel/src/rust/api/automation.dart';
 import 'package:voxel_panel/src/providers.dart';
 import 'package:voxel_panel/src/rust/api/files.dart';
 import 'package:voxel_panel/src/rust/api/panel.dart';
@@ -17,6 +18,19 @@ import 'package:voxel_panel/widgets/common/feedback.dart';
 import 'package:voxel_panel/widgets/common/panel_card.dart';
 import 'package:voxel_panel/widgets/provider_icon.dart';
 import 'package:voxel_panel/widgets/sparkline.dart';
+
+/// Folder size of a server: live value while running, measured on demand otherwise.
+final diskUsageProvider = FutureProvider.autoDispose.family<int, String>((ref, id) => serverDiskUsage(id: id));
+
+Color tpsColor(VoxelColors colors, double? tps) {
+  if (tps == null) {
+    return colors.muted;
+  }
+  if (tps >= 18) {
+    return colors.online;
+  }
+  return tps >= 15 ? colors.warning : colors.danger;
+}
 
 class OverviewTab extends ConsumerWidget {
   const OverviewTab({
@@ -45,6 +59,9 @@ class OverviewTab extends ConsumerWidget {
     final memory = runtime?.memoryBytes ?? 0;
     final ramPercent = ramMax == null || ramMax == 0 ? 0.0 : (memory / ramMax * 100).clamp(0, 100).toDouble();
     final active = runtime?.pid != null;
+    final disk = runtime?.diskBytes ?? ref.watch(diskUsageProvider(details.id)).value;
+    final tps = runtime?.tps;
+    final isProxy = providerInfo(kind: details.provider).isProxy;
     return ListView(
       padding: const EdgeInsets.fromLTRB(28, 20, 28, 28),
       children: [
@@ -53,7 +70,11 @@ class OverviewTab extends ConsumerWidget {
           const SizedBox(height: 16),
           _Banner(icon: Icons.warning_amber, color: colors.danger, text: l.crashBanner(runtime?.lastExitCode ?? -1)),
         ],
-        if (!details.eulaAccepted && !providerInfo(kind: details.provider).isProxy) ...[
+        if ((runtime?.restartAttempts ?? 0) > 0 && status != ServerStatus.stopped) ...[
+          const SizedBox(height: 16),
+          _Banner(icon: Icons.autorenew, color: colors.warning, text: l.autoRestartedBanner(runtime!.restartAttempts)),
+        ],
+        if (!details.eulaAccepted && !isProxy) ...[
           const SizedBox(height: 16),
           _Banner(
             icon: Icons.gavel,
@@ -91,13 +112,22 @@ class OverviewTab extends ConsumerWidget {
               value: active ? formatBytes(memory) : '--',
               hint: l.statMemoryHint(details.ramMax),
             ),
+            if (!isProxy)
+              _StatCard(
+                icon: Icons.speed,
+                label: l.statTps,
+                value: tps == null ? '--' : tps.toStringAsFixed(1),
+                valueColor: tpsColor(colors, tps),
+                hint: runtime?.mspt == null ? (active ? l.statTpsHint : l.statTpsOffline) : l.statMspt(runtime!.mspt!.toStringAsFixed(1)),
+              ),
             _StatCard(icon: Icons.schedule, label: l.statUptime, value: '', hint: l.statUptimeHint, live: _Uptime(startedUnix: runtime?.startedUnix)),
+            _StatCard(icon: Icons.sd_storage_outlined, label: l.statDisk, value: disk == null ? '--' : formatBytes(disk), hint: l.statDiskHint),
           ],
         ),
         const SizedBox(height: 16),
         PanelCard(
           title: l.liveStats,
-          subtitle: l.liveStatsSubtitle,
+          subtitle: l.liveStatsHistory,
           trailing: Text(status.isOnline ? l.serverOnline : l.serverOffline, style: TextStyle(color: status.isOnline ? colors.online : colors.muted)),
           child: ResponsiveGrid(
             minItemWidth: 280,
@@ -115,6 +145,20 @@ class OverviewTab extends ConsumerWidget {
                 samples: [
                   for (final sample in history) ramMax == null || ramMax == 0 ? 0 : (sample.memoryBytes / ramMax * 100).clamp(0, 100).toDouble(),
                 ],
+              ),
+              if (!isProxy)
+                _Meter(
+                  title: l.statTps,
+                  value: tps == null ? '--' : '${tps.toStringAsFixed(1)} / 20',
+                  percent: (tps ?? 0) / 20,
+                  color: tpsColor(colors, tps),
+                  samples: [for (final sample in history) if (sample.tps != null) sample.tps! / 20 * 100],
+                ),
+              _Meter(
+                title: l.statPlayers,
+                value: '${runtime?.players.length ?? 0} / ${details.maxPlayers}',
+                percent: details.maxPlayers == 0 ? 0 : (runtime?.players.length ?? 0) / details.maxPlayers,
+                samples: [for (final sample in history) details.maxPlayers == 0 ? 0 : (sample.players / details.maxPlayers * 100).clamp(0, 100).toDouble()],
               ),
             ],
           ),
@@ -268,13 +312,14 @@ class _Banner extends StatelessWidget {
 }
 
 class _StatCard extends StatelessWidget {
-  const _StatCard({required this.icon, required this.label, required this.value, required this.hint, this.live});
+  const _StatCard({required this.icon, required this.label, required this.value, required this.hint, this.live, this.valueColor});
 
   final IconData icon;
   final String label;
   final String value;
   final String hint;
   final Widget? live;
+  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -286,7 +331,7 @@ class _StatCard extends StatelessWidget {
         children: [
           Icon(icon, color: colors.accent, size: 18),
           const SizedBox(height: 8),
-          live ?? Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+          live ?? Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: valueColor)),
           Text(hint, style: TextStyle(color: colors.muted, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
         ],
       ),
@@ -332,12 +377,13 @@ class _UptimeState extends State<_Uptime> {
 }
 
 class _Meter extends StatelessWidget {
-  const _Meter({required this.title, required this.value, required this.percent, required this.samples});
+  const _Meter({required this.title, required this.value, required this.percent, required this.samples, this.color});
 
   final String title;
   final String value;
   final double percent;
   final List<double> samples;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -350,10 +396,10 @@ class _Meter extends StatelessWidget {
         const SizedBox(height: 8),
         ClipRRect(
           borderRadius: BorderRadius.circular(6),
-          child: LinearProgressIndicator(value: percent.clamp(0, 1), minHeight: 6, backgroundColor: colors.track, color: colors.accent),
+          child: LinearProgressIndicator(value: percent.clamp(0, 1), minHeight: 6, backgroundColor: colors.track, color: color ?? colors.accent),
         ),
         const SizedBox(height: 8),
-        Sparkline(samples: samples, color: colors.accent, idleColor: colors.cardBorder, height: 48),
+        Sparkline(samples: samples, color: color ?? colors.accent, idleColor: colors.cardBorder, height: 48),
       ],
     );
   }
