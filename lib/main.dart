@@ -103,16 +103,50 @@ class _VoxelAppState extends ConsumerState<VoxelApp> with WidgetsBindingObserver
           data: media.copyWith(textScaler: TextScaler.linear(appearance?.textScale ?? 1.0)),
           child: DesktopIntegration(
             navigatorKey: _navigatorKey,
-            child: Column(
-              children: [
-                WindowTitleBar(onSettings: _openSettings),
-                Expanded(child: child ?? const SizedBox.shrink()),
-              ],
-            ),
+            child: _WindowShell(onSettings: _openSettings, child: child ?? const SizedBox.shrink()),
           ),
         );
       },
       home: const HomeScreen(),
     );
   }
+}
+
+/// Title bar plus app content. It sits above the Navigator, so it needs its own Overlay
+/// for the tooltips of the title bar buttons.
+class _WindowShell extends StatefulWidget {
+  const _WindowShell({required this.onSettings, required this.child});
+
+  final VoidCallback onSettings;
+  final Widget child;
+
+  @override
+  State<_WindowShell> createState() => _WindowShellState();
+}
+
+class _WindowShellState extends State<_WindowShell> {
+  late final OverlayEntry _entry = OverlayEntry(
+    builder: (context) => Column(
+      children: [
+        WindowTitleBar(onSettings: widget.onSettings),
+        Expanded(child: widget.child),
+      ],
+    ),
+  );
+
+  @override
+  void didUpdateWidget(_WindowShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _entry.markNeedsBuild();
+  }
+
+  @override
+  void dispose() {
+    _entry.remove();
+    _entry.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Overlay(initialEntries: [_entry]);
 }
