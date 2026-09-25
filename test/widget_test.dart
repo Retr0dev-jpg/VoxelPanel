@@ -10,6 +10,7 @@ import 'package:voxel_panel/src/providers.dart';
 import 'package:voxel_panel/src/rust/api/types.dart';
 import 'package:voxel_panel/src/theme.dart';
 import 'package:voxel_panel/widgets/code_editor.dart';
+import 'package:voxel_panel/widgets/common/panel_card.dart';
 import 'package:voxel_panel/widgets/provider_icon.dart';
 import 'package:voxel_panel/widgets/server_list_view.dart';
 
@@ -229,5 +230,25 @@ void main() {
       runtime: const RuntimeState(servers: {'abc': runtime}),
     );
     expect(find.text('Crash'), findsOneWidget);
+  });
+
+  testWidgets('le card della stessa riga hanno la stessa altezza', (tester) async {
+    await pumpApp(
+      tester,
+      SingleChildScrollView(
+        child: ResponsiveGrid(
+          minItemWidth: 200,
+          children: [
+            const PanelCard(key: Key('short'), child: Text('breve')),
+            PanelCard(key: const Key('long'), child: Text(List.filled(40, 'testo lungo').join(' '))),
+            const PanelCard(key: Key('third'), child: Text('breve')),
+          ],
+        ),
+      ),
+    );
+    final short = tester.getSize(find.byKey(const Key('short'))).height;
+    expect(short, greaterThan(60));
+    expect(tester.getSize(find.byKey(const Key('long'))).height, short);
+    expect(tester.getSize(find.byKey(const Key('third'))).height, short);
   });
 }
