@@ -6,9 +6,54 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
+pub use crate::api::settings::JavaVendor;
 use crate::platform;
 use crate::scan::derive_java_version;
 use crate::{PanelError, PanelResult, ProgressTx};
+
+pub const VENDORS: [JavaVendor; 7] = [
+    JavaVendor::Temurin,
+    JavaVendor::Zulu,
+    JavaVendor::Corretto,
+    JavaVendor::Microsoft,
+    JavaVendor::Liberica,
+    JavaVendor::SapMachine,
+    JavaVendor::GraalVm,
+];
+
+pub struct VendorMeta {
+    /// Prefix of the folders VoxelPanel installs, so equal archive names never collide.
+    pub id: &'static str,
+    pub name: &'static str,
+    pub publisher: &'static str,
+    pub website: &'static str,
+    /// Distribution name in the foojay Disco API.
+    foojay: &'static str,
+    /// Lowercase fragments of `IMPLEMENTOR` in the JDK `release` file.
+    implementors: &'static [&'static str],
+}
+
+pub fn meta(vendor: JavaVendor) -> VendorMeta {
+    let (id, name, publisher, website, foojay, implementors): (_, _, _, _, _, &'static [&'static str]) = match vendor {
+        JavaVendor::Temurin => ("temurin", "Temurin", "Eclipse Adoptium", "https://adoptium.net", "temurin", &["adoptium", "adoptopenjdk", "eclipse"]),
+        JavaVendor::Zulu => ("zulu", "Zulu", "Azul", "https://www.azul.com/downloads/", "zulu", &["azul"]),
+        JavaVendor::Corretto => ("corretto", "Corretto", "Amazon", "https://aws.amazon.com/corretto/", "corretto", &["amazon"]),
+        JavaVendor::Microsoft => ("microsoft", "Microsoft Build of OpenJDK", "Microsoft", "https://learn.microsoft.com/java/openjdk/", "microsoft", &["microsoft"]),
+        JavaVendor::Liberica => ("liberica", "Liberica", "BellSoft", "https://bell-sw.com/libericajdk/", "liberica", &["bellsoft"]),
+        JavaVendor::SapMachine => ("sapmachine", "SapMachine", "SAP", "https://sap.github.io/SapMachine/", "sap_machine", &["sap"]),
+        JavaVendor::GraalVm => ("graalvm", "GraalVM Community", "GraalVM", "https://www.graalvm.org", "graalvm_community", &["graalvm"]),
+    };
+    VendorMeta { id, name, publisher, website, foojay, implementors }
+}
+
+pub fn parse_vendor(release: &str) -> Option<JavaVendor> {
+    let implementor = release.lines().find_map(|line| line.strip_prefix("IMPLEMENTOR="))?.trim().trim_matches('"').to_lowercase();
+    VENDORS.into_iter().find(|&vendor| meta(vendor).implementors.iter().any(|fragment| implementor.contains(fragment)))
+}
+
+pub fn vendor_of(home: &Path) -> Option<JavaVendor> {
+    std::fs::read_to_string(home.join("release")).ok().as_deref().and_then(parse_vendor)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RuntimeSource {
@@ -24,6 +69,7 @@ pub enum RuntimeSource {
 pub struct JavaRuntime {
     pub name: String,
     pub major: Option<u32>,
+    pub vendor: Option<JavaVendor>,
     pub home: PathBuf,
     pub source: RuntimeSource,
 }
@@ -97,7 +143,7 @@ fn scan_dir(runtime_root: &Path, source: RuntimeSource) -> Vec<JavaRuntime> {
     };
     for entry in entries.flatten() {
         let path = entry.path();
-        if !path.is_dir() {
+        if !path.is_dir() || entry.file_name().to_string_lossy().starts_with('.') {
             continue;
         }
         let Some(home) = platform::resolve_java_home(&path) else {
@@ -105,6 +151,7 @@ fn scan_dir(runtime_root: &Path, source: RuntimeSource) -> Vec<JavaRuntime> {
         };
         runtimes.push(JavaRuntime {
             major: derive_from_home(&home),
+            vendor: vendor_of(&home),
             name: entry.file_name().to_string_lossy().to_string(),
             home,
             source,
@@ -144,6 +191,7 @@ fn runtime_at(home: PathBuf, source: RuntimeSource) -> JavaRuntime {
         .to_string();
     JavaRuntime {
         major: derive_from_home(&home),
+        vendor: vendor_of(&home),
         name,
         home,
         source,
@@ -202,31 +250,82 @@ fn push_unique(target: &mut Vec<JavaRuntime>, incoming: Vec<JavaRuntime>) {
     }
 }
 
-pub fn find_by_major(runtime_root: &Path, major: u32) -> Option<PathBuf> {
+/// A managed runtime for `major`; with `vendor` only one from that distribution.
+pub fn find_managed(runtime_root: &Path, major: u32, vendor: Option<JavaVendor>) -> Option<PathBuf> {
     scan_runtime_dir(runtime_root)
         .into_iter()
-        .find(|runtime| runtime.major == Some(major))
+        .find(|runtime| runtime.major == Some(major) && (vendor.is_none() || runtime.vendor == vendor))
         .map(|runtime| runtime.home)
 }
 
-pub async fn list_releases() -> PanelResult<Vec<JavaRelease>> {
-    let releases: Releases = crate::net::http()
-        .get("https://api.adoptium.net/v3/info/available_releases")
+#[derive(Debug, Deserialize)]
+struct FoojayResponse {
+    result: Vec<FoojayPackage>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FoojayPackage {
+    major_version: u32,
+    term_of_support: String,
+    filename: String,
+    links: FoojayLinks,
+}
+
+#[derive(Debug, Deserialize)]
+struct FoojayLinks {
+    pkg_download_redirect: String,
+}
+
+/// Latest GA JDK packages of `vendor` for this platform (one per major, or only `major`).
+pub fn foojay_packages_url(vendor: JavaVendor, major: Option<u32>) -> String {
+    let (os, archive, libc) = if cfg!(windows) {
+        ("windows", "zip", "c_std_lib")
+    } else if cfg!(target_os = "macos") {
+        ("macos", "tar.gz", "libc")
+    } else {
+        ("linux", "tar.gz", "glibc")
+    };
+    let version = major.map(|major| format!("&version={major}")).unwrap_or_default();
+    format!(
+        "https://api.foojay.io/disco/v3.0/packages?distribution={}&architecture={}&operating_system={os}&archive_type={archive}&lib_c_type={libc}&package_type=jdk&release_status=ga&latest=available&javafx_bundled=false&directly_downloadable=true{version}",
+        meta(vendor).foojay,
+        platform::adoptium_arch(),
+    )
+}
+
+async fn foojay_packages(vendor: JavaVendor, major: Option<u32>) -> PanelResult<Vec<FoojayPackage>> {
+    let response: FoojayResponse = crate::net::http()
+        .get(foojay_packages_url(vendor, major))
         .send()
         .await
-        .map_err(|error| PanelError::network(format!("Adoptium non raggiungibile: {error}")))?
+        .map_err(|error| PanelError::network(format!("Catalogo Java (foojay) non raggiungibile: {error}")))?
         .error_for_status()?
         .json()
         .await?;
-    let lts = releases.available_lts_releases.clone();
-    let mut items: Vec<JavaRelease> = releases
-        .available_releases
-        .into_iter()
-        .map(|major| JavaRelease {
-            lts: lts.contains(&major),
-            major,
-        })
-        .collect();
+    Ok(response.result)
+}
+
+pub async fn list_releases(vendor: JavaVendor) -> PanelResult<Vec<JavaRelease>> {
+    let mut items: Vec<JavaRelease> = if vendor == JavaVendor::Temurin {
+        let releases: Releases = crate::net::http()
+            .get("https://api.adoptium.net/v3/info/available_releases")
+            .send()
+            .await
+            .map_err(|error| PanelError::network(format!("Adoptium non raggiungibile: {error}")))?
+            .error_for_status()?
+            .json()
+            .await?;
+        let lts = releases.available_lts_releases;
+        releases.available_releases.into_iter().map(|major| JavaRelease { lts: lts.contains(&major), major }).collect()
+    } else {
+        let mut items: Vec<JavaRelease> = Vec::new();
+        for package in foojay_packages(vendor, None).await? {
+            if !items.iter().any(|item| item.major == package.major_version) {
+                items.push(JavaRelease { major: package.major_version, lts: package.term_of_support.eq_ignore_ascii_case("lts") });
+            }
+        }
+        items
+    };
     items.sort_by_key(|item| std::cmp::Reverse(item.major));
     Ok(items)
 }
@@ -239,37 +338,71 @@ pub fn adoptium_assets_url(major: u32) -> String {
     )
 }
 
+async fn package_for(vendor: JavaVendor, major: u32) -> PanelResult<Package> {
+    let name = meta(vendor).name;
+    let package = if vendor == JavaVendor::Temurin {
+        let assets: Vec<Asset> = crate::net::http()
+            .get(adoptium_assets_url(major))
+            .send()
+            .await
+            .map_err(|error| PanelError::network(format!("Pacchetto Java non raggiungibile: {error}")))?
+            .error_for_status()
+            .map_err(|error| PanelError::not_found(format!("Pacchetto Java {major} non trovato: {error}")))?
+            .json()
+            .await?;
+        assets.into_iter().map(|asset| asset.binary.package).find(|package| !package.link.is_empty() && !package.name.is_empty())
+    } else {
+        foojay_packages(vendor, Some(major))
+            .await?
+            .into_iter()
+            .find(|package| package.major_version == major)
+            .map(|package| Package { name: package.filename, link: package.links.pkg_download_redirect })
+    };
+    package.ok_or_else(|| PanelError::not_found(format!("Pacchetto Java {major} di {name} non disponibile per questo sistema")))
+}
+
+/// Downloads Java `major` from `vendor` unless a runtime of that distribution is already managed.
+pub async fn install(runtime_root: &Path, vendor: JavaVendor, major: u32, progress: &ProgressTx) -> PanelResult<PathBuf> {
+    let vendor_meta = meta(vendor);
+    if let Some(existing) = find_managed(runtime_root, major, Some(vendor)) {
+        progress.emit("Java", format!("{} {major} già installato.", vendor_meta.name), Some(1.0));
+        return Ok(existing);
+    }
+    let package = package_for(vendor, major).await?;
+    let staging = runtime_root.join(format!(".staging-{}", uuid::Uuid::new_v4().simple()));
+    crate::paths::ensure_dir(&staging)?;
+    let result = async {
+        let archive = staging.join(&package.name);
+        progress.emit("Java", format!("Download {} {major}...", vendor_meta.name), Some(0.0));
+        crate::net::download(&package.link, &archive, "Java", progress).await?;
+        progress.emit("Java", format!("Estrazione {} {major}...", vendor_meta.name), None);
+        let extracted = staging.join("jdk");
+        let (archive_path, destination) = (archive.clone(), extracted.clone());
+        tokio::task::spawn_blocking(move || crate::net::extract_archive(&archive_path, &destination)).await??;
+        let top = std::fs::read_dir(&extracted)?
+            .flatten()
+            .map(|entry| entry.path())
+            .find(|path| platform::resolve_java_home(path).is_some())
+            .ok_or_else(|| PanelError::invalid(format!("L'archivio {} non contiene un JDK riconoscibile", package.name)))?;
+        let folder = top.file_name().map(|name| name.to_string_lossy().to_string()).unwrap_or_else(|| major.to_string());
+        let target = runtime_root.join(format!("{}-{folder}", vendor_meta.id));
+        if !target.exists() {
+            std::fs::rename(&top, &target)?;
+        }
+        platform::resolve_java_home(&target).ok_or_else(|| PanelError::from(format!("Java {major} estratto ma non rilevato in {}", target.display())))
+    }
+    .await;
+    let _ = std::fs::remove_dir_all(&staging);
+    result
+}
+
+/// Any managed Java `major`, downloading it from the vendor chosen in the settings if missing.
 pub async fn ensure_major(runtime_root: &Path, major: u32, progress: &ProgressTx) -> PanelResult<PathBuf> {
-    if let Some(existing) = find_by_major(runtime_root, major) {
+    if let Some(existing) = find_managed(runtime_root, major, None) {
         progress.emit("Java", format!("Java {major} già installato."), Some(1.0));
         return Ok(existing);
     }
-    let assets: Vec<Asset> = crate::net::http()
-        .get(adoptium_assets_url(major))
-        .send()
-        .await
-        .map_err(|error| PanelError::network(format!("Pacchetto Java non raggiungibile: {error}")))?
-        .error_for_status()
-        .map_err(|error| PanelError::not_found(format!("Pacchetto Java {major} non trovato: {error}")))?
-        .json()
-        .await?;
-    let package = assets
-        .into_iter()
-        .map(|asset| asset.binary.package)
-        .find(|package| !package.link.is_empty() && !package.name.is_empty())
-        .ok_or_else(|| PanelError::not_found(format!("Pacchetto Java {major} non trovato da Adoptium")))?;
-    crate::paths::ensure_dir(runtime_root)?;
-    let archive = runtime_root.join(&package.name);
-    progress.emit("Java", format!("Download Java {major}..."), Some(0.0));
-    crate::net::download(&package.link, &archive, "Java", progress).await?;
-    progress.emit("Java", format!("Estrazione Java {major}..."), None);
-    let archive_path = archive.clone();
-    let destination = runtime_root.to_path_buf();
-    tokio::task::spawn_blocking(move || crate::net::extract_archive(&archive_path, &destination)).await??;
-    let _ = std::fs::remove_file(&archive);
-    find_by_major(runtime_root, major).ok_or_else(|| {
-        PanelError::from(format!("Java {major} estratto ma non rilevato in {}", runtime_root.display()))
-    })
+    install(runtime_root, crate::launcher_settings::current().java.vendor, major, progress).await
 }
 
 #[cfg(test)]
@@ -293,6 +426,59 @@ mod tests {
         let runtimes = scan_runtime_dir(&root);
         assert_eq!(runtimes.len(), 1);
         assert_eq!(runtimes[0].major, Some(17));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn recognises_vendors_from_release_files() {
+        assert_eq!(parse_vendor("IMPLEMENTOR=\"Eclipse Adoptium\"\nJAVA_VERSION=\"21.0.2\""), Some(JavaVendor::Temurin));
+        assert_eq!(parse_vendor("IMPLEMENTOR=\"Azul Systems, Inc.\""), Some(JavaVendor::Zulu));
+        assert_eq!(parse_vendor("IMPLEMENTOR=\"Amazon.com Inc.\""), Some(JavaVendor::Corretto));
+        assert_eq!(parse_vendor("IMPLEMENTOR=\"Microsoft\""), Some(JavaVendor::Microsoft));
+        assert_eq!(parse_vendor("IMPLEMENTOR=\"BellSoft\""), Some(JavaVendor::Liberica));
+        assert_eq!(parse_vendor("IMPLEMENTOR=\"SAP SE\""), Some(JavaVendor::SapMachine));
+        assert_eq!(parse_vendor("IMPLEMENTOR=\"GraalVM Community\""), Some(JavaVendor::GraalVm));
+        assert_eq!(parse_vendor("IMPLEMENTOR=\"Oracle Corporation\""), None);
+        assert_eq!(parse_vendor("JAVA_VERSION=\"17\""), None);
+    }
+
+    #[test]
+    fn vendor_folder_prefixes_are_unique() {
+        let ids: std::collections::HashSet<_> = VENDORS.iter().map(|&vendor| meta(vendor).id).collect();
+        assert_eq!(ids.len(), VENDORS.len());
+    }
+
+    #[test]
+    fn asks_foojay_for_this_platform() {
+        let url = foojay_packages_url(JavaVendor::Zulu, Some(21));
+        assert!(url.contains("distribution=zulu"));
+        assert!(url.contains("&version=21"));
+        assert!(url.contains(&format!("architecture={}", platform::adoptium_arch())));
+        assert!(!foojay_packages_url(JavaVendor::SapMachine, None).contains("version="));
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn live_lists_java_releases_for_every_vendor() {
+        for vendor in VENDORS {
+            let releases = list_releases(vendor).await.unwrap();
+            println!("{} -> {:?}", meta(vendor).name, releases.iter().map(|release| release.major).collect::<Vec<_>>());
+            assert!(releases.iter().any(|release| release.major == 21 && release.lts), "{} has no Java 21 LTS", meta(vendor).name);
+        }
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn live_installs_a_non_temurin_runtime() {
+        let root = std::env::temp_dir().join(format!("voxel-java-{}", uuid::Uuid::new_v4()));
+        let home = install(&root, JavaVendor::Zulu, 21, &ProgressTx::silent()).await.unwrap();
+        assert!(java_executable(&home).is_file());
+        assert_eq!(vendor_of(&home), Some(JavaVendor::Zulu));
+        assert_eq!(find_managed(&root, 21, Some(JavaVendor::Zulu)), Some(home.clone()));
+        assert_eq!(find_managed(&root, 21, Some(JavaVendor::Temurin)), None);
+        assert!(std::fs::read_dir(&root).unwrap().flatten().all(|entry| !entry.file_name().to_string_lossy().starts_with(".staging")));
+        let again = install(&root, JavaVendor::Zulu, 21, &ProgressTx::silent()).await.unwrap();
+        assert_eq!(again, home);
         let _ = std::fs::remove_dir_all(&root);
     }
 

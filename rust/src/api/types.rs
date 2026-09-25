@@ -143,6 +143,8 @@ pub struct JavaRuntimeInfo {
     /// Only managed runtimes can be deleted from the launcher.
     pub managed: bool,
     pub system: bool,
+    /// Read from the JDK `release` file; unknown for other distributions.
+    pub vendor: Option<crate::api::settings::JavaVendor>,
 }
 
 #[derive(Debug, Clone)]

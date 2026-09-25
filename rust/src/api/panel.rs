@@ -9,6 +9,7 @@ use crate::process::{self, RunStatus, RuntimeSnapshot};
 use crate::{PanelError, PanelResult};
 
 use super::progress::report;
+use super::settings::JavaVendor;
 use super::types::*;
 
 fn to_status(status: RunStatus) -> ServerStatus {
@@ -175,14 +176,15 @@ pub async fn list_runtimes() -> PanelResult<Vec<JavaRuntimeInfo>> {
             major: runtime.major.unwrap_or(0),
             managed: runtime.source == crate::java_runtime::RuntimeSource::Managed,
             system: runtime.source == crate::java_runtime::RuntimeSource::System,
+            vendor: runtime.vendor,
             name: runtime.name,
             path: runtime.home.to_string_lossy().to_string(),
         })
         .collect())
 }
 
-pub async fn list_java_releases() -> PanelResult<Vec<JavaReleaseInfo>> {
-    let releases = crate::java_runtime::list_releases().await?;
+pub async fn list_java_releases(vendor: JavaVendor) -> PanelResult<Vec<JavaReleaseInfo>> {
+    let releases = crate::java_runtime::list_releases(vendor).await?;
     Ok(releases
         .into_iter()
         .map(|release| JavaReleaseInfo {
@@ -313,12 +315,12 @@ pub async fn change_server_version(id: String, mc_version: String, build: String
     .await
 }
 
-pub async fn install_java(major: u32, sink: StreamSink<ProgressEvent>) -> PanelResult<()> {
+pub async fn install_java(major: u32, vendor: JavaVendor, sink: StreamSink<ProgressEvent>) -> PanelResult<()> {
     report(
         sink,
         "Java",
         |path: &String| (format!("Java installato in {path}"), None),
-        |tx| async move { install::install_java(&Layout::app(), major, &tx).await },
+        |tx| async move { install::install_java(&Layout::app(), vendor, major, &tx).await },
     )
     .await
 }

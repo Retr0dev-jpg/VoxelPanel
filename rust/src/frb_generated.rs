@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1242081639;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1711384373;
 
 // Section: executor
 
@@ -1637,6 +1637,7 @@ fn wire__crate__api__panel__install_java_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_major = <u32>::sse_decode(&mut deserializer);
+            let api_vendor = <crate::api::settings::JavaVendor>::sse_decode(&mut deserializer);
             let api_sink = <StreamSink<
                 crate::api::types::ProgressEvent,
                 flutter_rust_bridge::for_generated::SseCodec,
@@ -1646,7 +1647,8 @@ fn wire__crate__api__panel__install_java_impl(
                 transform_result_sse::<_, crate::api::error::PanelError>(
                     (move || async move {
                         let output_ok =
-                            crate::api::panel::install_java(api_major, api_sink).await?;
+                            crate::api::panel::install_java(api_major, api_vendor, api_sink)
+                                .await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -1684,6 +1686,67 @@ fn wire__crate__api__settings__java_settings_default_impl(
                     std::result::Result::Ok(output_ok)
                 })())
             }
+        },
+    )
+}
+fn wire__crate__api__settings__java_vendor_default_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "java_vendor_default",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok = Ok::<_, ()>(crate::api::settings::JavaVendor::default())?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__settings__java_vendors_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "java_vendors",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Ok::<_, ()>(crate::api::settings::java_vendors())?;
+                std::result::Result::Ok(output_ok)
+            })())
         },
     )
 }
@@ -1987,11 +2050,12 @@ fn wire__crate__api__panel__list_java_releases_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_vendor = <crate::api::settings::JavaVendor>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, crate::api::error::PanelError>(
                     (move || async move {
-                        let output_ok = crate::api::panel::list_java_releases().await?;
+                        let output_ok = crate::api::panel::list_java_releases(api_vendor).await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -4756,12 +4820,14 @@ impl SseDecode for crate::api::types::JavaRuntimeInfo {
         let mut var_path = <String>::sse_decode(deserializer);
         let mut var_managed = <bool>::sse_decode(deserializer);
         let mut var_system = <bool>::sse_decode(deserializer);
+        let mut var_vendor = <Option<crate::api::settings::JavaVendor>>::sse_decode(deserializer);
         return crate::api::types::JavaRuntimeInfo {
             name: var_name,
             major: var_major,
             path: var_path,
             managed: var_managed,
             system: var_system,
+            vendor: var_vendor,
         };
     }
 }
@@ -4771,8 +4837,43 @@ impl SseDecode for crate::api::settings::JavaSettings {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_preferred =
             <Vec<crate::api::settings::PreferredJava>>::sse_decode(deserializer);
+        let mut var_vendor = <crate::api::settings::JavaVendor>::sse_decode(deserializer);
         return crate::api::settings::JavaSettings {
             preferred: var_preferred,
+            vendor: var_vendor,
+        };
+    }
+}
+
+impl SseDecode for crate::api::settings::JavaVendor {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::settings::JavaVendor::Temurin,
+            1 => crate::api::settings::JavaVendor::Zulu,
+            2 => crate::api::settings::JavaVendor::Corretto,
+            3 => crate::api::settings::JavaVendor::Microsoft,
+            4 => crate::api::settings::JavaVendor::Liberica,
+            5 => crate::api::settings::JavaVendor::SapMachine,
+            6 => crate::api::settings::JavaVendor::GraalVm,
+            _ => unreachable!("Invalid variant for JavaVendor: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::settings::JavaVendorInfo {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_vendor = <crate::api::settings::JavaVendor>::sse_decode(deserializer);
+        let mut var_name = <String>::sse_decode(deserializer);
+        let mut var_publisher = <String>::sse_decode(deserializer);
+        let mut var_website = <String>::sse_decode(deserializer);
+        return crate::api::settings::JavaVendorInfo {
+            vendor: var_vendor,
+            name: var_name,
+            publisher: var_publisher,
+            website: var_website,
         };
     }
 }
@@ -4982,6 +5083,20 @@ impl SseDecode for Vec<crate::api::types::JavaRuntimeInfo> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::types::JavaRuntimeInfo>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::settings::JavaVendorInfo> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::settings::JavaVendorInfo>::sse_decode(
                 deserializer,
             ));
         }
@@ -5332,6 +5447,17 @@ impl SseDecode for Option<i64> {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<i64>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::settings::JavaVendor> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::settings::JavaVendor>::sse_decode(deserializer));
         } else {
             return None;
         }
@@ -6061,113 +6187,116 @@ fn pde_ffi_dispatcher_primary_impl(
             data_len,
         ),
         45 => {
+            wire__crate__api__settings__java_vendor_default_impl(port, ptr, rust_vec_len, data_len)
+        }
+        47 => {
             wire__crate__api__settings__jvm_preset_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        47 => wire__crate__api__settings__launcher_settings_default_impl(
+        49 => wire__crate__api__settings__launcher_settings_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        48 => wire__crate__api__files__list_addons_impl(port, ptr, rust_vec_len, data_len),
-        49 => wire__crate__api__files__list_backups_impl(port, ptr, rust_vec_len, data_len),
-        50 => wire__crate__api__panel__list_builds_impl(port, ptr, rust_vec_len, data_len),
-        51 => wire__crate__api__server__list_config_files_impl(port, ptr, rust_vec_len, data_len),
-        52 => wire__crate__api__server__list_directory_impl(port, ptr, rust_vec_len, data_len),
-        53 => wire__crate__api__panel__list_java_releases_impl(port, ptr, rust_vec_len, data_len),
-        54 => wire__crate__api__server__list_logs_impl(port, ptr, rust_vec_len, data_len),
-        55 => wire__crate__api__files__list_properties_impl(port, ptr, rust_vec_len, data_len),
-        57 => wire__crate__api__panel__list_runtimes_impl(port, ptr, rust_vec_len, data_len),
-        58 => wire__crate__api__automation__list_schedules_impl(port, ptr, rust_vec_len, data_len),
-        59 => wire__crate__api__panel__list_servers_impl(port, ptr, rust_vec_len, data_len),
-        60 => wire__crate__api__panel__list_versions_impl(port, ptr, rust_vec_len, data_len),
-        61 => wire__crate__api__files__list_worlds_impl(port, ptr, rust_vec_len, data_len),
-        62 => wire__crate__api__players__modify_player_list_impl(port, ptr, rust_vec_len, data_len),
-        64 => wire__crate__api__content__modpack_versions_impl(port, ptr, rust_vec_len, data_len),
-        65 => {
+        50 => wire__crate__api__files__list_addons_impl(port, ptr, rust_vec_len, data_len),
+        51 => wire__crate__api__files__list_backups_impl(port, ptr, rust_vec_len, data_len),
+        52 => wire__crate__api__panel__list_builds_impl(port, ptr, rust_vec_len, data_len),
+        53 => wire__crate__api__server__list_config_files_impl(port, ptr, rust_vec_len, data_len),
+        54 => wire__crate__api__server__list_directory_impl(port, ptr, rust_vec_len, data_len),
+        55 => wire__crate__api__panel__list_java_releases_impl(port, ptr, rust_vec_len, data_len),
+        56 => wire__crate__api__server__list_logs_impl(port, ptr, rust_vec_len, data_len),
+        57 => wire__crate__api__files__list_properties_impl(port, ptr, rust_vec_len, data_len),
+        59 => wire__crate__api__panel__list_runtimes_impl(port, ptr, rust_vec_len, data_len),
+        60 => wire__crate__api__automation__list_schedules_impl(port, ptr, rust_vec_len, data_len),
+        61 => wire__crate__api__panel__list_servers_impl(port, ptr, rust_vec_len, data_len),
+        62 => wire__crate__api__panel__list_versions_impl(port, ptr, rust_vec_len, data_len),
+        63 => wire__crate__api__files__list_worlds_impl(port, ptr, rust_vec_len, data_len),
+        64 => wire__crate__api__players__modify_player_list_impl(port, ptr, rust_vec_len, data_len),
+        66 => wire__crate__api__content__modpack_versions_impl(port, ptr, rust_vec_len, data_len),
+        67 => {
             wire__crate__api__settings__move_managed_folder_impl(port, ptr, rust_vec_len, data_len)
         }
-        66 => wire__crate__api__settings__network_settings_default_impl(
+        68 => wire__crate__api__settings__network_settings_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        68 => wire__crate__api__settings__notification_settings_default_impl(
+        70 => wire__crate__api__settings__notification_settings_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        69 => wire__crate__api__players__online_players_impl(port, ptr, rust_vec_len, data_len),
-        70 => wire__crate__api__files__open_in_explorer_impl(port, ptr, rust_vec_len, data_len),
-        71 => wire__crate__api__settings__path_settings_default_impl(
+        71 => wire__crate__api__players__online_players_impl(port, ptr, rust_vec_len, data_len),
+        72 => wire__crate__api__files__open_in_explorer_impl(port, ptr, rust_vec_len, data_len),
+        73 => wire__crate__api__settings__path_settings_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        72 => wire__crate__api__players__player_lists_impl(port, ptr, rust_vec_len, data_len),
-        73 => wire__crate__api__panel__preview_import_impl(port, ptr, rust_vec_len, data_len),
-        76 => {
+        74 => wire__crate__api__players__player_lists_impl(port, ptr, rust_vec_len, data_len),
+        75 => wire__crate__api__panel__preview_import_impl(port, ptr, rust_vec_len, data_len),
+        78 => {
             wire__crate__api__types__provider_kind_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        78 => wire__crate__api__server__read_log_impl(port, ptr, rust_vec_len, data_len),
-        79 => wire__crate__api__server__read_text_file_impl(port, ptr, rust_vec_len, data_len),
-        80 => wire__crate__api__server__remove_server_icon_impl(port, ptr, rust_vec_len, data_len),
-        81 => wire__crate__api__panel__rename_server_impl(port, ptr, rust_vec_len, data_len),
-        82 => wire__crate__api__server__rename_server_path_impl(port, ptr, rust_vec_len, data_len),
-        83 => wire__crate__api__files__rename_world_impl(port, ptr, rust_vec_len, data_len),
-        84 => wire__crate__api__panel__required_java_impl(port, ptr, rust_vec_len, data_len),
-        85 => wire__crate__api__settings__reset_launcher_settings_impl(
+        80 => wire__crate__api__server__read_log_impl(port, ptr, rust_vec_len, data_len),
+        81 => wire__crate__api__server__read_text_file_impl(port, ptr, rust_vec_len, data_len),
+        82 => wire__crate__api__server__remove_server_icon_impl(port, ptr, rust_vec_len, data_len),
+        83 => wire__crate__api__panel__rename_server_impl(port, ptr, rust_vec_len, data_len),
+        84 => wire__crate__api__server__rename_server_path_impl(port, ptr, rust_vec_len, data_len),
+        85 => wire__crate__api__files__rename_world_impl(port, ptr, rust_vec_len, data_len),
+        86 => wire__crate__api__panel__required_java_impl(port, ptr, rust_vec_len, data_len),
+        87 => wire__crate__api__settings__reset_launcher_settings_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        86 => wire__crate__api__files__reset_world_impl(port, ptr, rust_vec_len, data_len),
-        87 => wire__crate__api__panel__restart_server_impl(port, ptr, rust_vec_len, data_len),
-        88 => wire__crate__api__files__restore_backup_impl(port, ptr, rust_vec_len, data_len),
-        89 => {
+        88 => wire__crate__api__files__reset_world_impl(port, ptr, rust_vec_len, data_len),
+        89 => wire__crate__api__panel__restart_server_impl(port, ptr, rust_vec_len, data_len),
+        90 => wire__crate__api__files__restore_backup_impl(port, ptr, rust_vec_len, data_len),
+        91 => {
             wire__crate__api__automation__run_schedule_now_impl(port, ptr, rust_vec_len, data_len)
         }
-        90 => wire__crate__api__players__run_server_command_impl(port, ptr, rust_vec_len, data_len),
-        91 => wire__crate__api__panel__runtime_snapshots_impl(port, ptr, rust_vec_len, data_len),
-        92 => wire__crate__api__settings__save_launcher_settings_impl(
+        92 => wire__crate__api__players__run_server_command_impl(port, ptr, rust_vec_len, data_len),
+        93 => wire__crate__api__panel__runtime_snapshots_impl(port, ptr, rust_vec_len, data_len),
+        94 => wire__crate__api__settings__save_launcher_settings_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        93 => wire__crate__api__files__save_properties_impl(port, ptr, rust_vec_len, data_len),
-        94 => wire__crate__api__automation__save_schedules_impl(port, ptr, rust_vec_len, data_len),
-        95 => wire__crate__api__server__save_server_config_impl(port, ptr, rust_vec_len, data_len),
-        96 => wire__crate__api__content__search_content_impl(port, ptr, rust_vec_len, data_len),
-        97 => wire__crate__api__content__search_modpacks_impl(port, ptr, rust_vec_len, data_len),
-        98 => wire__crate__api__panel__send_command_impl(port, ptr, rust_vec_len, data_len),
-        99 => {
+        95 => wire__crate__api__files__save_properties_impl(port, ptr, rust_vec_len, data_len),
+        96 => wire__crate__api__automation__save_schedules_impl(port, ptr, rust_vec_len, data_len),
+        97 => wire__crate__api__server__save_server_config_impl(port, ptr, rust_vec_len, data_len),
+        98 => wire__crate__api__content__search_content_impl(port, ptr, rust_vec_len, data_len),
+        99 => wire__crate__api__content__search_modpacks_impl(port, ptr, rust_vec_len, data_len),
+        100 => wire__crate__api__panel__send_command_impl(port, ptr, rust_vec_len, data_len),
+        101 => {
             wire__crate__api__automation__server_disk_usage_impl(port, ptr, rust_vec_len, data_len)
         }
-        100 => wire__crate__api__server__server_icon_path_impl(port, ptr, rust_vec_len, data_len),
-        101 => wire__crate__api__files__set_active_world_impl(port, ptr, rust_vec_len, data_len),
-        102 => wire__crate__api__files__set_addon_enabled_impl(port, ptr, rust_vec_len, data_len),
-        103 => wire__crate__api__server__set_server_icon_impl(port, ptr, rust_vec_len, data_len),
-        104 => wire__crate__api__panel__shutdown_all_impl(port, ptr, rust_vec_len, data_len),
-        105 => wire__crate__api__panel__start_server_impl(port, ptr, rust_vec_len, data_len),
-        106 => wire__crate__api__panel__stop_server_impl(port, ptr, rust_vec_len, data_len),
-        109 => wire__crate__api__settings__theme_preference_default_impl(
+        102 => wire__crate__api__server__server_icon_path_impl(port, ptr, rust_vec_len, data_len),
+        103 => wire__crate__api__files__set_active_world_impl(port, ptr, rust_vec_len, data_len),
+        104 => wire__crate__api__files__set_addon_enabled_impl(port, ptr, rust_vec_len, data_len),
+        105 => wire__crate__api__server__set_server_icon_impl(port, ptr, rust_vec_len, data_len),
+        106 => wire__crate__api__panel__shutdown_all_impl(port, ptr, rust_vec_len, data_len),
+        107 => wire__crate__api__panel__start_server_impl(port, ptr, rust_vec_len, data_len),
+        108 => wire__crate__api__panel__stop_server_impl(port, ptr, rust_vec_len, data_len),
+        111 => wire__crate__api__settings__theme_preference_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        110 => wire__crate__api__content__update_addons_impl(port, ptr, rust_vec_len, data_len),
-        111 => {
+        112 => wire__crate__api__content__update_addons_impl(port, ptr, rust_vec_len, data_len),
+        113 => {
             wire__crate__api__panel__update_runtime_config_impl(port, ptr, rust_vec_len, data_len)
         }
-        112 => wire__crate__api__panel__watch_console_impl(port, ptr, rust_vec_len, data_len),
-        113 => wire__crate__api__panel__watch_events_impl(port, ptr, rust_vec_len, data_len),
-        114 => wire__crate__api__server__write_text_file_impl(port, ptr, rust_vec_len, data_len),
+        114 => wire__crate__api__panel__watch_console_impl(port, ptr, rust_vec_len, data_len),
+        115 => wire__crate__api__panel__watch_events_impl(port, ptr, rust_vec_len, data_len),
+        116 => wire__crate__api__server__write_text_file_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -6183,15 +6312,16 @@ fn pde_ffi_dispatcher_sync_impl(
         3 => wire__crate__api__panel__any_server_running_impl(ptr, rust_vec_len, data_len),
         4 => wire__crate__api__settings__app_log_dir_impl(ptr, rust_vec_len, data_len),
         6 => wire__crate__api__panel__app_paths_impl(ptr, rust_vec_len, data_len),
-        46 => wire__crate__api__settings__jvm_presets_impl(ptr, rust_vec_len, data_len),
-        56 => wire__crate__api__panel__list_providers_impl(ptr, rust_vec_len, data_len),
-        63 => wire__crate__api__content__modpack_sources_impl(ptr, rust_vec_len, data_len),
-        67 => wire__crate__api__automation__next_schedule_runs_impl(ptr, rust_vec_len, data_len),
-        74 => wire__crate__api__server__properties_schema_impl(ptr, rust_vec_len, data_len),
-        75 => wire__crate__api__panel__provider_info_impl(ptr, rust_vec_len, data_len),
-        77 => wire__crate__api__panel__ram_presets_impl(ptr, rust_vec_len, data_len),
-        107 => wire__crate__api__panel__suggest_ram_impl(ptr, rust_vec_len, data_len),
-        108 => wire__crate__api__panel__system_memory_mb_impl(ptr, rust_vec_len, data_len),
+        46 => wire__crate__api__settings__java_vendors_impl(ptr, rust_vec_len, data_len),
+        48 => wire__crate__api__settings__jvm_presets_impl(ptr, rust_vec_len, data_len),
+        58 => wire__crate__api__panel__list_providers_impl(ptr, rust_vec_len, data_len),
+        65 => wire__crate__api__content__modpack_sources_impl(ptr, rust_vec_len, data_len),
+        69 => wire__crate__api__automation__next_schedule_runs_impl(ptr, rust_vec_len, data_len),
+        76 => wire__crate__api__server__properties_schema_impl(ptr, rust_vec_len, data_len),
+        77 => wire__crate__api__panel__provider_info_impl(ptr, rust_vec_len, data_len),
+        79 => wire__crate__api__panel__ram_presets_impl(ptr, rust_vec_len, data_len),
+        109 => wire__crate__api__panel__suggest_ram_impl(ptr, rust_vec_len, data_len),
+        110 => wire__crate__api__panel__system_memory_mb_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -6768,6 +6898,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::types::JavaRuntimeInfo {
             self.path.into_into_dart().into_dart(),
             self.managed.into_into_dart().into_dart(),
             self.system.into_into_dart().into_dart(),
+            self.vendor.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -6786,7 +6917,11 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::types::JavaRuntimeInfo>
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::settings::JavaSettings {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [self.preferred.into_into_dart().into_dart()].into_dart()
+        [
+            self.preferred.into_into_dart().into_dart(),
+            self.vendor.into_into_dart().into_dart(),
+        ]
+        .into_dart()
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
@@ -6797,6 +6932,55 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::settings::JavaSettings>
     for crate::api::settings::JavaSettings
 {
     fn into_into_dart(self) -> crate::api::settings::JavaSettings {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::settings::JavaVendor {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Temurin => 0.into_dart(),
+            Self::Zulu => 1.into_dart(),
+            Self::Corretto => 2.into_dart(),
+            Self::Microsoft => 3.into_dart(),
+            Self::Liberica => 4.into_dart(),
+            Self::SapMachine => 5.into_dart(),
+            Self::GraalVm => 6.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::settings::JavaVendor
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::settings::JavaVendor>
+    for crate::api::settings::JavaVendor
+{
+    fn into_into_dart(self) -> crate::api::settings::JavaVendor {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::settings::JavaVendorInfo {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.vendor.into_into_dart().into_dart(),
+            self.name.into_into_dart().into_dart(),
+            self.publisher.into_into_dart().into_dart(),
+            self.website.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::settings::JavaVendorInfo
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::settings::JavaVendorInfo>
+    for crate::api::settings::JavaVendorInfo
+{
+    fn into_into_dart(self) -> crate::api::settings::JavaVendorInfo {
         self
     }
 }
@@ -8114,6 +8298,7 @@ impl SseEncode for crate::api::types::JavaRuntimeInfo {
         <String>::sse_encode(self.path, serializer);
         <bool>::sse_encode(self.managed, serializer);
         <bool>::sse_encode(self.system, serializer);
+        <Option<crate::api::settings::JavaVendor>>::sse_encode(self.vendor, serializer);
     }
 }
 
@@ -8121,6 +8306,38 @@ impl SseEncode for crate::api::settings::JavaSettings {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <Vec<crate::api::settings::PreferredJava>>::sse_encode(self.preferred, serializer);
+        <crate::api::settings::JavaVendor>::sse_encode(self.vendor, serializer);
+    }
+}
+
+impl SseEncode for crate::api::settings::JavaVendor {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::settings::JavaVendor::Temurin => 0,
+                crate::api::settings::JavaVendor::Zulu => 1,
+                crate::api::settings::JavaVendor::Corretto => 2,
+                crate::api::settings::JavaVendor::Microsoft => 3,
+                crate::api::settings::JavaVendor::Liberica => 4,
+                crate::api::settings::JavaVendor::SapMachine => 5,
+                crate::api::settings::JavaVendor::GraalVm => 6,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::settings::JavaVendorInfo {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::settings::JavaVendor>::sse_encode(self.vendor, serializer);
+        <String>::sse_encode(self.name, serializer);
+        <String>::sse_encode(self.publisher, serializer);
+        <String>::sse_encode(self.website, serializer);
     }
 }
 
@@ -8283,6 +8500,16 @@ impl SseEncode for Vec<crate::api::types::JavaRuntimeInfo> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::types::JavaRuntimeInfo>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::settings::JavaVendorInfo> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::settings::JavaVendorInfo>::sse_encode(item, serializer);
         }
     }
 }
@@ -8565,6 +8792,16 @@ impl SseEncode for Option<i64> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <i64>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::settings::JavaVendor> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::settings::JavaVendor>::sse_encode(value, serializer);
         }
     }
 }

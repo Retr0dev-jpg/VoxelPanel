@@ -108,10 +108,33 @@ pub struct PreferredJava {
     pub path: String,
 }
 
+/// Distribution used when VoxelPanel downloads a Java runtime.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum JavaVendor {
+    #[default]
+    Temurin,
+    Zulu,
+    Corretto,
+    Microsoft,
+    Liberica,
+    SapMachine,
+    GraalVm,
+}
+
+#[derive(Debug, Clone)]
+pub struct JavaVendorInfo {
+    pub vendor: JavaVendor,
+    pub name: String,
+    pub publisher: String,
+    pub website: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct JavaSettings {
     pub preferred: Vec<PreferredJava>,
+    pub vendor: JavaVendor,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -314,6 +337,22 @@ pub fn jvm_presets() -> Vec<JvmPresetInfo> {
         .map(|preset| JvmPresetInfo {
             preset,
             flags: crate::jvm::preset_flags(preset),
+        })
+        .collect()
+}
+
+#[flutter_rust_bridge::frb(sync)]
+pub fn java_vendors() -> Vec<JavaVendorInfo> {
+    crate::java_runtime::VENDORS
+        .iter()
+        .map(|&vendor| {
+            let meta = crate::java_runtime::meta(vendor);
+            JavaVendorInfo {
+                vendor,
+                name: meta.name.into(),
+                publisher: meta.publisher.into(),
+                website: meta.website.into(),
+            }
         })
         .collect()
 }

@@ -129,34 +129,16 @@ class _JavaSectionState extends ConsumerState<JavaSection> {
   String? _progress;
 
   Future<void> _install() async {
-    final l = context.l10n;
-    List<JavaReleaseInfo> releases;
-    try {
-      releases = await listJavaReleases();
-    } catch (error) {
-      if (mounted) {
-        showError(context, error);
-      }
-      return;
-    }
-    if (!mounted) {
-      return;
-    }
-    final major = await showDialog<int>(
+    final choice = await showDialog<(JavaVendor, int)>(
       context: context,
-      builder: (context) => SimpleDialog(
-        title: Text(l.javaVersion),
-        children: [
-          for (final release in releases)
-            SimpleDialogOption(onPressed: () => Navigator.pop(context, release.major), child: Text('Java ${release.major}${release.lts ? ' LTS' : ''}')),
-        ],
-      ),
+      builder: (context) => _JavaInstallDialog(initialVendor: widget.settings.java.vendor),
     );
-    if (major == null) {
+    if (choice == null || !mounted) {
       return;
     }
+    final (vendor, major) = choice;
     try {
-      await for (final event in installJava(major: major)) {
+      await for (final event in installJava(major: major, vendor: vendor)) {
         if (!mounted) {
           return;
         }
@@ -183,7 +165,11 @@ class _JavaSectionState extends ConsumerState<JavaSection> {
         if (entry.major != major) entry,
       if (path != null) PreferredJava(major: major, path: path),
     ]..sort((a, b) => b.major.compareTo(a.major));
-    saveSettings(context, ref, widget.settings.copyWith(java: JavaSettings(preferred: preferred)));
+    saveSettings(context, ref, widget.settings.copyWith(java: JavaSettings(preferred: preferred, vendor: widget.settings.java.vendor)));
+  }
+
+  void _setVendor(JavaVendor vendor) {
+    saveSettings(context, ref, widget.settings.copyWith(java: JavaSettings(preferred: widget.settings.java.preferred, vendor: vendor)));
   }
 
   @override
@@ -196,8 +182,28 @@ class _JavaSectionState extends ConsumerState<JavaSection> {
       error: (error, stack) => ErrorState(error: error, onRetry: () => ref.invalidate(javaRuntimesProvider)),
       data: (runtimes) {
         final majors = runtimes.map((runtime) => runtime.major).where((major) => major > 0).toSet().toList()..sort((a, b) => b.compareTo(a));
+        final vendors = {for (final info in javaVendors()) info.vendor: info};
         return Column(
           children: [
+            SettingsGroup(
+              title: l.javaVendor,
+              subtitle: l.javaVendorHint,
+              children: [
+                SettingsRow(
+                  title: l.javaVendorLabel,
+                  child: SettingsDropdown<JavaVendor>(
+                    value: widget.settings.java.vendor,
+                    items: {for (final info in vendors.values) info.vendor: '${info.name} · ${info.publisher}'},
+                    onChanged: _setVendor,
+                  ),
+                ),
+                if (vendors[widget.settings.java.vendor] case final info?)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(onPressed: () => launchUrl(Uri.parse(info.website)), icon: const Icon(Icons.open_in_new, size: 16), label: Text(l.javaVendorWebsite(info.name))),
+                  ),
+              ],
+            ),
             SettingsGroup(
               title: l.javaInstalled,
               subtitle: l.javaInstalledHint,
@@ -217,7 +223,10 @@ class _JavaSectionState extends ConsumerState<JavaSection> {
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(Icons.coffee, color: runtime.managed ? colors.accent : colors.muted),
                     title: Text(runtime.major == 0 ? runtime.name : 'Java ${runtime.major} · ${runtime.name}'),
-                    subtitle: Text('${runtime.managed ? l.javaManaged : runtime.system ? l.javaSystem : l.javaServer}\n${runtime.path}'),
+                    subtitle: Text(
+                      '${runtime.managed ? l.javaManaged : runtime.system ? l.javaSystem : l.javaServer}'
+                      '${runtime.vendor == null ? '' : ' · ${vendors[runtime.vendor]?.name ?? ''}'}\n${runtime.path}',
+                    ),
                     isThreeLine: true,
                     trailing: runtime.managed
                         ? IconButton(
@@ -255,6 +264,78 @@ class _JavaSectionState extends ConsumerState<JavaSection> {
           ],
         );
       },
+    );
+  }
+}
+
+/// Picks a distribution and a Java version; pops `(vendor, major)`.
+class _JavaInstallDialog extends StatefulWidget {
+  const _JavaInstallDialog({required this.initialVendor});
+
+  final JavaVendor initialVendor;
+
+  @override
+  State<_JavaInstallDialog> createState() => _JavaInstallDialogState();
+}
+
+class _JavaInstallDialogState extends State<_JavaInstallDialog> {
+  late JavaVendor _vendor = widget.initialVendor;
+  late Future<List<JavaReleaseInfo>> _releases = listJavaReleases(vendor: _vendor);
+
+  void _select(JavaVendor vendor) => setState(() {
+    _vendor = vendor;
+    _releases = listJavaReleases(vendor: vendor);
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final colors = context.voxel;
+    return AlertDialog(
+      title: Text(l.javaInstall),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SettingsDropdown<JavaVendor>(value: _vendor, items: {for (final info in javaVendors()) info.vendor: '${info.name} · ${info.publisher}'}, onChanged: _select),
+            const SizedBox(height: 12),
+            Text(l.javaVersion, style: TextStyle(color: colors.muted, fontSize: 12)),
+            const SizedBox(height: 4),
+            SizedBox(
+              height: 280,
+              child: FutureBuilder<List<JavaReleaseInfo>>(
+                future: _releases,
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return ErrorState(error: snapshot.error!, onRetry: () => _select(_vendor));
+                  }
+                  final releases = snapshot.data;
+                  if (releases == null) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (releases.isEmpty) {
+                    return Center(child: Text(l.javaNoReleases, style: TextStyle(color: colors.muted)));
+                  }
+                  return ListView(
+                    children: [
+                      for (final release in releases)
+                        ListTile(
+                          dense: true,
+                          leading: Icon(Icons.coffee, color: release.lts ? colors.accent : colors.muted),
+                          title: Text('Java ${release.major}${release.lts ? ' LTS' : ''}'),
+                          onTap: () => Navigator.pop(context, (_vendor, release.major)),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(l.cancel))],
     );
   }
 }
