@@ -11,18 +11,20 @@ import 'package:voxel_panel/src/rust/api/types.dart';
 import 'package:voxel_panel/src/theme.dart';
 import 'package:voxel_panel/widgets/common/feedback.dart';
 
-class PluginsTab extends StatefulWidget {
-  const PluginsTab({super.key, required this.serverId, required this.running});
+/// Plugins or mods of a server, depending on [kind].
+class AddonsTab extends StatefulWidget {
+  const AddonsTab({super.key, required this.serverId, required this.running, required this.kind});
 
   final String serverId;
   final bool running;
+  final AddonKind kind;
 
   @override
-  State<PluginsTab> createState() => _PluginsTabState();
+  State<AddonsTab> createState() => _AddonsTabState();
 }
 
-class _PluginsTabState extends State<PluginsTab> {
-  List<PluginInfo> _plugins = [];
+class _AddonsTabState extends State<AddonsTab> {
+  List<AddonInfo> _plugins = [];
   Object? _error;
   var _busy = false;
 
@@ -34,7 +36,7 @@ class _PluginsTabState extends State<PluginsTab> {
 
   Future<void> _load() async {
     try {
-      final plugins = await listPlugins(id: widget.serverId);
+      final plugins = await listAddons(id: widget.serverId, kind: widget.kind);
       if (mounted) {
         setState(() {
           _plugins = plugins;
@@ -61,6 +63,7 @@ class _PluginsTabState extends State<PluginsTab> {
   Widget build(BuildContext context) {
     final l = context.l10n;
     final locked = widget.running || _busy;
+    final isMod = widget.kind == AddonKind.mod;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -73,7 +76,7 @@ class _PluginsTabState extends State<PluginsTab> {
               FilledButton.icon(
                 onPressed: locked ? null : _pickJar,
                 icon: const Icon(Icons.upload_file),
-                label: Text(l.installJar),
+                label: Text(isMod ? l.installModJar : l.installJar),
               ),
               FilledButton.tonalIcon(
                 onPressed: locked ? null : () => _search(context),
@@ -87,7 +90,7 @@ class _PluginsTabState extends State<PluginsTab> {
         if (widget.running)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Text(l.stopToEditPlugins, style: TextStyle(color: context.voxel.warning)),
+            child: Text(isMod ? l.stopToEditMods : l.stopToEditPlugins, style: TextStyle(color: context.voxel.warning)),
           ),
         if (_busy) const LinearProgressIndicator(),
         Expanded(child: _body(context, locked)),
@@ -101,7 +104,7 @@ class _PluginsTabState extends State<PluginsTab> {
       return ErrorState(error: _error!, onRetry: _load);
     }
     if (_plugins.isEmpty) {
-      return EmptyState(icon: Icons.extension_outlined, message: l.noPlugins);
+      return EmptyState(icon: Icons.extension_outlined, message: widget.kind == AddonKind.mod ? l.noMods : l.noPlugins);
     }
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
@@ -117,7 +120,7 @@ class _PluginsTabState extends State<PluginsTab> {
             children: [
               Switch(
                 value: plugin.enabled,
-                onChanged: locked ? null : (value) => _act(() => setPluginEnabled(id: widget.serverId, fileName: plugin.fileName, enabled: value)),
+                onChanged: locked ? null : (value) => _act(() => setAddonEnabled(id: widget.serverId, kind: widget.kind, fileName: plugin.fileName, enabled: value)),
               ),
               IconButton(
                 tooltip: l.delete,
@@ -126,7 +129,7 @@ class _PluginsTabState extends State<PluginsTab> {
                     : () async {
                         final ok = await confirmAction(context, title: l.deletePluginTitle, message: plugin.fileName, destructive: true, confirmLabel: l.delete);
                         if (ok) {
-                          await _act(() => deletePlugin(id: widget.serverId, fileName: plugin.fileName));
+                          await _act(() => deleteAddon(id: widget.serverId, kind: widget.kind, fileName: plugin.fileName));
                         }
                       },
                 icon: const Icon(Icons.delete_outline),
@@ -142,17 +145,17 @@ class _PluginsTabState extends State<PluginsTab> {
     final files = await FilePicker.pickFiles(dialogTitle: context.l10n.pluginJarTitle, type: FileType.custom, allowedExtensions: const ['jar']);
     final path = files.isEmpty ? null : files.first.path;
     if (path != null) {
-      await _act(() => installPluginFile(id: widget.serverId, sourcePath: path));
+      await _act(() => installAddonFile(id: widget.serverId, kind: widget.kind, sourcePath: path));
     }
   }
 
   Future<void> _search(BuildContext context) async {
-    final projectId = await showDialog<String>(context: context, builder: (context) => const _ModrinthDialog());
+    final projectId = await showDialog<String>(context: context, builder: (context) => _ModrinthDialog(serverId: widget.serverId, kind: widget.kind));
     if (projectId == null) {
       return;
     }
     await _act(() async {
-      await for (final event in installModrinthProject(id: widget.serverId, projectId: projectId)) {
+      await for (final event in installModrinthProject(id: widget.serverId, kind: widget.kind, projectId: projectId)) {
         if (event.error != null) {
           throw Exception(event.error);
         }
@@ -162,7 +165,10 @@ class _PluginsTabState extends State<PluginsTab> {
 }
 
 class _ModrinthDialog extends StatefulWidget {
-  const _ModrinthDialog();
+  const _ModrinthDialog({required this.serverId, required this.kind});
+
+  final String serverId;
+  final AddonKind kind;
 
   @override
   State<_ModrinthDialog> createState() => _ModrinthDialogState();
@@ -186,7 +192,7 @@ class _ModrinthDialogState extends State<_ModrinthDialog> {
       _error = null;
     });
     try {
-      final hits = await searchModrinth(query: query);
+      final hits = await searchModrinth(id: widget.serverId, kind: widget.kind, query: query);
       if (mounted) {
         setState(() => _hits = hits);
       }
@@ -214,7 +220,7 @@ class _ModrinthDialogState extends State<_ModrinthDialog> {
             TextField(
               controller: _query,
               autofocus: true,
-              decoration: InputDecoration(labelText: l.searchPlugins, suffixIcon: IconButton(onPressed: () => _run(_query.text), icon: const Icon(Icons.search))),
+              decoration: InputDecoration(labelText: widget.kind == AddonKind.mod ? l.searchMods : l.searchPlugins, suffixIcon: IconButton(onPressed: () => _run(_query.text), icon: const Icon(Icons.search))),
               onSubmitted: _run,
             ),
             const SizedBox(height: 8),

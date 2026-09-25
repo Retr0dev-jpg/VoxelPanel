@@ -4,10 +4,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:voxel_panel/screens/server/addons_tab.dart';
 import 'package:voxel_panel/screens/server/backups_tab.dart';
 import 'package:voxel_panel/screens/server/console_tab.dart';
 import 'package:voxel_panel/screens/server/overview_tab.dart';
-import 'package:voxel_panel/screens/server/plugins_tab.dart';
 import 'package:voxel_panel/screens/server/properties_tab.dart';
 import 'package:voxel_panel/screens/server/worlds_tab.dart';
 import 'package:voxel_panel/src/l10n.dart';
@@ -28,37 +28,56 @@ class ServerScreen extends ConsumerStatefulWidget {
   ConsumerState<ServerScreen> createState() => _ServerScreenState();
 }
 
+enum ServerSection { overview, console, properties, plugins, mods, worlds, backups }
+
+/// Sections that make sense for a server type: proxies have no worlds or server.properties,
+/// mod loaders get a mods section instead of (or next to) plugins.
+List<ServerSection> sectionsFor(ProviderInfo info) => [
+  ServerSection.overview,
+  ServerSection.console,
+  if (!info.isProxy) ServerSection.properties,
+  if (info.supportsPlugins) ServerSection.plugins,
+  if (info.supportsMods) ServerSection.mods,
+  if (info.hasWorlds) ServerSection.worlds,
+  ServerSection.backups,
+];
+
 class _ServerScreenState extends ConsumerState<ServerScreen> {
-  var _section = 0;
+  var _section = ServerSection.overview;
 
   void _refresh() => ref.invalidate(serverDetailsProvider(widget.serverId));
+
+  SidebarEntry _entry(AppLocalizations l, ServerSection section) => switch (section) {
+    ServerSection.overview => SidebarEntry(label: l.tabOverview, icon: Icons.space_dashboard_outlined),
+    ServerSection.console => SidebarEntry(label: l.tabConsole, icon: Icons.terminal_outlined),
+    ServerSection.properties => SidebarEntry(label: l.tabProperties, icon: Icons.tune),
+    ServerSection.plugins => SidebarEntry(label: l.tabPlugins, icon: Icons.extension_outlined),
+    ServerSection.mods => SidebarEntry(label: l.tabMods, icon: Icons.widgets_outlined),
+    ServerSection.worlds => SidebarEntry(label: l.tabWorlds, icon: Icons.public_outlined),
+    ServerSection.backups => SidebarEntry(label: l.tabBackups, icon: Icons.inventory_2_outlined),
+  };
 
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
     final details = ref.watch(serverDetailsProvider(widget.serverId));
     final status = ref.watch(serverStatusProvider(widget.serverId));
+    final sections = details.value == null ? const [ServerSection.overview] : sectionsFor(providerInfo(kind: details.value!.provider));
+    final selected = sections.contains(_section) ? _section : ServerSection.overview;
     return Scaffold(
       body: Row(
         children: [
           AppSidebar(
             onBack: () => Navigator.pop(context),
-            selected: _section,
-            onSelected: (index) => setState(() => _section = index),
-            entries: [
-              SidebarEntry(label: l.tabOverview, icon: Icons.space_dashboard_outlined),
-              SidebarEntry(label: l.tabConsole, icon: Icons.terminal_outlined),
-              SidebarEntry(label: l.tabProperties, icon: Icons.tune),
-              SidebarEntry(label: l.tabPlugins, icon: Icons.extension_outlined),
-              SidebarEntry(label: l.tabWorlds, icon: Icons.public_outlined),
-              SidebarEntry(label: l.tabBackups, icon: Icons.inventory_2_outlined),
-            ],
+            selected: sections.indexOf(selected),
+            onSelected: (index) => setState(() => _section = sections[index]),
+            entries: [for (final section in sections) _entry(l, section)],
           ),
           Expanded(
             child: details.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stack) => ErrorState(error: error, onRetry: _refresh),
-              data: (details) => _body(context, details, status),
+              data: (details) => _body(context, details, status, sections, selected),
             ),
           ),
         ],
@@ -66,40 +85,47 @@ class _ServerScreenState extends ConsumerState<ServerScreen> {
     );
   }
 
-  Widget _body(BuildContext context, ServerDetails details, ServerStatus status) {
+  Widget _body(BuildContext context, ServerDetails details, ServerStatus status, List<ServerSection> sections, ServerSection selected) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (_section != 0)
+        if (selected != ServerSection.overview)
           Padding(
             padding: const EdgeInsets.fromLTRB(28, 22, 28, 4),
             child: Text(details.name, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
           ),
         Expanded(
           child: IndexedStack(
-            index: _section,
+            index: sections.indexOf(selected),
             children: [
-              OverviewTab(
-                details: details,
-                onChanged: _refresh,
-                onDelete: () => _delete(details),
-                onRename: () => _rename(details),
-                onChangeVersion: () async {
-                  if (await showChangeVersionDialog(context, details)) {
-                    _refresh();
-                  }
-                },
-              ),
-              ConsoleTab(serverId: widget.serverId, running: status == ServerStatus.running || status == ServerStatus.starting),
-              PropertiesTab(serverId: widget.serverId),
-              PluginsTab(serverId: widget.serverId, running: status.isActive),
-              WorldsTab(serverId: widget.serverId, running: status.isActive),
-              BackupsTab(serverId: widget.serverId, running: status.isActive),
+              for (final section in sections) _page(section, details, status),
             ],
           ),
         ),
       ],
     );
+  }
+
+  Widget _page(ServerSection section, ServerDetails details, ServerStatus status) {
+    return switch (section) {
+      ServerSection.overview => OverviewTab(
+        details: details,
+        onChanged: _refresh,
+        onDelete: () => _delete(details),
+        onRename: () => _rename(details),
+        onChangeVersion: () async {
+          if (await showChangeVersionDialog(context, details)) {
+            _refresh();
+          }
+        },
+      ),
+      ServerSection.console => ConsoleTab(serverId: widget.serverId, running: status == ServerStatus.running || status == ServerStatus.starting),
+      ServerSection.properties => PropertiesTab(serverId: widget.serverId),
+      ServerSection.plugins => AddonsTab(serverId: widget.serverId, running: status.isActive, kind: AddonKind.plugin),
+      ServerSection.mods => AddonsTab(serverId: widget.serverId, running: status.isActive, kind: AddonKind.mod),
+      ServerSection.worlds => WorldsTab(serverId: widget.serverId, running: status.isActive),
+      ServerSection.backups => BackupsTab(serverId: widget.serverId, running: status.isActive),
+    };
   }
 
   Future<void> _rename(ServerDetails details) async {

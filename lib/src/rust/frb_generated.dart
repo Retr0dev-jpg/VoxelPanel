@@ -73,7 +73,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -2089682666;
+  int get rustContentHash => 820590771;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -125,17 +125,18 @@ abstract class RustLibApi extends BaseApi {
 
   Future<DefaultsSettings> crateApiSettingsDefaultsSettingsDefault();
 
+  Future<void> crateApiFilesDeleteAddon({
+    required String id,
+    required AddonKind kind,
+    required String fileName,
+  });
+
   Future<void> crateApiFilesDeleteBackup({
     required String id,
     required String fileName,
   });
 
   Future<void> crateApiSettingsDeleteJavaRuntime({required String path});
-
-  Future<void> crateApiFilesDeletePlugin({
-    required String id,
-    required String fileName,
-  });
 
   Future<void> crateApiPanelDeleteServer({
     required String id,
@@ -168,16 +169,18 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiSimpleInitApp();
 
+  Future<void> crateApiFilesInstallAddonFile({
+    required String id,
+    required AddonKind kind,
+    required String sourcePath,
+  });
+
   Stream<ProgressEvent> crateApiPanelInstallJava({required int major});
 
   Stream<ProgressEvent> crateApiFilesInstallModrinthProject({
     required String id,
+    required AddonKind kind,
     required String projectId,
-  });
-
-  Future<void> crateApiFilesInstallPluginFile({
-    required String id,
-    required String sourcePath,
   });
 
   Future<JavaSettings> crateApiSettingsJavaSettingsDefault();
@@ -188,6 +191,11 @@ abstract class RustLibApi extends BaseApi {
 
   Future<LauncherSettings> crateApiSettingsLauncherSettingsDefault();
 
+  Future<List<AddonInfo>> crateApiFilesListAddons({
+    required String id,
+    required AddonKind kind,
+  });
+
   Future<List<BackupInfo>> crateApiFilesListBackups({required String id});
 
   Future<List<BuildEntry>> crateApiPanelListBuilds({
@@ -196,8 +204,6 @@ abstract class RustLibApi extends BaseApi {
   });
 
   Future<List<JavaReleaseInfo>> crateApiPanelListJavaReleases();
-
-  Future<List<PluginInfo>> crateApiFilesListPlugins({required String id});
 
   Future<List<PropertyEntry>> crateApiFilesListProperties({required String id});
 
@@ -266,6 +272,8 @@ abstract class RustLibApi extends BaseApi {
   });
 
   Future<List<ModrinthProject>> crateApiFilesSearchModrinth({
+    required String id,
+    required AddonKind kind,
     required String query,
   });
 
@@ -279,8 +287,9 @@ abstract class RustLibApi extends BaseApi {
     required String name,
   });
 
-  Future<void> crateApiFilesSetPluginEnabled({
+  Future<void> crateApiFilesSetAddonEnabled({
     required String id,
+    required AddonKind kind,
     required String fileName,
     required bool enabled,
   });
@@ -777,6 +786,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "defaults_settings_default", argNames: []);
 
   @override
+  Future<void> crateApiFilesDeleteAddon({
+    required String id,
+    required AddonKind kind,
+    required String fileName,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_addon_kind(kind, serializer);
+          sse_encode_String(fileName, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 17,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_panel_error,
+        ),
+        constMeta: kCrateApiFilesDeleteAddonConstMeta,
+        argValues: [id, kind, fileName],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesDeleteAddonConstMeta => const TaskConstMeta(
+    debugName: "delete_addon",
+    argNames: ["id", "kind", "fileName"],
+  );
+
+  @override
   Future<void> crateApiFilesDeleteBackup({
     required String id,
     required String fileName,
@@ -790,7 +835,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 17,
+            funcId: 18,
             port: port_,
           );
         },
@@ -820,7 +865,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 19,
             port: port_,
           );
         },
@@ -837,40 +882,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiSettingsDeleteJavaRuntimeConstMeta =>
       const TaskConstMeta(debugName: "delete_java_runtime", argNames: ["path"]);
-
-  @override
-  Future<void> crateApiFilesDeletePlugin({
-    required String id,
-    required String fileName,
-  }) {
-    return handler.executeNormal(
-      NormalTask(
-        callFfi: (port_) {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_String(id, serializer);
-          sse_encode_String(fileName, serializer);
-          pdeCallFfi(
-            generalizedFrbRustBinding,
-            serializer,
-            funcId: 19,
-            port: port_,
-          );
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: sse_decode_panel_error,
-        ),
-        constMeta: kCrateApiFilesDeletePluginConstMeta,
-        argValues: [id, fileName],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiFilesDeletePluginConstMeta => const TaskConstMeta(
-    debugName: "delete_plugin",
-    argNames: ["id", "fileName"],
-  );
 
   @override
   Future<void> crateApiPanelDeleteServer({
@@ -1146,6 +1157,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "init_app", argNames: []);
 
   @override
+  Future<void> crateApiFilesInstallAddonFile({
+    required String id,
+    required AddonKind kind,
+    required String sourcePath,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_addon_kind(kind, serializer);
+          sse_encode_String(sourcePath, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 29,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_panel_error,
+        ),
+        constMeta: kCrateApiFilesInstallAddonFileConstMeta,
+        argValues: [id, kind, sourcePath],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesInstallAddonFileConstMeta =>
+      const TaskConstMeta(
+        debugName: "install_addon_file",
+        argNames: ["id", "kind", "sourcePath"],
+      );
+
+  @override
   Stream<ProgressEvent> crateApiPanelInstallJava({required int major}) {
     final sink = RustStreamSink<ProgressEvent>();
     unawaited(
@@ -1158,7 +1206,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 29,
+              funcId: 30,
               port: port_,
             );
           },
@@ -1183,6 +1231,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @override
   Stream<ProgressEvent> crateApiFilesInstallModrinthProject({
     required String id,
+    required AddonKind kind,
     required String projectId,
   }) {
     final sink = RustStreamSink<ProgressEvent>();
@@ -1192,12 +1241,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           callFfi: (port_) {
             final serializer = SseSerializer(generalizedFrbRustBinding);
             sse_encode_String(id, serializer);
+            sse_encode_addon_kind(kind, serializer);
             sse_encode_String(projectId, serializer);
             sse_encode_StreamSink_progress_event_Sse(sink, serializer);
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 30,
+              funcId: 31,
               port: port_,
             );
           },
@@ -1206,7 +1256,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             decodeErrorData: sse_decode_panel_error,
           ),
           constMeta: kCrateApiFilesInstallModrinthProjectConstMeta,
-          argValues: [id, projectId, sink],
+          argValues: [id, kind, projectId, sink],
           apiImpl: this,
         ),
       ),
@@ -1217,42 +1267,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiFilesInstallModrinthProjectConstMeta =>
       const TaskConstMeta(
         debugName: "install_modrinth_project",
-        argNames: ["id", "projectId", "sink"],
-      );
-
-  @override
-  Future<void> crateApiFilesInstallPluginFile({
-    required String id,
-    required String sourcePath,
-  }) {
-    return handler.executeNormal(
-      NormalTask(
-        callFfi: (port_) {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_String(id, serializer);
-          sse_encode_String(sourcePath, serializer);
-          pdeCallFfi(
-            generalizedFrbRustBinding,
-            serializer,
-            funcId: 31,
-            port: port_,
-          );
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: sse_decode_panel_error,
-        ),
-        constMeta: kCrateApiFilesInstallPluginFileConstMeta,
-        argValues: [id, sourcePath],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiFilesInstallPluginFileConstMeta =>
-      const TaskConstMeta(
-        debugName: "install_plugin_file",
-        argNames: ["id", "sourcePath"],
+        argNames: ["id", "kind", "projectId", "sink"],
       );
 
   @override
@@ -1359,6 +1374,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "launcher_settings_default", argNames: []);
 
   @override
+  Future<List<AddonInfo>> crateApiFilesListAddons({
+    required String id,
+    required AddonKind kind,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_addon_kind(kind, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 36,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_addon_info,
+          decodeErrorData: sse_decode_panel_error,
+        ),
+        constMeta: kCrateApiFilesListAddonsConstMeta,
+        argValues: [id, kind],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesListAddonsConstMeta =>
+      const TaskConstMeta(debugName: "list_addons", argNames: ["id", "kind"]);
+
+  @override
   Future<List<BackupInfo>> crateApiFilesListBackups({required String id}) {
     return handler.executeNormal(
       NormalTask(
@@ -1368,7 +1415,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 36,
+            funcId: 37,
             port: port_,
           );
         },
@@ -1400,7 +1447,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 37,
+            funcId: 38,
             port: port_,
           );
         },
@@ -1429,7 +1476,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 38,
+            funcId: 39,
             port: port_,
           );
         },
@@ -1446,34 +1493,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiPanelListJavaReleasesConstMeta =>
       const TaskConstMeta(debugName: "list_java_releases", argNames: []);
-
-  @override
-  Future<List<PluginInfo>> crateApiFilesListPlugins({required String id}) {
-    return handler.executeNormal(
-      NormalTask(
-        callFfi: (port_) {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_String(id, serializer);
-          pdeCallFfi(
-            generalizedFrbRustBinding,
-            serializer,
-            funcId: 39,
-            port: port_,
-          );
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_list_plugin_info,
-          decodeErrorData: sse_decode_panel_error,
-        ),
-        constMeta: kCrateApiFilesListPluginsConstMeta,
-        argValues: [id],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiFilesListPluginsConstMeta =>
-      const TaskConstMeta(debugName: "list_plugins", argNames: ["id"]);
 
   @override
   Future<List<PropertyEntry>> crateApiFilesListProperties({
@@ -2147,12 +2166,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @override
   Future<List<ModrinthProject>> crateApiFilesSearchModrinth({
+    required String id,
+    required AddonKind kind,
     required String query,
   }) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_addon_kind(kind, serializer);
           sse_encode_String(query, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
@@ -2166,14 +2189,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_panel_error,
         ),
         constMeta: kCrateApiFilesSearchModrinthConstMeta,
-        argValues: [query],
+        argValues: [id, kind, query],
         apiImpl: this,
       ),
     );
   }
 
   TaskConstMeta get kCrateApiFilesSearchModrinthConstMeta =>
-      const TaskConstMeta(debugName: "search_modrinth", argNames: ["query"]);
+      const TaskConstMeta(
+        debugName: "search_modrinth",
+        argNames: ["id", "kind", "query"],
+      );
 
   @override
   Future<void> crateApiPanelSendCommand({
@@ -2245,8 +2271,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiFilesSetPluginEnabled({
+  Future<void> crateApiFilesSetAddonEnabled({
     required String id,
+    required AddonKind kind,
     required String fileName,
     required bool enabled,
   }) {
@@ -2255,6 +2282,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(id, serializer);
+          sse_encode_addon_kind(kind, serializer);
           sse_encode_String(fileName, serializer);
           sse_encode_bool(enabled, serializer);
           pdeCallFfi(
@@ -2268,17 +2296,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_panel_error,
         ),
-        constMeta: kCrateApiFilesSetPluginEnabledConstMeta,
-        argValues: [id, fileName, enabled],
+        constMeta: kCrateApiFilesSetAddonEnabledConstMeta,
+        argValues: [id, kind, fileName, enabled],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiFilesSetPluginEnabledConstMeta =>
+  TaskConstMeta get kCrateApiFilesSetAddonEnabledConstMeta =>
       const TaskConstMeta(
-        debugName: "set_plugin_enabled",
-        argNames: ["id", "fileName", "enabled"],
+        debugName: "set_addon_enabled",
+        argNames: ["id", "kind", "fileName", "enabled"],
       );
 
   @override
@@ -2576,6 +2604,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  AddonInfo dco_decode_addon_info(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return AddonInfo(
+      fileName: dco_decode_String(arr[0]),
+      enabled: dco_decode_bool(arr[1]),
+      sizeBytes: dco_decode_i_64(arr[2]),
+    );
+  }
+
+  @protected
+  AddonKind dco_decode_addon_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return AddonKind.values[raw as int];
+  }
+
+  @protected
   AdvancedSettings dco_decode_advanced_settings(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -2820,8 +2867,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ImportPreview dco_decode_import_preview(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 13)
-      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
+    if (arr.length != 14)
+      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
     return ImportPreview(
       name: dco_decode_String(arr[0]),
       root: dco_decode_String(arr[1]),
@@ -2834,8 +2881,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       ramMax: dco_decode_String(arr[8]),
       jvmFlags: dco_decode_list_String(arr[9]),
       pluginCount: dco_decode_u_32(arr[10]),
-      worldCount: dco_decode_u_32(arr[11]),
-      hasEula: dco_decode_bool(arr[12]),
+      modCount: dco_decode_u_32(arr[11]),
+      worldCount: dco_decode_u_32(arr[12]),
+      hasEula: dco_decode_bool(arr[13]),
     );
   }
 
@@ -2921,6 +2969,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<AddonInfo> dco_decode_list_addon_info(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_addon_info).toList();
+  }
+
+  @protected
   List<BackupInfo> dco_decode_list_backup_info(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_backup_info).toList();
@@ -2954,12 +3008,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<ModrinthProject> dco_decode_list_modrinth_project(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_modrinth_project).toList();
-  }
-
-  @protected
-  List<PluginInfo> dco_decode_list_plugin_info(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return (raw as List<dynamic>).map(dco_decode_plugin_info).toList();
   }
 
   @protected
@@ -3123,19 +3171,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       backupsDir: dco_decode_String(arr[1]),
       runtimesDir: dco_decode_String(arr[2]),
       cacheDir: dco_decode_String(arr[3]),
-    );
-  }
-
-  @protected
-  PluginInfo dco_decode_plugin_info(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
-    return PluginInfo(
-      fileName: dco_decode_String(arr[0]),
-      enabled: dco_decode_bool(arr[1]),
-      sizeBytes: dco_decode_i_64(arr[2]),
     );
   }
 
@@ -3422,6 +3457,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  AddonInfo sse_decode_addon_info(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_fileName = sse_decode_String(deserializer);
+    var var_enabled = sse_decode_bool(deserializer);
+    var var_sizeBytes = sse_decode_i_64(deserializer);
+    return AddonInfo(
+      fileName: var_fileName,
+      enabled: var_enabled,
+      sizeBytes: var_sizeBytes,
+    );
+  }
+
+  @protected
+  AddonKind sse_decode_addon_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return AddonKind.values[inner];
+  }
+
+  @protected
   AdvancedSettings sse_decode_advanced_settings(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_logging = sse_decode_bool(deserializer);
@@ -3703,6 +3758,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_ramMax = sse_decode_String(deserializer);
     var var_jvmFlags = sse_decode_list_String(deserializer);
     var var_pluginCount = sse_decode_u_32(deserializer);
+    var var_modCount = sse_decode_u_32(deserializer);
     var var_worldCount = sse_decode_u_32(deserializer);
     var var_hasEula = sse_decode_bool(deserializer);
     return ImportPreview(
@@ -3717,6 +3773,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       ramMax: var_ramMax,
       jvmFlags: var_jvmFlags,
       pluginCount: var_pluginCount,
+      modCount: var_modCount,
       worldCount: var_worldCount,
       hasEula: var_hasEula,
     );
@@ -3811,6 +3868,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<AddonInfo> sse_decode_list_addon_info(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <AddonInfo>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_addon_info(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<BackupInfo> sse_decode_list_backup_info(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -3886,18 +3955,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <ModrinthProject>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_modrinth_project(deserializer));
-    }
-    return ans_;
-  }
-
-  @protected
-  List<PluginInfo> sse_decode_list_plugin_info(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-
-    var len_ = sse_decode_i_32(deserializer);
-    var ans_ = <PluginInfo>[];
-    for (var idx_ = 0; idx_ < len_; ++idx_) {
-      ans_.add(sse_decode_plugin_info(deserializer));
     }
     return ans_;
   }
@@ -4159,19 +4216,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       backupsDir: var_backupsDir,
       runtimesDir: var_runtimesDir,
       cacheDir: var_cacheDir,
-    );
-  }
-
-  @protected
-  PluginInfo sse_decode_plugin_info(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_fileName = sse_decode_String(deserializer);
-    var var_enabled = sse_decode_bool(deserializer);
-    var var_sizeBytes = sse_decode_i_64(deserializer);
-    return PluginInfo(
-      fileName: var_fileName,
-      enabled: var_enabled,
-      sizeBytes: var_sizeBytes,
     );
   }
 
@@ -4516,6 +4560,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_addon_info(AddonInfo self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.fileName, serializer);
+    sse_encode_bool(self.enabled, serializer);
+    sse_encode_i_64(self.sizeBytes, serializer);
+  }
+
+  @protected
+  void sse_encode_addon_kind(AddonKind self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
   void sse_encode_advanced_settings(
     AdvancedSettings self,
     SseSerializer serializer,
@@ -4751,6 +4809,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.ramMax, serializer);
     sse_encode_list_String(self.jvmFlags, serializer);
     sse_encode_u_32(self.pluginCount, serializer);
+    sse_encode_u_32(self.modCount, serializer);
     sse_encode_u_32(self.worldCount, serializer);
     sse_encode_bool(self.hasEula, serializer);
   }
@@ -4829,6 +4888,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_addon_info(
+    List<AddonInfo> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_addon_info(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_backup_info(
     List<BackupInfo> self,
     SseSerializer serializer,
@@ -4897,18 +4968,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_modrinth_project(item, serializer);
-    }
-  }
-
-  @protected
-  void sse_encode_list_plugin_info(
-    List<PluginInfo> self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_i_32(self.length, serializer);
-    for (final item in self) {
-      sse_encode_plugin_info(item, serializer);
     }
   }
 
@@ -5140,14 +5199,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.backupsDir, serializer);
     sse_encode_String(self.runtimesDir, serializer);
     sse_encode_String(self.cacheDir, serializer);
-  }
-
-  @protected
-  void sse_encode_plugin_info(PluginInfo self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_String(self.fileName, serializer);
-    sse_encode_bool(self.enabled, serializer);
-    sse_encode_i_64(self.sizeBytes, serializer);
   }
 
   @protected

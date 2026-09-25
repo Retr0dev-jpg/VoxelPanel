@@ -53,7 +53,7 @@ class OverviewTab extends ConsumerWidget {
           const SizedBox(height: 16),
           _Banner(icon: Icons.warning_amber, color: colors.danger, text: l.crashBanner(runtime?.lastExitCode ?? -1)),
         ],
-        if (!details.eulaAccepted) ...[
+        if (!details.eulaAccepted && !providerInfo(kind: details.provider).isProxy) ...[
           const SizedBox(height: 16),
           _Banner(
             icon: Icons.gavel,

@@ -20,6 +20,7 @@ pub struct DetectedServer {
     pub ram_max: Option<String>,
     pub jvm_flags: Vec<String>,
     pub plugin_count: u32,
+    pub mod_count: u32,
     pub world_count: u32,
     pub has_eula: bool,
 }
@@ -69,7 +70,8 @@ pub fn detect(root: &Path) -> DetectedServer {
         ram_min: start.ram_min,
         ram_max: start.ram_max,
         jvm_flags: start.jvm_flags,
-        plugin_count: crate::plugins::list(root).len() as u32,
+        plugin_count: crate::addons::list(root, crate::api::types::AddonKind::Plugin).len() as u32,
+        mod_count: crate::addons::list(root, crate::api::types::AddonKind::Mod).len() as u32,
         world_count: crate::worlds::list(root, None).len() as u32,
         has_eula: root.join("eula.txt").exists(),
     }

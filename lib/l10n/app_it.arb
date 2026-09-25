@@ -247,10 +247,13 @@
       }
     }
   },
-  "importDetectedContent": "Plugin: {plugins} · Mondi: {worlds}",
+  "importDetectedContent": "Plugin: {plugins} · Mod: {mods} · Mondi: {worlds}",
   "@importDetectedContent": {
     "placeholders": {
       "plugins": {
+        "type": "int"
+      },
+      "mods": {
         "type": "int"
       },
       "worlds": {
@@ -549,5 +552,10 @@
     }
   },
   "changeVersionHint": "Prima del cambio viene creato un backup automatico. Tornare a una versione precedente può danneggiare i mondi.",
-  "changeVersionConfirm": "Installa"
+  "changeVersionConfirm": "Installa",
+  "tabMods": "Mod",
+  "installModJar": "Installa mod (.jar)",
+  "stopToEditMods": "Ferma il server prima di modificare le mod.",
+  "noMods": "Nessuna mod installata.",
+  "searchMods": "Cerca mod"
 }

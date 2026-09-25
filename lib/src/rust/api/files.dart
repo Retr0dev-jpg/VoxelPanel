@@ -21,38 +21,61 @@ Future<void> saveProperties({
 }) =>
     RustLib.instance.api.crateApiFilesSaveProperties(id: id, entries: entries);
 
-Future<List<PluginInfo>> listPlugins({required String id}) =>
-    RustLib.instance.api.crateApiFilesListPlugins(id: id);
-
-Future<void> setPluginEnabled({
+Future<List<AddonInfo>> listAddons({
   required String id,
+  required AddonKind kind,
+}) => RustLib.instance.api.crateApiFilesListAddons(id: id, kind: kind);
+
+Future<void> setAddonEnabled({
+  required String id,
+  required AddonKind kind,
   required String fileName,
   required bool enabled,
-}) => RustLib.instance.api.crateApiFilesSetPluginEnabled(
+}) => RustLib.instance.api.crateApiFilesSetAddonEnabled(
   id: id,
+  kind: kind,
   fileName: fileName,
   enabled: enabled,
 );
 
-Future<void> deletePlugin({required String id, required String fileName}) =>
-    RustLib.instance.api.crateApiFilesDeletePlugin(id: id, fileName: fileName);
-
-Future<void> installPluginFile({
+Future<void> deleteAddon({
   required String id,
-  required String sourcePath,
-}) => RustLib.instance.api.crateApiFilesInstallPluginFile(
+  required AddonKind kind,
+  required String fileName,
+}) => RustLib.instance.api.crateApiFilesDeleteAddon(
   id: id,
+  kind: kind,
+  fileName: fileName,
+);
+
+Future<void> installAddonFile({
+  required String id,
+  required AddonKind kind,
+  required String sourcePath,
+}) => RustLib.instance.api.crateApiFilesInstallAddonFile(
+  id: id,
+  kind: kind,
   sourcePath: sourcePath,
 );
 
-Future<List<ModrinthProject>> searchModrinth({required String query}) =>
-    RustLib.instance.api.crateApiFilesSearchModrinth(query: query);
+/// Searches Modrinth for plugins or mods compatible with this server's software and version.
+Future<List<ModrinthProject>> searchModrinth({
+  required String id,
+  required AddonKind kind,
+  required String query,
+}) => RustLib.instance.api.crateApiFilesSearchModrinth(
+  id: id,
+  kind: kind,
+  query: query,
+);
 
 Stream<ProgressEvent> installModrinthProject({
   required String id,
+  required AddonKind kind,
   required String projectId,
 }) => RustLib.instance.api.crateApiFilesInstallModrinthProject(
   id: id,
+  kind: kind,
   projectId: projectId,
 );
 

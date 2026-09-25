@@ -138,7 +138,7 @@
   "serverJarTitle": "Server jar",
   "importDetectedJava": "Java: {value}",
   "importDetectedRam": "RAM: {min} / {max}",
-  "importDetectedContent": "Plugins: {plugins} · Worlds: {worlds}",
+  "importDetectedContent": "Plugins: {plugins} · Mods: {mods} · Worlds: {worlds}",
   "eulaCheckbox": "I accept the Minecraft EULA (eula=true)",
   "eulaHint": "You must accept the Minecraft EULA to create the server.",
   "serverName": "Server name",
@@ -332,5 +332,10 @@
   "changeVersion": "Change version",
   "changeVersionTitle": "Change version of {name}",
   "changeVersionHint": "An automatic backup is created first. Going back to an older version can damage worlds.",
-  "changeVersionConfirm": "Install"
+  "changeVersionConfirm": "Install",
+  "tabMods": "Mods",
+  "installModJar": "Install mod (.jar)",
+  "stopToEditMods": "Stop the server before changing mods.",
+  "noMods": "No mods installed.",
+  "searchMods": "Search mods"
 }

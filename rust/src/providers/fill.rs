@@ -22,6 +22,7 @@ pub struct Fill {
 pub static PAPER: Fill = Fill { kind: ProviderKind::Paper, project: "paper" };
 pub static FOLIA: Fill = Fill { kind: ProviderKind::Folia, project: "folia" };
 pub static VELOCITY: Fill = Fill { kind: ProviderKind::Velocity, project: "velocity" };
+pub static WATERFALL: Fill = Fill { kind: ProviderKind::Waterfall, project: "waterfall" };
 
 /// Flattens the `versions` object (grouped by family) and sorts newest first.
 pub fn versions_from_project_json(value: &Value, snapshots: bool) -> PanelResult<Vec<VersionEntry>> {
@@ -107,10 +108,10 @@ impl Provider for Fill {
 
     fn required_java<'a>(&'a self, version: &'a str) -> BoxFuture<'a, PanelResult<u32>> {
         Box::pin(async move {
-            if self.kind == ProviderKind::Velocity {
-                Ok(velocity_java(version))
-            } else {
-                super::mojang::required_java(version).await
+            match self.kind {
+                ProviderKind::Velocity => Ok(velocity_java(version)),
+                ProviderKind::Waterfall => Ok(17),
+                _ => super::mojang::required_java(version).await,
             }
         })
     }

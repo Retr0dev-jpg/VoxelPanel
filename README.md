@@ -13,7 +13,7 @@ L’interfaccia è in Flutter (Material 3, italiano e inglese). Il motore è in 
 - Mostra lo stato reale di ogni server: "Avvio" finché il log non segnala la fine del caricamento, poi "Online"; rileva i crash con il codice di uscita.
 - Statistiche live di CPU e RAM, uptime ed elenco dei giocatori collegati, inviati dal motore Rust senza polling.
 - Console con cronologia dei comandi (frecce su e giù), ricerca, filtro per livello, copia e limite di righe.
-- Modifica `server.properties`, gestisce plugin locali e da Modrinth, mondi, backup e ripristino.
+- Modifica `server.properties`, gestisce plugin e mod locali o da Modrinth, mondi, backup e ripristino.
 - Rinomina ed elimina i server (anche più server insieme), con scelta se cancellare file e backup.
 - Impostazioni del launcher: lingua, tema chiaro o scuro con colore di accento, avvio con il sistema, chiusura nel tray, cartelle di server, backup, runtime e cache (spostabili con migrazione guidata), runtime Java installati e di sistema con versione preferita, valori predefiniti per i nuovi server (RAM, preset JVM Aikar/G1/ZGC, porta), console, backup (conservazione, compressione, esclusioni), proxy e timeout di rete, chiave CurseForge, notifiche desktop, log dell'app, esportazione e importazione.
 
@@ -29,8 +29,18 @@ La rete serve solo per installare o aggiornare Java, Paper o un plugin. Stato, c
 | Plugin | Pufferfish | Jenkins di Pufferfish |
 | Plugin | Leaf | api.leafmc.one |
 | Plugin | Spigot | Compilato in locale con BuildTools (richiede Git) |
-| Proxy | Velocity | API Fill v3 di PaperMC |
+| Mod | Fabric | meta.fabricmc.net (launcher del server) |
+| Mod | Quilt | meta.quiltmc.org (installer in modalità server) |
+| Mod | Forge | Maven e promozioni di Forge (installer `--installServer`) |
+| Mod | NeoForge | Maven di NeoForge (installer `--installServer`) |
+| Proxy | Velocity, Waterfall (archiviato) | API Fill v3 di PaperMC |
+| Proxy | BungeeCord | Jenkins di md-5 |
+| Ibridi | Mohist | api.mohistmc.com |
+| Ibridi | Arclight (varianti Forge, NeoForge, Fabric) | Release GitHub |
+| Ibridi | SpongeVanilla, SpongeForge | API di download di Sponge |
 | Altro | Jar personalizzato | File scelto dall’utente |
+
+Forge e NeoForge moderni vengono avviati con il file di argomenti creato dall’installer (`@libraries/.../unix_args.txt` o `win_args.txt`); le versioni vecchie con il jar prodotto. Le sezioni del server si adattano al software: i proxy non hanno mondi né `server.properties`, i loader di mod hanno la sezione Mod (con ricerca su Modrinth filtrata per loader e versione) e gli ibridi hanno sia Plugin sia Mod.
 
 Gli elenchi delle versioni vengono salvati nella cartella della cache: se la rete non risponde il wizard usa l’ultima copia scaricata.
 
@@ -90,6 +100,8 @@ I test che contattano le API reali dei provider sono esclusi di default:
 
 ```bash
 cd rust && cargo test live_ -- --ignored
+# installer veri di Quilt, Forge e NeoForge (serve un Java recente)
+VOXELPANEL_TEST_JAVA=/percorso/java cargo test live_runs_installers -- --ignored
 ```
 
 Controlli eseguiti anche dalla CI su ogni pull request (i test Rust girano su Windows, Linux e macOS):

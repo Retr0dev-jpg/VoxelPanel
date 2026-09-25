@@ -15,7 +15,7 @@ mod logging;
 mod net;
 mod paths;
 mod platform;
-mod plugins;
+mod addons;
 mod process;
 mod properties;
 mod providers;

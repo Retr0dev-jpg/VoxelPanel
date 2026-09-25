@@ -161,6 +161,7 @@ pub struct ImportPreview {
     pub ram_max: String,
     pub jvm_flags: Vec<String>,
     pub plugin_count: u32,
+    pub mod_count: u32,
     pub world_count: u32,
     pub has_eula: bool,
 }
@@ -222,8 +223,14 @@ pub struct PropertyEntry {
     pub value: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AddonKind {
+    Plugin,
+    Mod,
+}
+
 #[derive(Debug, Clone)]
-pub struct PluginInfo {
+pub struct AddonInfo {
     pub file_name: String,
     pub enabled: bool,
     pub size_bytes: i64,

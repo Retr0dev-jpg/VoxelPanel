@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:voxel_panel/screens/create/create_validation.dart';
 import 'package:voxel_panel/screens/server/console_tab.dart';
+import 'package:voxel_panel/screens/server/server_screen.dart';
 import 'package:voxel_panel/src/providers.dart';
 import 'package:voxel_panel/src/rust/api/types.dart';
 import 'package:voxel_panel/widgets/provider_icon.dart';
@@ -49,7 +50,37 @@ WizardInput _input({
   );
 }
 
+ProviderInfo _info(ProviderKind kind, {bool plugins = false, bool mods = false, bool proxy = false}) => ProviderInfo(
+  kind: kind,
+  id: kind.name,
+  name: kind.name,
+  category: ProviderCategory.other,
+  description: '',
+  supportsPlugins: plugins,
+  supportsMods: mods,
+  hasWorlds: !proxy,
+  isProxy: proxy,
+  hasSnapshots: false,
+  hasBuilds: false,
+  deprecated: false,
+  note: '',
+  configFiles: const [],
+);
+
 void main() {
+  test('le sezioni del server dipendono dal software', () {
+    expect(sectionsFor(_info(ProviderKind.velocity, plugins: true, proxy: true)), [
+      ServerSection.overview,
+      ServerSection.console,
+      ServerSection.plugins,
+      ServerSection.backups,
+    ]);
+    final fabric = sectionsFor(_info(ProviderKind.fabric, mods: true));
+    expect(fabric, contains(ServerSection.mods));
+    expect(fabric, isNot(contains(ServerSection.plugins)));
+    expect(sectionsFor(_info(ProviderKind.mohist, plugins: true, mods: true)), containsAll([ServerSection.plugins, ServerSection.mods, ServerSection.worlds]));
+  });
+
   test('ogni passo del wizard valida i propri campi', () {
     expect(validateStep(WizardStep.software, _input(name: ' ')), CreateIssue.missingName);
     expect(validateStep(WizardStep.software, _input(provider: false)), CreateIssue.missingProvider);

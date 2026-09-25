@@ -12,9 +12,13 @@ use futures::future::BoxFuture;
 use crate::api::types::{BuildEntry, ProviderCategory, ProviderInfo, ProviderKind, VersionEntry};
 use crate::{LaunchSpec, PanelError, PanelResult, ProgressTx};
 
+pub mod fabric;
 pub mod fill;
+pub mod forge;
+pub mod hybrid;
 pub mod leaf;
 pub mod mojang;
+pub mod proxies;
 pub mod pufferfish;
 pub mod purpur;
 pub mod spigot;
@@ -62,7 +66,17 @@ pub fn all() -> Vec<&'static dyn Provider> {
         &pufferfish::PUFFERFISH,
         &leaf::LEAF,
         &spigot::SPIGOT,
+        &fabric::FABRIC,
+        &fabric::QUILT,
+        &forge::FORGE,
+        &forge::NEOFORGE,
         &fill::VELOCITY,
+        &proxies::BUNGEECORD,
+        &fill::WATERFALL,
+        &hybrid::MOHIST_PROVIDER,
+        &hybrid::ARCLIGHT,
+        &hybrid::SPONGE_VANILLA,
+        &hybrid::SPONGE_FORGE,
     ]
 }
 
@@ -151,7 +165,7 @@ pub fn meta(kind: ProviderKind) -> ProviderInfo {
         ProviderKind::Waterfall => ("Waterfall", C::Proxy, "Fork di BungeeCord di PaperMC, non più sviluppato.", true, false, false, true, true, "Progetto archiviato: preferisci Velocity.", vec!["config.yml", "waterfall.yml"]),
         ProviderKind::Mohist => ("Mohist", C::Hybrid, "Forge o NeoForge con supporto ai plugin Bukkit.", true, true, false, true, false, "", [&bukkit[..], &["mohist-config/mohist.yml"][..]].concat()),
         ProviderKind::Arclight => ("Arclight", C::Hybrid, "Plugin Bukkit su Forge, NeoForge o Fabric.", true, true, false, true, false, "", [&bukkit[..], &["arclight.conf"][..]].concat()),
-        ProviderKind::SpongeVanilla => ("SpongeVanilla", C::Hybrid, "Piattaforma di plugin Sponge su server Vanilla.", true, false, false, true, false, "", vec!["server.properties", "config/sponge/global.conf"]),
+        ProviderKind::SpongeVanilla => ("SpongeVanilla", C::Hybrid, "Piattaforma di plugin Sponge su server Vanilla.", true, false, true, true, false, "", vec!["server.properties", "config/sponge/global.conf"]),
         ProviderKind::SpongeForge => ("SpongeForge", C::Hybrid, "Plugin Sponge insieme alle mod Forge.", true, true, false, true, false, "", vec!["server.properties", "config/sponge/global.conf"]),
         ProviderKind::Custom => ("Jar personalizzato", C::Other, "Un jar scelto da te: VoxelPanel lo avvia ma non lo aggiorna.", true, true, false, false, false, "", vec!["server.properties"]),
     };
@@ -338,7 +352,18 @@ mod live {
         let root = std::env::temp_dir().join(format!("voxel-live-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&root).unwrap();
         let progress = ProgressTx::silent();
-        for kind in [ProviderKind::Vanilla, ProviderKind::Paper, ProviderKind::Purpur, ProviderKind::Leaf, ProviderKind::Velocity, ProviderKind::Pufferfish] {
+        for kind in [
+            ProviderKind::Vanilla,
+            ProviderKind::Paper,
+            ProviderKind::Purpur,
+            ProviderKind::Leaf,
+            ProviderKind::Velocity,
+            ProviderKind::Pufferfish,
+            ProviderKind::Fabric,
+            ProviderKind::BungeeCord,
+            ProviderKind::Waterfall,
+            ProviderKind::SpongeVanilla,
+        ] {
             let provider = get(kind).unwrap();
             let version = provider.versions(false).await.unwrap()[0].id.clone();
             let installed = provider
@@ -350,5 +375,35 @@ mod live {
             println!("{kind:?} {version} -> {}", jar.display());
         }
         let _ = std::fs::remove_dir_all(&root);
+    }
+}
+
+/// Runs the real Quilt/Forge/NeoForge installers. Needs `VOXELPANEL_TEST_JAVA` pointing to a
+/// Java executable recent enough for the newest Minecraft version.
+#[cfg(test)]
+mod live_installers {
+    use super::*;
+
+    #[tokio::test]
+    #[ignore]
+    async fn live_runs_installers() {
+        let Some(java) = std::env::var_os("VOXELPANEL_TEST_JAVA").map(PathBuf::from) else {
+            return;
+        };
+        let progress = ProgressTx::silent();
+        for kind in [ProviderKind::Quilt, ProviderKind::NeoForge, ProviderKind::Forge] {
+            let root = std::env::temp_dir().join(format!("voxel-installer-{}", uuid::Uuid::new_v4()));
+            std::fs::create_dir_all(&root).unwrap();
+            let provider = get(kind).unwrap();
+            let version = provider.versions(false).await.unwrap()[0].id.clone();
+            let installed = provider
+                .install(InstallRequest { root: &root, mc_version: &version, build: None, java: &java, progress: &progress })
+                .await
+                .unwrap_or_else(|error| panic!("{kind:?}: {}", error.message));
+            let target = installed.launch.target().unwrap();
+            assert!(target.is_file(), "{kind:?}: {} missing", target.display());
+            println!("{kind:?} {version} {:?} -> {:?}", installed.build, installed.launch);
+            let _ = std::fs::remove_dir_all(&root);
+        }
     }
 }

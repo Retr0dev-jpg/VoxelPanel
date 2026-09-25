@@ -234,6 +234,7 @@ pub async fn preview_import(path: String) -> PanelResult<ImportPreview> {
         ram_max: detected.ram_max.unwrap_or_else(|| "4G".into()),
         jvm_flags: detected.jvm_flags,
         plugin_count: detected.plugin_count,
+        mod_count: detected.mod_count,
         world_count: detected.world_count,
         has_eula: detected.has_eula,
     })

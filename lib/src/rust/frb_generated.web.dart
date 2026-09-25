@@ -47,6 +47,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String dco_decode_String(dynamic raw);
 
   @protected
+  AddonInfo dco_decode_addon_info(dynamic raw);
+
+  @protected
+  AddonKind dco_decode_addon_kind(dynamic raw);
+
+  @protected
   AdvancedSettings dco_decode_advanced_settings(dynamic raw);
 
   @protected
@@ -143,6 +149,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
+  List<AddonInfo> dco_decode_list_addon_info(dynamic raw);
+
+  @protected
   List<BackupInfo> dco_decode_list_backup_info(dynamic raw);
 
   @protected
@@ -159,9 +168,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ModrinthProject> dco_decode_list_modrinth_project(dynamic raw);
-
-  @protected
-  List<PluginInfo> dco_decode_list_plugin_info(dynamic raw);
 
   @protected
   List<PreferredJava> dco_decode_list_preferred_java(dynamic raw);
@@ -225,9 +231,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PathSettings dco_decode_path_settings(dynamic raw);
-
-  @protected
-  PluginInfo dco_decode_plugin_info(dynamic raw);
 
   @protected
   PreferredJava dco_decode_preferred_java(dynamic raw);
@@ -309,6 +312,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String sse_decode_String(SseDeserializer deserializer);
+
+  @protected
+  AddonInfo sse_decode_addon_info(SseDeserializer deserializer);
+
+  @protected
+  AddonKind sse_decode_addon_kind(SseDeserializer deserializer);
 
   @protected
   AdvancedSettings sse_decode_advanced_settings(SseDeserializer deserializer);
@@ -415,6 +424,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
+  List<AddonInfo> sse_decode_list_addon_info(SseDeserializer deserializer);
+
+  @protected
   List<BackupInfo> sse_decode_list_backup_info(SseDeserializer deserializer);
 
   @protected
@@ -439,9 +451,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ModrinthProject> sse_decode_list_modrinth_project(
     SseDeserializer deserializer,
   );
-
-  @protected
-  List<PluginInfo> sse_decode_list_plugin_info(SseDeserializer deserializer);
 
   @protected
   List<PreferredJava> sse_decode_list_preferred_java(
@@ -521,9 +530,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PathSettings sse_decode_path_settings(SseDeserializer deserializer);
-
-  @protected
-  PluginInfo sse_decode_plugin_info(SseDeserializer deserializer);
 
   @protected
   PreferredJava sse_decode_preferred_java(SseDeserializer deserializer);
@@ -611,6 +617,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_addon_info(AddonInfo self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_addon_kind(AddonKind self, SseSerializer serializer);
 
   @protected
   void sse_encode_advanced_settings(
@@ -751,6 +763,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_addon_info(
+    List<AddonInfo> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_backup_info(
     List<BackupInfo> self,
     SseSerializer serializer,
@@ -783,12 +801,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_modrinth_project(
     List<ModrinthProject> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_plugin_info(
-    List<PluginInfo> self,
     SseSerializer serializer,
   );
 
@@ -896,9 +908,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_path_settings(PathSettings self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_plugin_info(PluginInfo self, SseSerializer serializer);
 
   @protected
   void sse_encode_preferred_java(PreferredJava self, SseSerializer serializer);

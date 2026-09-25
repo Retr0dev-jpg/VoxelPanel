@@ -124,7 +124,7 @@ class _CreateServerScreenState extends State<CreateServerScreen> {
             ),
             const SizedBox(height: 8),
             Text(l.importDetectedRam(preview.ramMin, preview.ramMax)),
-            Text(l.importDetectedContent(preview.pluginCount, preview.worldCount)),
+            Text(l.importDetectedContent(preview.pluginCount, preview.modCount, preview.worldCount)),
             if (preview.jarPath.isEmpty) Text(l.importNoJar, style: TextStyle(color: context.voxel.warning)),
             CheckboxListTile(
               contentPadding: EdgeInsets.zero,

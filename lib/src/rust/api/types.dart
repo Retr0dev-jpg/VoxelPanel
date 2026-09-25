@@ -7,7 +7,33 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `hash`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `hash`
+
+class AddonInfo {
+  final String fileName;
+  final bool enabled;
+  final PlatformInt64 sizeBytes;
+
+  const AddonInfo({
+    required this.fileName,
+    required this.enabled,
+    required this.sizeBytes,
+  });
+
+  @override
+  int get hashCode => fileName.hashCode ^ enabled.hashCode ^ sizeBytes.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AddonInfo &&
+          runtimeType == other.runtimeType &&
+          fileName == other.fileName &&
+          enabled == other.enabled &&
+          sizeBytes == other.sizeBytes;
+}
+
+enum AddonKind { plugin, mod }
 
 class AppPaths {
   final String data;
@@ -212,6 +238,7 @@ class ImportPreview {
   final String ramMax;
   final List<String> jvmFlags;
   final int pluginCount;
+  final int modCount;
   final int worldCount;
   final bool hasEula;
 
@@ -227,6 +254,7 @@ class ImportPreview {
     required this.ramMax,
     required this.jvmFlags,
     required this.pluginCount,
+    required this.modCount,
     required this.worldCount,
     required this.hasEula,
   });
@@ -244,6 +272,7 @@ class ImportPreview {
       ramMax.hashCode ^
       jvmFlags.hashCode ^
       pluginCount.hashCode ^
+      modCount.hashCode ^
       worldCount.hashCode ^
       hasEula.hashCode;
 
@@ -263,6 +292,7 @@ class ImportPreview {
           ramMax == other.ramMax &&
           jvmFlags == other.jvmFlags &&
           pluginCount == other.pluginCount &&
+          modCount == other.modCount &&
           worldCount == other.worldCount &&
           hasEula == other.hasEula;
 }
@@ -355,30 +385,6 @@ class ModrinthProject {
           title == other.title &&
           description == other.description &&
           downloads == other.downloads;
-}
-
-class PluginInfo {
-  final String fileName;
-  final bool enabled;
-  final PlatformInt64 sizeBytes;
-
-  const PluginInfo({
-    required this.fileName,
-    required this.enabled,
-    required this.sizeBytes,
-  });
-
-  @override
-  int get hashCode => fileName.hashCode ^ enabled.hashCode ^ sizeBytes.hashCode;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is PluginInfo &&
-          runtimeType == other.runtimeType &&
-          fileName == other.fileName &&
-          enabled == other.enabled &&
-          sizeBytes == other.sizeBytes;
 }
 
 class ProgressEvent {

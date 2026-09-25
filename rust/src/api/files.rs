@@ -39,39 +39,41 @@ pub async fn save_properties(id: String, entries: Vec<PropertyEntry>) -> PanelRe
     crate::properties::write_entries(&record.root, &pairs)
 }
 
-pub async fn list_plugins(id: String) -> PanelResult<Vec<PluginInfo>> {
+pub async fn list_addons(id: String, kind: AddonKind) -> PanelResult<Vec<AddonInfo>> {
     let record = crate::catalog::get(&Layout::app(), &id)?;
-    Ok(crate::plugins::list(&record.root)
+    Ok(crate::addons::list(&record.root, kind)
         .into_iter()
-        .map(|plugin| PluginInfo {
-            file_name: plugin.file_name,
-            enabled: plugin.enabled,
-            size_bytes: plugin.size_bytes as i64,
+        .map(|addon| AddonInfo {
+            file_name: addon.file_name,
+            enabled: addon.enabled,
+            size_bytes: addon.size_bytes as i64,
         })
         .collect())
 }
 
-pub async fn set_plugin_enabled(id: String, file_name: String, enabled: bool) -> PanelResult<()> {
+pub async fn set_addon_enabled(id: String, kind: AddonKind, file_name: String, enabled: bool) -> PanelResult<()> {
     process::ensure_stopped(&id)?;
     let record = crate::catalog::get(&Layout::app(), &id)?;
-    crate::plugins::set_enabled(&record.root, &file_name, enabled)
+    crate::addons::set_enabled(&record.root, kind, &file_name, enabled)
 }
 
-pub async fn delete_plugin(id: String, file_name: String) -> PanelResult<()> {
+pub async fn delete_addon(id: String, kind: AddonKind, file_name: String) -> PanelResult<()> {
     process::ensure_stopped(&id)?;
     let record = crate::catalog::get(&Layout::app(), &id)?;
-    crate::plugins::delete(&record.root, &file_name)
+    crate::addons::delete(&record.root, kind, &file_name)
 }
 
-pub async fn install_plugin_file(id: String, source_path: String) -> PanelResult<()> {
+pub async fn install_addon_file(id: String, kind: AddonKind, source_path: String) -> PanelResult<()> {
     process::ensure_stopped(&id)?;
     let record = crate::catalog::get(&Layout::app(), &id)?;
-    crate::plugins::install_file(&record.root, std::path::Path::new(&source_path))
+    crate::addons::install_file(&record.root, kind, std::path::Path::new(&source_path))
 }
 
-pub async fn search_modrinth(query: String) -> PanelResult<Vec<ModrinthProject>> {
-    let hits = crate::plugins::search(&query).await?;
-    Ok(hits
+/// Searches Modrinth for plugins or mods compatible with this server's software and version.
+pub async fn search_modrinth(id: String, kind: AddonKind, query: String) -> PanelResult<Vec<ModrinthProject>> {
+    let record = crate::catalog::get(&Layout::app(), &id)?;
+    Ok(crate::addons::search(&record, kind, &query)
+        .await?
         .into_iter()
         .map(|hit| ModrinthProject {
             project_id: hit.project_id,
@@ -83,22 +85,14 @@ pub async fn search_modrinth(query: String) -> PanelResult<Vec<ModrinthProject>>
         .collect())
 }
 
-pub async fn install_modrinth_project(
-    id: String,
-    project_id: String,
-    sink: StreamSink<ProgressEvent>,
-) -> PanelResult<()> {
+pub async fn install_modrinth_project(id: String, kind: AddonKind, project_id: String, sink: StreamSink<ProgressEvent>) -> PanelResult<()> {
     process::ensure_stopped(&id)?;
     let record = crate::catalog::get(&Layout::app(), &id)?;
-    let version = record
-        .mc_version
-        .clone()
-        .ok_or("Versione di Minecraft sconosciuta: impossibile filtrare i plugin")?;
     report(
         sink,
-        "Plugin",
-        move |_: &()| ("Plugin installato.".into(), Some(id)),
-        |tx| async move { crate::plugins::install_project(&record.root, &project_id, &version, &tx).await },
+        "Modrinth",
+        move |_: &()| ("Installazione completata.".into(), Some(id)),
+        |tx| async move { crate::addons::install_project(&record, kind, &project_id, &tx).await },
     )
     .await
 }
