@@ -105,7 +105,7 @@ flutter pub get
 flutter run -d windows   # oppure linux, macos
 ```
 
-Su Linux servono `clang cmake ninja-build pkg-config libgtk-3-dev libnotify-dev libayatana-appindicator3-dev`.
+Su Linux servono `clang cmake ninja-build pkg-config libgtk-3-dev libayatana-appindicator3-dev`.
 
 Dopo ogni modifica alle funzioni in `rust/src/api/` vanno rigenerati i binding:
 
@@ -134,7 +134,7 @@ flutter test
 
 ## Release
 
-Ogni push su `main` compila l’app per i tre sistemi. La release `v<versione>` viene pubblicata solo se non esiste già: per rilasciare basta aumentare `version` in `pubspec.yaml`.
+Ogni pull request e ogni push su `main` compilano e impacchettano l’app per i tre sistemi; solo il push su `main` pubblica. La release `v<versione>` viene pubblicata solo se non esiste già: per rilasciare basta aumentare `version` in `pubspec.yaml`.
 
 ## RCON
 

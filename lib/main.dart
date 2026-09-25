@@ -7,7 +7,6 @@ import 'dart:ui' show AppExitResponse;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:local_notifier/local_notifier.dart';
 import 'package:voxel_panel/screens/home_screen.dart';
 import 'package:voxel_panel/screens/settings/launcher_settings_screen.dart';
 import 'package:voxel_panel/src/desktop_integration.dart';
@@ -28,7 +27,7 @@ Future<void> main() async {
     await windowManager.focus();
   });
   await RustLib.init();
-  await localNotifier.setup(appName: 'VoxelPanel').catchError((_) {});
+  await initNotifications();
   runApp(const ProviderScope(child: VoxelApp()));
 }
 

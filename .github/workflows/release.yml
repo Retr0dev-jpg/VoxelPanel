@@ -1,9 +1,14 @@
 name: Build and Release
 
 on:
+  pull_request:
   push:
     branches: [main, master]
   workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: write
@@ -35,7 +40,7 @@ jobs:
         if: matrix.platform == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-14-dev libnotify-dev libayatana-appindicator3-dev
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-14-dev libayatana-appindicator3-dev
 
       - name: Build
         shell: bash
@@ -66,13 +71,15 @@ jobs:
           test -d "$app"
           hdiutil create -volname VoxelPanel -srcfolder "$app" -ov -format UDZO dist/VoxelPanel-macos.dmg
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: voxelpanel-${{ matrix.platform }}
           path: dist/*
 
   release:
     needs: build
+    # Pull requests only verify that every platform builds and packages.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -83,7 +90,7 @@ jobs:
           version=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' pubspec.yaml)
           echo "tag=v$version" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true

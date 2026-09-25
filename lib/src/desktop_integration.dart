@@ -3,10 +3,12 @@
 // See the LICENSE file in the project root.
 
 import 'dart:async';
+import 'dart:io';
 
+import 'package:dbus/dbus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:local_notifier/local_notifier.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:tray_manager/tray_manager.dart' as tray;
 import 'package:url_launcher/url_launcher.dart';
@@ -22,6 +24,47 @@ final appVersionProvider = FutureProvider<String>((ref) async {
   final info = await PackageInfo.fromPlatform();
   return info.buildNumber.isEmpty ? info.version : '${info.version}+${info.buildNumber}';
 });
+
+final _notifications = FlutterLocalNotificationsPlugin();
+var _notificationsReady = false;
+var _nextNotificationId = 0;
+
+/// Registers the app with the OS notification service; on macOS this asks for permission once.
+Future<void> initNotifications() async {
+  // The Linux plugin fails asynchronously, outside this try, when no notification daemon is reachable.
+  if (Platform.isLinux && !await _linuxNotificationServiceAvailable()) {
+    return;
+  }
+  try {
+    final ready = await _notifications.initialize(
+      settings: InitializationSettings(
+        macOS: const DarwinInitializationSettings(),
+        linux: LinuxInitializationSettings(defaultActionName: 'Open', defaultIcon: AssetsLinuxIcon('assets/tray/tray_icon.png')),
+        // The GUID identifies the Windows toast activator and must never change between releases.
+        windows: const WindowsInitializationSettings(appName: 'VoxelPanel', appUserModelId: 'dev.voxelpanel.VoxelPanel', guid: 'f7d95041-8962-4bd5-89d3-cfc58791a5d1'),
+      ),
+      onDidReceiveNotificationResponse: (_) async {
+        await windowManager.show();
+        await windowManager.focus();
+      },
+    );
+    _notificationsReady = ready ?? false;  } catch (_) {
+    // Without a notification service the app keeps working silently.
+    _notificationsReady = false;
+  }
+}
+
+Future<bool> _linuxNotificationServiceAvailable() async {
+  const name = 'org.freedesktop.Notifications';
+  final client = DBusClient.session();
+  try {
+    return await client.nameHasOwner(name) || (await client.listActivatableNames()).contains(name);
+  } catch (_) {
+    return false;
+  } finally {
+    await client.close().catchError((_) {});
+  }
+}
 
 /// Window close behaviour, tray icon, desktop notifications and the update check.
 class DesktopIntegration extends ConsumerStatefulWidget {
@@ -176,7 +219,10 @@ class _DesktopIntegrationState extends ConsumerState<DesktopIntegration> with Wi
   }
 
   void _notify(String title, String body) {
-    unawaited(LocalNotification(title: title, body: body).show().catchError((_) {}));
+    if (!_notificationsReady) {
+      return;
+    }
+    unawaited(_notifications.show(id: _nextNotificationId++, title: title, body: body).catchError((_) {}));
   }
 
   void _onRuntime(RuntimeState? previous, RuntimeState next) {
