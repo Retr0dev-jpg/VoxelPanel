@@ -3,8 +3,12 @@
 // See the LICENSE file in the project root.
 
 //! Minimal Source RCON client, used to query servers without writing to their console.
+//!
+//! One authenticated connection is kept per server: servers log every RCON connection, so opening
+//! one per command floods the console.
 
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 use std::time::Duration;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -44,9 +48,14 @@ async fn read_packet(stream: &mut TcpStream) -> PanelResult<(i32, i32, String)> 
     Ok((id, kind, body))
 }
 
-/// Connects, authenticates and runs one command, returning its text output.
-pub async fn execute(config: &RconConfig, command: &str) -> PanelResult<String> {
-    tokio::time::timeout(TIMEOUT, async {
+struct Session {
+    config: RconConfig,
+    stream: TcpStream,
+    last_id: i32,
+}
+
+impl Session {
+    async fn open(config: &RconConfig) -> PanelResult<Self> {
         let mut stream = TcpStream::connect(("127.0.0.1", config.port as u16))
             .await
             .map_err(|error| PanelError::network(format!("RCON non raggiungibile: {error}")))?;
@@ -61,12 +70,66 @@ pub async fn execute(config: &RconConfig, command: &str) -> PanelResult<String> 
                 break;
             }
         }
-        stream.write_all(&encode(2, COMMAND, command)).await?;
-        let (_, _, body) = read_packet(&mut stream).await?;
-        Ok(body)
-    })
-    .await
-    .map_err(|_| PanelError::network("RCON non ha risposto in tempo"))?
+        Ok(Self { config: config.clone(), stream, last_id: 1 })
+    }
+
+    async fn run(&mut self, command: &str) -> PanelResult<String> {
+        self.last_id = if self.last_id >= i32::MAX - 1 { 2 } else { self.last_id + 1 };
+        let request = self.last_id;
+        self.stream.write_all(&encode(request, COMMAND, command)).await?;
+        loop {
+            // Leftover fragments of earlier long responses carry older ids.
+            let (id, _, body) = read_packet(&mut self.stream).await?;
+            if id == request {
+                return Ok(body);
+            }
+        }
+    }
+}
+
+type Slot = Arc<tokio::sync::Mutex<Option<Session>>>;
+
+fn sessions() -> &'static Mutex<HashMap<String, Slot>> {
+    static SESSIONS: OnceLock<Mutex<HashMap<String, Slot>>> = OnceLock::new();
+    SESSIONS.get_or_init(Default::default)
+}
+
+/// Drops the connection kept for a server, e.g. when its process exits.
+pub fn disconnect(key: &str) {
+    sessions().lock().unwrap_or_else(PoisonError::into_inner).remove(key);
+}
+
+async fn run_pooled(session: &mut Option<Session>, config: &RconConfig, command: &str) -> PanelResult<String> {
+    if let Some(open) = session.as_mut().filter(|open| open.config == *config) {
+        if let Ok(body) = open.run(command).await {
+            return Ok(body);
+        }
+    }
+    // Stale connection (server restarted, settings changed): reconnect once.
+    *session = None;
+    let mut fresh = Session::open(config).await?;
+    let body = fresh.run(command).await?;
+    *session = Some(fresh);
+    Ok(body)
+}
+
+/// Runs one command on the connection kept for `key`, opening it when needed.
+pub async fn execute_pooled(key: &str, config: &RconConfig, command: &str) -> PanelResult<String> {
+    let slot = sessions().lock().unwrap_or_else(PoisonError::into_inner).entry(key.to_string()).or_default().clone();
+    let mut session = slot.lock().await;
+    let outcome = tokio::time::timeout(TIMEOUT, run_pooled(&mut session, config, command)).await;
+    match outcome {
+        Ok(Ok(body)) => Ok(body),
+        // A half-read response would desynchronise the next command.
+        Ok(Err(error)) => {
+            *session = None;
+            Err(error)
+        }
+        Err(_) => {
+            *session = None;
+            Err(PanelError::network("RCON non ha risposto in tempo"))
+        }
+    }
 }
 
 pub fn strip_formatting(text: &str) -> String {
@@ -144,7 +207,7 @@ pub fn ensure_configured(layout: &Layout, record: &mut ServerRecord) -> PanelRes
 pub async fn execute_for(id: &str, command: &str) -> PanelResult<String> {
     let record = crate::catalog::get(&Layout::app(), id)?;
     let config = record.rcon.ok_or_else(|| PanelError::invalid("RCON non configurato per questo server"))?;
-    execute(&config, command).await
+    execute_pooled(id, &config, command).await
 }
 
 #[cfg(test)]
@@ -166,21 +229,57 @@ mod tests {
         assert_eq!(parse_list("§6There are §c1§6 out of maximum §c20§6 players online.\n§6default§r: §fSteve"), vec!["Steve"]);
     }
 
-    #[tokio::test]
-    async fn talks_to_a_fake_server() {
+    /// Accepts `connections` clients; each authenticates and gets `commands` answers echoing the
+    /// command, preceded by a stray packet with an old id. Returns the port and an accept counter.
+    async fn fake_server(connections: usize, commands: usize) -> (u32, Arc<std::sync::atomic::AtomicUsize>) {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port() as u32;
+        let accepted = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counter = accepted.clone();
         tokio::spawn(async move {
-            let (mut socket, _) = listener.accept().await.unwrap();
-            let (id, kind, body) = read_packet_raw(&mut socket).await;
-            assert_eq!((kind, body.as_str()), (AUTH, "secret"));
-            socket.write_all(&encode(id, 2, "")).await.unwrap();
-            let (id, _, body) = read_packet_raw(&mut socket).await;
-            assert_eq!(body, "list");
-            socket.write_all(&encode(id, 0, "There are 1 of a max of 20 players online: Steve")).await.unwrap();
+            for _ in 0..connections {
+                let (mut socket, _) = listener.accept().await.unwrap();
+                counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                let (id, kind, password) = read_packet_raw(&mut socket).await;
+                assert_eq!(kind, AUTH);
+                socket.write_all(&encode(if password == "secret" { id } else { -1 }, 2, "")).await.unwrap();
+                for _ in 0..commands {
+                    let (id, _, body) = read_packet_raw(&mut socket).await;
+                    socket.write_all(&encode(id - 1, 0, "stale fragment")).await.unwrap();
+                    socket.write_all(&encode(id, 0, &format!("ok {body}"))).await.unwrap();
+                }
+            }
         });
-        let response = execute(&RconConfig { port, password: "secret".into() }, "list").await.unwrap();
-        assert_eq!(parse_list(&response), vec!["Steve"]);
+        (port, accepted)
+    }
+
+    #[tokio::test]
+    async fn reuses_one_connection_for_many_commands() {
+        let (port, accepted) = fake_server(1, 3).await;
+        let config = RconConfig { port, password: "secret".into() };
+        for command in ["tps", "mspt", "list"] {
+            assert_eq!(execute_pooled("reuse", &config, command).await.unwrap(), format!("ok {command}"));
+        }
+        assert_eq!(accepted.load(std::sync::atomic::Ordering::SeqCst), 1);
+        disconnect("reuse");
+    }
+
+    #[tokio::test]
+    async fn reconnects_when_the_server_closes_the_connection() {
+        let (port, accepted) = fake_server(2, 1).await;
+        let config = RconConfig { port, password: "secret".into() };
+        assert_eq!(execute_pooled("reconnect", &config, "tps").await.unwrap(), "ok tps");
+        assert_eq!(execute_pooled("reconnect", &config, "list").await.unwrap(), "ok list");
+        assert_eq!(accepted.load(std::sync::atomic::Ordering::SeqCst), 2);
+        disconnect("reconnect");
+    }
+
+    #[tokio::test]
+    async fn reports_a_wrong_password() {
+        let (port, _) = fake_server(2, 0).await;
+        let error = execute_pooled("password", &RconConfig { port, password: "wrong".into() }, "list").await.unwrap_err();
+        assert_eq!(error.message, "Password RCON rifiutata");
+        disconnect("password");
     }
 
     async fn read_packet_raw(socket: &mut TcpStream) -> (i32, i32, String) {

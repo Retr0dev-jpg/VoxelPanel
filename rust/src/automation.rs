@@ -355,6 +355,8 @@ mod live {
         assert!(tps.is_some());
         let backup = backup_now(&id, "live").await.unwrap();
         println!("backup {backup}");
+        let connections = process::subscribe(&id).0.iter().filter(|line| line.contains("RCON Client") && line.contains("started")).count();
+        assert_eq!(connections, 1, "every RCON command should reuse the same connection");
         process::stop_server(&id).await.unwrap();
         assert_eq!(process::status_of(&id), RunStatus::Stopped);
         assert!(!process::snapshot(&id).crashed);

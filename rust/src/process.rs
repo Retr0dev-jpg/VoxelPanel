@@ -404,6 +404,7 @@ fn mark_exited(id: &str, pid: u32, code: Option<i32>) {
         runtime.mspt = None;
     });
     if matched {
+        crate::rcon::disconnect(id);
         let crashed = snapshot(id).crashed;
         if crashed {
             tracing::warn!(server = id, pid, ?code, "server terminato in modo inatteso");
