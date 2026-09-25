@@ -102,6 +102,9 @@ class _CreateWizardState extends ConsumerState<CreateWizard> {
   bool get _isCustom => _provider?.kind == ProviderKind.custom;
   bool get _isProxy => _provider?.isProxy ?? false;
 
+  /// Replaced requests keep running; without a listener their failure crashes as unhandled.
+  static Future<T> _observed<T>(Future<T> future) => future..ignore();
+
   void _selectProvider(ProviderInfo? provider, {bool notify = true}) {
     void apply() {
       _provider = provider;
@@ -110,7 +113,9 @@ class _CreateWizardState extends ConsumerState<CreateWizard> {
       _builds = null;
       _requiredJava = null;
       _snapshots = false;
-      _versions = provider == null || provider.kind == ProviderKind.custom ? null : listVersions(provider: provider.kind, includeSnapshots: false);
+      _versions = provider == null || provider.kind == ProviderKind.custom
+          ? null
+          : _observed(listVersions(provider: provider.kind, includeSnapshots: false));
     }
 
     notify ? setState(apply) : apply();
@@ -124,8 +129,8 @@ class _CreateWizardState extends ConsumerState<CreateWizard> {
     setState(() {
       _version = version;
       _build = '';
-      _builds = provider.hasBuilds ? listBuilds(provider: provider.kind, version: version) : null;
-      _requiredJava = requiredJava(provider: provider.kind, version: version).then((value) => value);
+      _builds = provider.hasBuilds ? _observed(listBuilds(provider: provider.kind, version: version)) : null;
+      _requiredJava = _observed(requiredJava(provider: provider.kind, version: version).then((value) => value));
     });
   }
 
@@ -392,7 +397,7 @@ class _CreateWizardState extends ConsumerState<CreateWizard> {
                 selected: _snapshots,
                 onSelected: (value) => setState(() {
                   _snapshots = value;
-                  _versions = listVersions(provider: provider.kind, includeSnapshots: value);
+                  _versions = _observed(listVersions(provider: provider.kind, includeSnapshots: value));
                 }),
               ),
             ],
@@ -405,7 +410,7 @@ class _CreateWizardState extends ConsumerState<CreateWizard> {
             future: _versions,
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return ErrorState(error: snapshot.error!, onRetry: () => setState(() => _versions = listVersions(provider: provider.kind, includeSnapshots: _snapshots)));
+                return ErrorState(error: snapshot.error!, onRetry: () => setState(() => _versions = _observed(listVersions(provider: provider.kind, includeSnapshots: _snapshots))));
               }
               final versions = snapshot.data;
               if (versions == null) {
@@ -466,7 +471,15 @@ class _CreateWizardState extends ConsumerState<CreateWizard> {
               children: [
                 const Icon(Icons.coffee_outlined, size: 16),
                 const SizedBox(width: 8),
-                Text(snapshot.hasData ? l.requiresJava(snapshot.data!) : l.loading),
+                Flexible(
+                  child: Text(
+                    snapshot.hasError
+                        ? describeError(context, snapshot.error!)
+                        : snapshot.hasData
+                        ? l.requiresJava(snapshot.data!)
+                        : l.loading,
+                  ),
+                ),
               ],
             ),
           ),

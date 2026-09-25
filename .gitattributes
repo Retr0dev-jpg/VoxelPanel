@@ -1,0 +1,19 @@
+# LF everywhere: Flutter regenerates files with LF, and a CRLF checkout
+# (core.autocrlf=true) would flag them as modified after every build.
+* text=auto eol=lf
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.icns binary
+*.otf binary
+*.ttf binary
+*.zip binary
+*.jar binary

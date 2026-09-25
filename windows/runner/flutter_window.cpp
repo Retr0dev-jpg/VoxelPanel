@@ -7,7 +7,9 @@
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
 
-FlutterWindow::~FlutterWindow() {}
+// window_manager's destroy only posts WM_QUIT, so the HWND can still be alive
+// here; the base destructor would skip this class's OnDestroy.
+FlutterWindow::~FlutterWindow() { Destroy(); }
 
 bool FlutterWindow::OnCreate() {
   if (!Win32Window::OnCreate()) {

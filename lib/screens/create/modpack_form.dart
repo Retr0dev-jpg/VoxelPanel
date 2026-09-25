@@ -79,7 +79,7 @@ class _ModpackFormState extends State<ModpackForm> {
     setState(() {
       _project = project;
       _version = '';
-      _versions = modpackVersions(source: project.source, projectId: project.id);
+      _versions = modpackVersions(source: project.source, projectId: project.id)..ignore();
       if (_name.text.isEmpty) {
         _name.text = project.title;
       }
