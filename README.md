@@ -105,7 +105,7 @@ flutter pub get
 flutter run -d windows   # oppure linux, macos
 ```
 
-Su Linux servono `clang cmake ninja-build pkg-config libgtk-3-dev libnotify-dev libayatana-appindicator3-dev`.
+Su Linux servono `clang cmake ninja-build pkg-config libgtk-3-dev libayatana-appindicator3-dev`.
 
 Dopo ogni modifica alle funzioni in `rust/src/api/` vanno rigenerati i binding:
 
