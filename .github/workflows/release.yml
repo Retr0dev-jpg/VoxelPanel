@@ -71,7 +71,7 @@ jobs:
           test -d "$app"
           hdiutil create -volname VoxelPanel -srcfolder "$app" -ov -format UDZO dist/VoxelPanel-macos.dmg
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: voxelpanel-${{ matrix.platform }}
           path: dist/*
@@ -90,7 +90,7 @@ jobs:
           version=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' pubspec.yaml)
           echo "tag=v$version" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
