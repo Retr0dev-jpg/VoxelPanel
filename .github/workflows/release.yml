@@ -42,11 +42,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-14-dev libayatana-appindicator3-dev
 
+      # The build number after `+` in pubspec.yaml is only the local fallback.
       - name: Build
         shell: bash
         run: |
           flutter config --enable-${{ matrix.platform }}-desktop
-          flutter build ${{ matrix.platform }} --release
+          flutter build ${{ matrix.platform }} --release --build-number=${{ github.run_number }}
 
       - name: Package Windows
         if: matrix.platform == 'windows'

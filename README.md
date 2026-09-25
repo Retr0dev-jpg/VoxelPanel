@@ -136,7 +136,7 @@ flutter test
 
 ## Release
 
-Ogni pull request e ogni push su `main` compilano e impacchettano l’app per i tre sistemi; solo il push su `main` pubblica. La release `v<versione>` viene pubblicata solo se non esiste già: per rilasciare basta aumentare `version` in `pubspec.yaml`.
+Ogni pull request e ogni push su `main` compilano e impacchettano l’app per i tre sistemi; solo il push su `main` pubblica. La release `v<versione>` viene pubblicata solo se non esiste già: per rilasciare basta aumentare `version` in `pubspec.yaml`. Il numero di build (la parte dopo `+`) viene assegnato dalla CI con il numero progressivo dell’esecuzione del workflow; quello in `pubspec.yaml` vale solo per le build locali.
 
 ## RCON
 
