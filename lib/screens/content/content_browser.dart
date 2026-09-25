@@ -3,13 +3,16 @@
 // See the LICENSE file in the project root.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:voxel_panel/src/l10n.dart';
 import 'package:voxel_panel/src/labels.dart';
 import 'package:voxel_panel/src/rust/api/content.dart';
 import 'package:voxel_panel/src/rust/api/types.dart';
+import 'package:voxel_panel/src/settings.dart';
 import 'package:voxel_panel/src/theme.dart';
 import 'package:voxel_panel/widgets/common/feedback.dart';
+import 'package:voxel_panel/widgets/content_layout.dart';
 
 String sourceLabel(ContentSourceKind source) => switch (source) {
   ContentSourceKind.modrinth => 'Modrinth',
@@ -54,17 +57,17 @@ class ProjectIcon extends StatelessWidget {
 }
 
 /// Catalogue browser for plugins or mods of one server. Pops `true` when something was installed.
-class ContentBrowserPage extends StatefulWidget {
+class ContentBrowserPage extends ConsumerStatefulWidget {
   const ContentBrowserPage({super.key, required this.serverId, required this.kind});
 
   final String serverId;
   final AddonKind kind;
 
   @override
-  State<ContentBrowserPage> createState() => _ContentBrowserPageState();
+  ConsumerState<ContentBrowserPage> createState() => _ContentBrowserPageState();
 }
 
-class _ContentBrowserPageState extends State<ContentBrowserPage> {
+class _ContentBrowserPageState extends ConsumerState<ContentBrowserPage> {
   List<ContentSourceKind> _sources = [];
   ContentSourceKind? _source;
   final _query = TextEditingController();
@@ -146,6 +149,39 @@ class _ContentBrowserPageState extends State<ContentBrowserPage> {
     }
   }
 
+  Widget _loadMore(BuildContext context) {
+    final l = context.l10n;
+    if (_projects.length >= _total) {
+      return const SizedBox(height: 12);
+    }
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: OutlinedButton(onPressed: _loading ? null : () => _search(reset: false), child: Text(_loading ? l.loading : l.loadMore)),
+      ),
+    );
+  }
+
+  Widget _results(BuildContext context) {
+    if (watchContentLayout(ref) == ContentLayout.grid) {
+      return CustomScrollView(
+        slivers: [
+          SliverGrid.builder(
+            gridDelegate: contentGridDelegate,
+            itemCount: _projects.length,
+            itemBuilder: (context, index) => _ProjectTile(project: _projects[index], onTap: () => _open(_projects[index])),
+          ),
+          SliverToBoxAdapter(child: _loadMore(context)),
+        ],
+      );
+    }
+    return ListView.separated(
+      itemCount: _projects.length + 1,
+      separatorBuilder: (context, index) => const SizedBox(height: 6),
+      itemBuilder: (context, index) => index == _projects.length ? _loadMore(context) : _ProjectRow(project: _projects[index], onTap: () => _open(_projects[index])),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
@@ -167,7 +203,8 @@ class _ContentBrowserPageState extends State<ContentBrowserPage> {
                 children: [
                   IconButton(onPressed: () => Navigator.pop(context, _installed), icon: const Icon(Icons.arrow_back)),
                   const SizedBox(width: 8),
-                  Text(widget.kind == AddonKind.mod ? l.browseMods : l.browsePlugins, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
+                  Expanded(child: Text(widget.kind == AddonKind.mod ? l.browseMods : l.browsePlugins, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700))),
+                  const ContentLayoutToggle(),
                 ],
               ),
               const SizedBox(height: 12),
@@ -201,46 +238,85 @@ class _ContentBrowserPageState extends State<ContentBrowserPage> {
                     ? ErrorState(error: _error!, onRetry: () => _search(reset: true))
                     : !_loading && _projects.isEmpty
                     ? EmptyState(icon: Icons.search_off, message: l.noSearchResultsCatalog)
-                    : ListView.separated(
-                        itemCount: _projects.length + 1,
-                        separatorBuilder: (context, index) => const SizedBox(height: 6),
-                        itemBuilder: (context, index) {
-                          if (index == _projects.length) {
-                            return _projects.length < _total
-                                ? Center(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(12),
-                                      child: OutlinedButton(onPressed: _loading ? null : () => _search(reset: false), child: Text(_loading ? l.loading : l.loadMore)),
-                                    ),
-                                  )
-                                : const SizedBox(height: 12);
-                          }
-                          final project = _projects[index];
-                          return Material(
-                            color: colors.card,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.cardBorder)),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              leading: ProjectIcon(project.iconUrl),
-                              title: Text(project.title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                              subtitle: Text(
-                                [if (project.author.isNotEmpty) project.author, project.description].join(' · '),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              trailing: Wrap(
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  Text('↓ ${compactCount(project.downloads)}', style: TextStyle(color: colors.muted)),
-                                  if (project.pageUrl.isNotEmpty) IconButton(tooltip: l.openPage, onPressed: () => launchUrl(Uri.parse(project.pageUrl)), icon: const Icon(Icons.open_in_new, size: 18)),
-                                ],
-                              ),
-                              onTap: () => _open(project),
-                            ),
-                          );
-                        },
-                      ),
+                    : _results(context),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProjectRow extends StatelessWidget {
+  const _ProjectRow({required this.project, required this.onTap});
+
+  final ContentProject project;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final colors = context.voxel;
+    return Material(
+      color: colors.card,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: colors.cardBorder)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        leading: ProjectIcon(project.iconUrl),
+        title: Text(project.title, style: const TextStyle(fontWeight: FontWeight.w700)),
+        subtitle: Text([if (project.author.isNotEmpty) project.author, project.description].join(' · '), maxLines: 2, overflow: TextOverflow.ellipsis),
+        trailing: Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text('↓ ${compactCount(project.downloads)}', style: TextStyle(color: colors.muted)),
+            if (project.pageUrl.isNotEmpty) IconButton(tooltip: l.openPage, onPressed: () => launchUrl(Uri.parse(project.pageUrl)), icon: const Icon(Icons.open_in_new, size: 18)),
+          ],
+        ),
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
+class _ProjectTile extends StatelessWidget {
+  const _ProjectTile({required this.project, required this.onTap});
+
+  final ContentProject project;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final colors = context.voxel;
+    return Material(
+      color: colors.card,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: colors.cardBorder)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ProjectIcon(project.iconUrl, size: 52),
+                  const Spacer(),
+                  if (project.pageUrl.isNotEmpty)
+                    IconButton(tooltip: l.openPage, visualDensity: VisualDensity.compact, onPressed: () => launchUrl(Uri.parse(project.pageUrl)), icon: const Icon(Icons.open_in_new, size: 18)),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(project.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
+              if (project.author.isNotEmpty) Text(project.author, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: colors.accent, fontSize: 12)),
+              const SizedBox(height: 4),
+              Expanded(
+                child: Text(project.description, maxLines: 3, overflow: TextOverflow.ellipsis, style: TextStyle(color: colors.muted, fontSize: 12)),
+              ),
+              Text('↓ ${compactCount(project.downloads)}', style: TextStyle(color: colors.muted, fontSize: 12)),
             ],
           ),
         ),

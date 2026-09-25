@@ -96,6 +96,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw);
 
   @protected
+  JavaVendor dco_decode_box_autoadd_java_vendor(dynamic raw);
+
+  @protected
   LauncherSettings dco_decode_box_autoadd_launcher_settings(dynamic raw);
 
   @protected
@@ -118,6 +121,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ConsoleSettings dco_decode_console_settings(dynamic raw);
+
+  @protected
+  ContentLayout dco_decode_content_layout(dynamic raw);
 
   @protected
   ContentPage dco_decode_content_page(dynamic raw);
@@ -171,6 +177,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   JavaSettings dco_decode_java_settings(dynamic raw);
 
   @protected
+  JavaVendor dco_decode_java_vendor(dynamic raw);
+
+  @protected
+  JavaVendorInfo dco_decode_java_vendor_info(dynamic raw);
+
+  @protected
   JvmPreset dco_decode_jvm_preset(dynamic raw);
 
   @protected
@@ -214,6 +226,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<JavaRuntimeInfo> dco_decode_list_java_runtime_info(dynamic raw);
+
+  @protected
+  List<JavaVendorInfo> dco_decode_list_java_vendor_info(dynamic raw);
 
   @protected
   List<JvmPresetInfo> dco_decode_list_jvm_preset_info(dynamic raw);
@@ -294,6 +309,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw);
+
+  @protected
+  JavaVendor? dco_decode_opt_box_autoadd_java_vendor(dynamic raw);
 
   @protected
   int? dco_decode_opt_box_autoadd_u_32(dynamic raw);
@@ -470,6 +488,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
+  JavaVendor sse_decode_box_autoadd_java_vendor(SseDeserializer deserializer);
+
+  @protected
   LauncherSettings sse_decode_box_autoadd_launcher_settings(
     SseDeserializer deserializer,
   );
@@ -498,6 +519,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ConsoleSettings sse_decode_console_settings(SseDeserializer deserializer);
+
+  @protected
+  ContentLayout sse_decode_content_layout(SseDeserializer deserializer);
 
   @protected
   ContentPage sse_decode_content_page(SseDeserializer deserializer);
@@ -555,6 +579,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   JavaSettings sse_decode_java_settings(SseDeserializer deserializer);
 
   @protected
+  JavaVendor sse_decode_java_vendor(SseDeserializer deserializer);
+
+  @protected
+  JavaVendorInfo sse_decode_java_vendor_info(SseDeserializer deserializer);
+
+  @protected
   JvmPreset sse_decode_jvm_preset(SseDeserializer deserializer);
 
   @protected
@@ -606,6 +636,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<JavaRuntimeInfo> sse_decode_list_java_runtime_info(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<JavaVendorInfo> sse_decode_list_java_vendor_info(
     SseDeserializer deserializer,
   );
 
@@ -708,6 +743,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer);
+
+  @protected
+  JavaVendor? sse_decode_opt_box_autoadd_java_vendor(
+    SseDeserializer deserializer,
+  );
 
   @protected
   int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer);
@@ -904,6 +944,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_java_vendor(
+    JavaVendor self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_launcher_settings(
     LauncherSettings self,
     SseSerializer serializer,
@@ -941,6 +987,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     ConsoleSettings self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_content_layout(ContentLayout self, SseSerializer serializer);
 
   @protected
   void sse_encode_content_page(ContentPage self, SseSerializer serializer);
@@ -1018,6 +1067,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_java_settings(JavaSettings self, SseSerializer serializer);
 
   @protected
+  void sse_encode_java_vendor(JavaVendor self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_java_vendor_info(
+    JavaVendorInfo self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_jvm_preset(JvmPreset self, SseSerializer serializer);
 
   @protected
@@ -1092,6 +1150,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_java_runtime_info(
     List<JavaRuntimeInfo> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_java_vendor_info(
+    List<JavaVendorInfo> self,
     SseSerializer serializer,
   );
 
@@ -1230,6 +1294,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_i_64(
     PlatformInt64? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_java_vendor(
+    JavaVendor? self,
     SseSerializer serializer,
   );
 

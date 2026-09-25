@@ -129,8 +129,8 @@ async fn resolve_java(layout: &Layout, chosen: &str, required: u32, progress: &P
     Ok((java_for_major(layout, required, progress).await?, required))
 }
 
-pub async fn install_java(layout: &Layout, major: u32, progress: &ProgressTx) -> PanelResult<String> {
-    let home = crate::java_runtime::ensure_major(&layout.runtimes(), major, progress).await?;
+pub async fn install_java(layout: &Layout, vendor: crate::java_runtime::JavaVendor, major: u32, progress: &ProgressTx) -> PanelResult<String> {
+    let home = crate::java_runtime::install(&layout.runtimes(), vendor, major, progress).await?;
     Ok(home.to_string_lossy().to_string())
 }
 

@@ -8,7 +8,7 @@ import 'error.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 Future<LauncherSettings> getLauncherSettings() =>
     RustLib.instance.api.crateApiSettingsGetLauncherSettings();
@@ -43,6 +43,9 @@ Future<void> clearCache() => RustLib.instance.api.crateApiSettingsClearCache();
 
 List<JvmPresetInfo> jvmPresets() =>
     RustLib.instance.api.crateApiSettingsJvmPresets();
+
+List<JavaVendorInfo> javaVendors() =>
+    RustLib.instance.api.crateApiSettingsJavaVendors();
 
 String appLogDir() => RustLib.instance.api.crateApiSettingsAppLogDir();
 
@@ -92,12 +95,14 @@ class AppearanceSettings {
   final int accentColor;
   final double textScale;
   final bool compact;
+  final ContentLayout contentLayout;
 
   const AppearanceSettings({
     required this.theme,
     required this.accentColor,
     required this.textScale,
     required this.compact,
+    required this.contentLayout,
   });
 
   static Future<AppearanceSettings> default_() =>
@@ -108,7 +113,8 @@ class AppearanceSettings {
       theme.hashCode ^
       accentColor.hashCode ^
       textScale.hashCode ^
-      compact.hashCode;
+      compact.hashCode ^
+      contentLayout.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -118,7 +124,8 @@ class AppearanceSettings {
           theme == other.theme &&
           accentColor == other.accentColor &&
           textScale == other.textScale &&
-          compact == other.compact;
+          compact == other.compact &&
+          contentLayout == other.contentLayout;
 }
 
 class BackupSettings {
@@ -193,6 +200,15 @@ class ConsoleSettings {
           timestamps == other.timestamps &&
           fontSize == other.fontSize &&
           wrap == other.wrap;
+}
+
+/// How plugin, mod and catalogue lists are shown.
+enum ContentLayout {
+  list,
+  grid;
+
+  static Future<ContentLayout> default_() =>
+      RustLib.instance.api.crateApiSettingsContentLayoutDefault();
 }
 
 class DefaultsSettings {
@@ -279,21 +295,65 @@ class GeneralSettings {
 
 class JavaSettings {
   final List<PreferredJava> preferred;
+  final JavaVendor vendor;
 
-  const JavaSettings({required this.preferred});
+  const JavaSettings({required this.preferred, required this.vendor});
 
   static Future<JavaSettings> default_() =>
       RustLib.instance.api.crateApiSettingsJavaSettingsDefault();
 
   @override
-  int get hashCode => preferred.hashCode;
+  int get hashCode => preferred.hashCode ^ vendor.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is JavaSettings &&
           runtimeType == other.runtimeType &&
-          preferred == other.preferred;
+          preferred == other.preferred &&
+          vendor == other.vendor;
+}
+
+/// Distribution used when VoxelPanel downloads a Java runtime.
+enum JavaVendor {
+  temurin,
+  zulu,
+  corretto,
+  microsoft,
+  liberica,
+  sapMachine,
+  graalVm;
+
+  static Future<JavaVendor> default_() =>
+      RustLib.instance.api.crateApiSettingsJavaVendorDefault();
+}
+
+class JavaVendorInfo {
+  final JavaVendor vendor;
+  final String name;
+  final String publisher;
+  final String website;
+
+  const JavaVendorInfo({
+    required this.vendor,
+    required this.name,
+    required this.publisher,
+    required this.website,
+  });
+
+  @override
+  int get hashCode =>
+      vendor.hashCode ^ name.hashCode ^ publisher.hashCode ^ website.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is JavaVendorInfo &&
+          runtimeType == other.runtimeType &&
+          vendor == other.vendor &&
+          name == other.name &&
+          publisher == other.publisher &&
+          website == other.website;
 }
 
 enum JvmPreset {

@@ -52,7 +52,8 @@ class PanelCard extends StatelessWidget {
   }
 }
 
-/// Lays children out in equal-width columns that adapt to the available width.
+/// Lays children out in equal-width columns that adapt to the available width. Items in the same
+/// row share the tallest height, so children must support intrinsic sizing (no LayoutBuilder).
 class ResponsiveGrid extends StatelessWidget {
   const ResponsiveGrid({super.key, required this.children, this.minItemWidth = 220, this.spacing = 12});
 
@@ -66,10 +67,24 @@ class ResponsiveGrid extends StatelessWidget {
       builder: (context, constraints) {
         final columns = ((constraints.maxWidth + spacing) / (minItemWidth + spacing)).floor().clamp(1, children.isEmpty ? 1 : children.length);
         final width = (constraints.maxWidth - spacing * (columns - 1)) / columns;
-        return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
-          children: [for (final child in children) SizedBox(width: width, child: child)],
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var start = 0; start < children.length; start += columns) ...[
+              if (start > 0) SizedBox(height: spacing),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final (index, child) in children.skip(start).take(columns).indexed) ...[
+                      if (index > 0) SizedBox(width: spacing),
+                      SizedBox(width: width, child: child),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ],
         );
       },
     );

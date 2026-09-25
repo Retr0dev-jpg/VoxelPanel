@@ -7,7 +7,7 @@ L’interfaccia è in Flutter (Material 3, italiano e inglese). Il motore è in 
 ## Cosa fa
 
 - Crea un server con una procedura a passi (software, versione e build, Java e memoria, impostazioni iniziali, riepilogo) oppure importa una cartella già esistente riconoscendo il software, senza copiare i mondi.
-- Installa Java da Adoptium (x64 o ARM64, per il sistema in uso) nella versione richiesta dal server, scarica il software verificandone il checksum e scrive EULA, `server.properties`, RAM, flag JVM e lo script di avvio (`start.bat` su Windows, `start.sh` su Linux e macOS).
+- Installa Java (x64 o ARM64, per il sistema in uso) nella versione richiesta dal server, dalla distribuzione scelta nelle impostazioni: Temurin (API di Adoptium) oppure Zulu, Corretto, Microsoft Build of OpenJDK, Liberica, SapMachine e GraalVM Community (API Disco di foojay); scarica il software verificandone il checksum e scrive EULA, `server.properties`, RAM, flag JVM e lo script di avvio (`start.bat` su Windows, `start.sh` su Linux e macOS).
 - Cambia versione o build di un server esistente, con backup automatico prima dell’aggiornamento.
 - Avvia `java` come processo figlio, con console, stop, riavvio e arresto di tutti i server alla chiusura.
 - Mostra lo stato reale di ogni server: "Avvio" finché il log non segnala la fine del caricamento, poi "Online"; rileva i crash con il codice di uscita.
@@ -30,7 +30,7 @@ L’interfaccia è in Flutter (Material 3, italiano e inglese). Il motore è in 
   - avvio automatico dei server contrassegnati all’apertura di VoxelPanel;
   - notifiche desktop e area di notifica collegate agli eventi dei server.
 - Rinomina ed elimina i server (anche più server insieme), con scelta se cancellare file e backup.
-- Impostazioni del launcher: lingua, tema chiaro o scuro con colore di accento, avvio con il sistema, chiusura nel tray, cartelle di server, backup, runtime e cache (spostabili con migrazione guidata), runtime Java installati e di sistema con versione preferita, valori predefiniti per i nuovi server (RAM, preset JVM Aikar/G1/ZGC, porta), console, backup (conservazione, compressione, esclusioni), proxy e timeout di rete, chiave CurseForge, notifiche desktop, log dell'app, esportazione e importazione.
+- Impostazioni del launcher: lingua, tema chiaro o scuro con colore di accento, vista a elenco o a griglia per plugin, mod e catalogo, avvio con il sistema, chiusura nel tray, cartelle di server, backup, runtime e cache (spostabili con migrazione guidata), runtime Java installati e di sistema (con la distribuzione riconosciuta dal file `release`) e versione preferita, distribuzione Java per i download, valori predefiniti per i nuovi server (RAM, preset JVM Aikar/G1/ZGC, porta), console, backup (conservazione, compressione, esclusioni), proxy e timeout di rete, chiave CurseForge, notifiche desktop, log dell'app, esportazione e importazione.
 
 La rete serve solo per installare o aggiornare Java, Paper o un plugin. Stato, console e file restano sul disco.
 
@@ -58,6 +58,8 @@ La rete serve solo per installare o aggiornare Java, Paper o un plugin. Stato, c
 Forge e NeoForge moderni vengono avviati con il file di argomenti creato dall’installer (`@libraries/.../unix_args.txt` o `win_args.txt`); le versioni vecchie con il jar prodotto. Le sezioni del server si adattano al software: i proxy non hanno mondi né `server.properties`, i loader di mod hanno la sezione Mod (con ricerca su Modrinth filtrata per loader e versione) e gli ibridi hanno sia Plugin sia Mod.
 
 Gli elenchi delle versioni vengono salvati nella cartella della cache: se la rete non risponde il wizard usa l’ultima copia scaricata.
+
+Le icone in `assets/providers/` sono i loghi dei rispettivi progetti (avatar GitHub delle organizzazioni, asset del sito PaperMC, icone dei repository; per Vanilla il blocco d’erba di Minecraft) e restano dei loro proprietari. Velocity, Waterfall, Folia e BungeeCord usano il simbolo ufficiale in bianco su un colore di sfondo.
 
 ## Piattaforme
 
@@ -117,7 +119,7 @@ flutter_rust_bridge_codegen generate
 I test che contattano le API reali dei provider sono esclusi di default:
 
 ```bash
-cd rust && cargo test live_ -- --ignored   # provider e cataloghi di contenuti
+cd rust && cargo test live_ -- --ignored   # provider, cataloghi di contenuti e distribuzioni Java (scarica Zulu 21)
 # installer veri di Quilt, Forge e NeoForge (serve un Java recente)
 VOXELPANEL_TEST_JAVA=/percorso/java cargo test live_runs_installers -- --ignored
 # server Paper reale: RCON, TPS, backup a caldo e arresto

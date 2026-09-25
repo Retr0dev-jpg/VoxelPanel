@@ -8,6 +8,7 @@ import 'error.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+import 'settings.dart';
 import 'types.dart';
 
 // These functions are ignored because they are not marked as `pub`: `created_message`, `to_runtime`, `to_status`
@@ -40,8 +41,8 @@ RamSuggestion suggestRam() => RustLib.instance.api.crateApiPanelSuggestRam();
 Future<List<JavaRuntimeInfo>> listRuntimes() =>
     RustLib.instance.api.crateApiPanelListRuntimes();
 
-Future<List<JavaReleaseInfo>> listJavaReleases() =>
-    RustLib.instance.api.crateApiPanelListJavaReleases();
+Future<List<JavaReleaseInfo>> listJavaReleases({required JavaVendor vendor}) =>
+    RustLib.instance.api.crateApiPanelListJavaReleases(vendor: vendor);
 
 /// Providers that VoxelPanel can install, in wizard order.
 List<ProviderInfo> listProviders() =>
@@ -146,8 +147,11 @@ Stream<ProgressEvent> changeServerVersion({
   build: build,
 );
 
-Stream<ProgressEvent> installJava({required int major}) =>
-    RustLib.instance.api.crateApiPanelInstallJava(major: major);
+Stream<ProgressEvent> installJava({
+  required int major,
+  required JavaVendor vendor,
+}) =>
+    RustLib.instance.api.crateApiPanelInstallJava(major: major, vendor: vendor);
 
 Stream<String> watchConsole({required String id}) =>
     RustLib.instance.api.crateApiPanelWatchConsole(id: id);

@@ -352,6 +352,18 @@
   "javaPreferred": "Runtime predefinito per versione",
   "javaPreferredHint": "Usato quando un server richiede quella versione di Java, al posto di scaricarne una nuova.",
   "javaAutomatic": "Automatico",
+  "javaVendor": "Distribuzione per i download",
+  "javaVendorHint": "Usata quando VoxelPanel scarica Java per un server che richiede una versione non installata. Le distribuzioni sono build di OpenJDK equivalenti per i server Minecraft.",
+  "javaVendorLabel": "Distribuzione",
+  "javaVendorWebsite": "Sito di {vendor}",
+  "@javaVendorWebsite": {
+    "placeholders": {
+      "vendor": {
+        "type": "String"
+      }
+    }
+  },
+  "javaNoReleases": "Nessuna versione disponibile per questo sistema.",
   "ramAutomatic": "Automatica (in base alla RAM del sistema)",
   "settingJvmPreset": "Preset dei flag JVM",
   "jvmPresetAikar": "Aikar (consigliato per Paper)",
@@ -418,6 +430,19 @@
   },
   "aboutRepository": "Codice sorgente",
   "aboutLicenses": "Licenze",
+  "aboutReportIssue": "Segnala un problema",
+  "aboutReportIssueHint": "Apre una nuova issue su GitHub con versione e sistema già compilati.",
+  "issueTemplate": "## Descrizione\n\n\n## Passaggi per riprodurre\n1. \n\n## Comportamento atteso\n\n\n## Ambiente\n- VoxelPanel: {version}\n- Sistema: {system}\n\n<!-- Se utile, allega il log dell'app: Impostazioni → Avanzate → Apri cartella log. -->",
+  "@issueTemplate": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "system": {
+        "type": "String"
+      }
+    }
+  },
   "checkUpdatesNow": "Controlla aggiornamenti",
   "upToDate": "Stai usando l'ultima versione.",
   "updateAvailable": "È disponibile VoxelPanel {version}.",
@@ -502,7 +527,7 @@
   "customVersionLabel": "Versione di Minecraft (facoltativa)",
   "customVersionHint": "Serve per scegliere Java e filtrare plugin e mod. Se vuota viene letta dal nome del jar.",
   "javaRuntime": "Runtime Java",
-  "javaAutoHint": "Automatico: runtime preferito per la versione richiesta, oppure download da Adoptium.",
+  "javaAutoHint": "Automatico: runtime preferito per la versione richiesta, oppure download dalla distribuzione scelta nelle impostazioni.",
   "systemMemory": "Memoria del sistema: {total}",
   "@systemMemory": {
     "placeholders": {
@@ -695,6 +720,10 @@
       }
     }
   },
+  "settingContentLayout": "Vista di plugin e mod",
+  "settingContentLayoutHint": "Elenco o griglia, per i plugin e mod installati e per il catalogo. Si cambia anche dal pulsante accanto alla ricerca.",
+  "layoutList": "Vista a elenco",
+  "layoutGrid": "Vista a griglia",
   "filter": "Filtra",
   "modpackMode": "Da modpack",
   "modpackModeSubtitle": "Modrinth, CurseForge o file .mrpack",

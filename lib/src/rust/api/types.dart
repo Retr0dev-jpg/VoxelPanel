@@ -7,6 +7,8 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+import 'settings.dart';
+
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `hash`, `hash`
 
 class AddonInfo {
@@ -555,12 +557,16 @@ class JavaRuntimeInfo {
   final bool managed;
   final bool system;
 
+  /// Read from the JDK `release` file; unknown for other distributions.
+  final JavaVendor? vendor;
+
   const JavaRuntimeInfo({
     required this.name,
     required this.major,
     required this.path,
     required this.managed,
     required this.system,
+    this.vendor,
   });
 
   @override
@@ -569,7 +575,8 @@ class JavaRuntimeInfo {
       major.hashCode ^
       path.hashCode ^
       managed.hashCode ^
-      system.hashCode;
+      system.hashCode ^
+      vendor.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -580,7 +587,8 @@ class JavaRuntimeInfo {
           major == other.major &&
           path == other.path &&
           managed == other.managed &&
-          system == other.system;
+          system == other.system &&
+          vendor == other.vendor;
 }
 
 class LogFileInfo {
