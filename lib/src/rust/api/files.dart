@@ -4,12 +4,13 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'error.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'types.dart';
 
-// These functions are ignored because they are not marked as `pub`: `from_settings`, `open_directory`, `to_settings`
+// These functions are ignored because they are not marked as `pub`: `backup_path`, `manifest_of`, `open_directory`
 
 Future<List<PropertyEntry>> listProperties({required String id}) =>
     RustLib.instance.api.crateApiFilesListProperties(id: id);
@@ -19,15 +20,6 @@ Future<void> saveProperties({
   required List<PropertyEntry> entries,
 }) =>
     RustLib.instance.api.crateApiFilesSaveProperties(id: id, entries: entries);
-
-Future<ServerSettings> getSettings({required String id}) =>
-    RustLib.instance.api.crateApiFilesGetSettings(id: id);
-
-Future<void> saveSettings({
-  required String id,
-  required ServerSettings settings,
-}) =>
-    RustLib.instance.api.crateApiFilesSaveSettings(id: id, settings: settings);
 
 Future<List<PluginInfo>> listPlugins({required String id}) =>
     RustLib.instance.api.crateApiFilesListPlugins(id: id);
@@ -90,6 +82,3 @@ Stream<ProgressEvent> restoreBackup({
 
 Future<void> deleteBackup({required String id, required String fileName}) =>
     RustLib.instance.api.crateApiFilesDeleteBackup(id: id, fileName: fileName);
-
-Future<bool> serverIsRunning({required String id}) =>
-    RustLib.instance.api.crateApiFilesServerIsRunning(id: id);

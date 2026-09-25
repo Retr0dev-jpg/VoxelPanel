@@ -4,7 +4,6 @@
 
 use crate::Progress;
 use std::path::Path;
-use std::sync::mpsc::Sender;
 use std::time::Duration;
 
 pub fn http() -> reqwest::Client {
@@ -20,8 +19,8 @@ pub async fn download(
     url: &str,
     destination: &Path,
     stage: &str,
-    progress: &Sender<Progress>,
-) -> Result<(), String> {
+    progress: &crate::ProgressTx,
+) -> crate::PanelResult<()> {
     if let Some(parent) = destination.parent() {
         crate::paths::ensure_dir(parent)?;
     }
@@ -60,7 +59,7 @@ pub async fn download(
                 ),
                 None => format!("{} MB", downloaded / (1024 * 1024)),
             };
-            let _ = progress.send(Progress {
+            progress.send(Progress {
                 stage: stage.to_string(),
                 message,
                 fraction,
@@ -70,7 +69,7 @@ pub async fn download(
     Ok(())
 }
 
-pub fn extract_zip(archive: &Path, destination: &Path) -> Result<(), String> {
+pub fn extract_zip(archive: &Path, destination: &Path) -> crate::PanelResult<()> {
     crate::paths::ensure_dir(destination)?;
     let file = std::fs::File::open(archive).map_err(|error| format!("Archivio illeggibile: {error}"))?;
     let mut zip = zip::ZipArchive::new(file).map_err(|error| format!("Zip non valido: {error}"))?;
@@ -83,13 +82,13 @@ pub fn extract_zip(archive: &Path, destination: &Path) -> Result<(), String> {
         };
         let out = destination.join(name);
         if entry.is_dir() {
-            std::fs::create_dir_all(&out).map_err(|error| error.to_string())?;
+            std::fs::create_dir_all(&out).map_err(|error| crate::PanelError::from(error.to_string()))?;
         } else {
             if let Some(parent) = out.parent() {
-                std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+                std::fs::create_dir_all(parent).map_err(|error| crate::PanelError::from(error.to_string()))?;
             }
-            let mut output = std::fs::File::create(&out).map_err(|error| error.to_string())?;
-            std::io::copy(&mut entry, &mut output).map_err(|error| error.to_string())?;
+            let mut output = std::fs::File::create(&out).map_err(|error| crate::PanelError::from(error.to_string()))?;
+            std::io::copy(&mut entry, &mut output).map_err(|error| crate::PanelError::from(error.to_string()))?;
         }
     }
     Ok(())

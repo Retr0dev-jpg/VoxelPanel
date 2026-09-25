@@ -128,17 +128,17 @@ pub fn find_by_major(runtime_root: &Path, major: u32) -> Option<PathBuf> {
         .map(|runtime| runtime.home)
 }
 
-pub async fn list_releases() -> Result<Vec<JavaRelease>, String> {
+pub async fn list_releases() -> crate::PanelResult<Vec<JavaRelease>> {
     let releases: Releases = crate::net::http()
         .get("https://api.adoptium.net/v3/info/available_releases")
         .send()
         .await
         .map_err(|error| format!("Adoptium non raggiungibile: {error}"))?
         .error_for_status()
-        .map_err(|error| error.to_string())?
+        .map_err(|error| crate::PanelError::from(error.to_string()))?
         .json()
         .await
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| crate::PanelError::from(error.to_string()))?;
     let lts = releases.available_lts_releases.clone();
     let mut items: Vec<JavaRelease> = releases
         .available_releases
@@ -148,17 +148,17 @@ pub async fn list_releases() -> Result<Vec<JavaRelease>, String> {
             major,
         })
         .collect();
-    items.sort_by(|left, right| right.major.cmp(&left.major));
+    items.sort_by_key(|item| std::cmp::Reverse(item.major));
     Ok(items)
 }
 
 pub async fn ensure_major(
     runtime_root: &Path,
     major: u32,
-    progress: &std::sync::mpsc::Sender<crate::Progress>,
-) -> Result<PathBuf, String> {
+    progress: &crate::ProgressTx,
+) -> crate::PanelResult<PathBuf> {
     if let Some(existing) = find_by_major(runtime_root, major) {
-        let _ = progress.send(crate::Progress {
+        progress.send(crate::Progress {
             stage: "Java".into(),
             message: format!("Java {major} già installato."),
             fraction: Some(1.0),
@@ -176,7 +176,7 @@ pub async fn ensure_major(
         .map_err(|error| format!("Pacchetto Java {major} non trovato: {error}"))?
         .json()
         .await
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| crate::PanelError::from(error.to_string()))?;
     let package = assets
         .into_iter()
         .find_map(|asset| {
@@ -189,13 +189,13 @@ pub async fn ensure_major(
         .ok_or_else(|| format!("Pacchetto Java {major} non trovato da Adoptium"))?;
     crate::paths::ensure_dir(runtime_root)?;
     let archive = runtime_root.join(&package.name);
-    let _ = progress.send(crate::Progress {
+    progress.send(crate::Progress {
         stage: "Java".into(),
         message: format!("Download Java {major}..."),
         fraction: Some(0.0),
     });
     crate::net::download(&package.link, &archive, "Java", progress).await?;
-    let _ = progress.send(crate::Progress {
+    progress.send(crate::Progress {
         stage: "Java".into(),
         message: format!("Estrazione Java {major}..."),
         fraction: None,
@@ -204,10 +204,10 @@ pub async fn ensure_major(
     let destination = runtime_root.to_path_buf();
     tokio::task::spawn_blocking(move || crate::net::extract_zip(&archive_path, &destination))
         .await
-        .map_err(|error| error.to_string())??;
+        .map_err(|error| crate::PanelError::from(error.to_string()))??;
     let _ = std::fs::remove_file(&archive);
     find_by_major(runtime_root, major).ok_or_else(|| {
-        format!("Java {major} estratto ma non rilevato in {}", runtime_root.display())
+        crate::PanelError::from(format!("Java {major} estratto ma non rilevato in {}", runtime_root.display()))
     })
 }
 

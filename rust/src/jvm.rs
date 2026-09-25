@@ -32,11 +32,11 @@ pub fn is_safe_flag(flag: &str) -> bool {
             .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, ':' | '+' | '-' | '=' | '.'))
 }
 
-pub fn sanitize_flags(flags: &[String]) -> Result<Vec<String>, String> {
+pub fn sanitize_flags(flags: &[String]) -> crate::PanelResult<Vec<String>> {
     let mut clean = Vec::new();
     for flag in flags {
         if !is_safe_flag(flag) {
-            return Err(format!("Flag JVM non consentito: {flag}"));
+            return Err(crate::PanelError::invalid(format!("Flag JVM non consentito: {flag}")));
         }
         if !clean.iter().any(|existing: &String| existing == flag) {
             clean.push(flag.clone());

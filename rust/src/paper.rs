@@ -30,7 +30,7 @@ struct ManifestEntry {
     url: String,
 }
 
-pub fn versions_from_project_json(value: &Value) -> Result<Vec<String>, String> {
+pub fn versions_from_project_json(value: &Value) -> crate::PanelResult<Vec<String>> {
     let versions = value
         .get("versions")
         .ok_or("Campo versions mancante nella risposta Paper")?;
@@ -105,7 +105,7 @@ pub fn parse_paper_version(file_name: &str) -> Option<String> {
         .filter(|value| !value.is_empty())
 }
 
-pub async fn fetch_versions() -> Result<Vec<String>, String> {
+pub async fn fetch_versions() -> crate::PanelResult<Vec<String>> {
     let client = crate::net::http();
     let project: Value = client
         .get(PAPER_PROJECT)
@@ -132,7 +132,7 @@ pub async fn fetch_versions() -> Result<Vec<String>, String> {
     Ok(keep_known_minecraft(versions, &ids))
 }
 
-pub async fn required_java(version: &str) -> Result<u32, String> {
+pub async fn required_java(version: &str) -> crate::PanelResult<u32> {
     let client = crate::net::http();
     let manifest: Manifest = client
         .get(MOJANG_MANIFEST)
@@ -140,10 +140,10 @@ pub async fn required_java(version: &str) -> Result<u32, String> {
         .await
         .map_err(|error| format!("Manifest Mojang non raggiungibile: {error}"))?
         .error_for_status()
-        .map_err(|error| error.to_string())?
+        .map_err(|error| crate::PanelError::from(error.to_string()))?
         .json()
         .await
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| crate::PanelError::from(error.to_string()))?;
     let entry = manifest
         .versions
         .into_iter()
@@ -153,16 +153,16 @@ pub async fn required_java(version: &str) -> Result<u32, String> {
         .get(entry.url)
         .send()
         .await
-        .map_err(|error| error.to_string())?
+        .map_err(|error| crate::PanelError::from(error.to_string()))?
         .error_for_status()
-        .map_err(|error| error.to_string())?
+        .map_err(|error| crate::PanelError::from(error.to_string()))?
         .json()
         .await
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| crate::PanelError::from(error.to_string()))?;
     Ok(java_major_from_meta(&meta))
 }
 
-pub async fn latest_download(version: &str) -> Result<PaperDownload, String> {
+pub async fn latest_download(version: &str) -> crate::PanelResult<PaperDownload> {
     let client = crate::net::http();
     let url = format!("{PAPER_PROJECT}/versions/{version}/builds/latest");
     let value: Value = client
@@ -174,7 +174,7 @@ pub async fn latest_download(version: &str) -> Result<PaperDownload, String> {
         .map_err(|error| format!("Build Paper non trovata: {error}"))?
         .json()
         .await
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| crate::PanelError::from(error.to_string()))?;
     let build = value
         .get("id")
         .and_then(|entry| entry.as_u64())
@@ -204,19 +204,19 @@ pub async fn latest_download(version: &str) -> Result<PaperDownload, String> {
 pub async fn download_paper(
     version: &str,
     root: &Path,
-    progress: &std::sync::mpsc::Sender<crate::Progress>,
-) -> Result<PathBuf, String> {
+    progress: &crate::ProgressTx,
+) -> crate::PanelResult<PathBuf> {
     let download = latest_download(version).await?;
     let destination = root.join(&download.file_name);
     if destination.exists() {
-        let _ = progress.send(crate::Progress {
+        progress.send(crate::Progress {
             stage: "Paper".into(),
             message: format!("Paper {version} già presente."),
             fraction: Some(1.0),
         });
         return Ok(destination);
     }
-let _ = progress.send(crate::Progress {
+progress.send(crate::Progress {
             stage: "Paper".into(),
             message: format!(
                 "Download Paper {} build {}...",

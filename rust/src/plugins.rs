@@ -50,15 +50,7 @@ pub fn list(root: &Path) -> Vec<PluginEntry> {
     items
 }
 
-pub fn require_stopped(running: bool) -> Result<(), String> {
-    if running {
-        Err("Ferma il server prima di modificare i plugin.".into())
-    } else {
-        Ok(())
-    }
-}
-
-pub fn set_enabled(root: &Path, file_name: &str, enabled: bool) -> Result<(), String> {
+pub fn set_enabled(root: &Path, file_name: &str, enabled: bool) -> crate::PanelResult<()> {
     let current = plugin_path(root, file_name)?;
     let lower = file_name.to_lowercase();
     let target_name = if enabled {
@@ -75,15 +67,15 @@ pub fn set_enabled(root: &Path, file_name: &str, enabled: bool) -> Result<(), St
     if target.exists() {
         return Err("Esiste già un file con questo nome".into());
     }
-    std::fs::rename(current, target).map_err(|error| error.to_string())
+    std::fs::rename(current, target).map_err(|error| crate::PanelError::from(error.to_string()))
 }
 
-pub fn delete(root: &Path, file_name: &str) -> Result<(), String> {
+pub fn delete(root: &Path, file_name: &str) -> crate::PanelResult<()> {
     let path = plugin_path(root, file_name)?;
-    std::fs::remove_file(path).map_err(|error| error.to_string())
+    std::fs::remove_file(path).map_err(|error| crate::PanelError::from(error.to_string()))
 }
 
-pub fn install_file(root: &Path, source: &Path) -> Result<(), String> {
+pub fn install_file(root: &Path, source: &Path) -> crate::PanelResult<()> {
     if !source.is_file() {
         return Err("Jar plugin non trovato".into());
     }
@@ -98,12 +90,12 @@ pub fn install_file(root: &Path, source: &Path) -> Result<(), String> {
     crate::paths::ensure_dir(&plugins)?;
     let destination = plugins.join(name);
     if source != destination {
-        std::fs::copy(source, &destination).map_err(|error| error.to_string())?;
+        std::fs::copy(source, &destination).map_err(|error| crate::PanelError::from(error.to_string()))?;
     }
     Ok(())
 }
 
-fn plugin_path(root: &Path, file_name: &str) -> Result<PathBuf, String> {
+fn plugin_path(root: &Path, file_name: &str) -> crate::PanelResult<PathBuf> {
     if file_name.contains(['\\', '/', ':']) || file_name.contains("..") {
         return Err("Nome plugin non valido".into());
     }
@@ -143,7 +135,7 @@ struct ModrinthFile {
     primary: bool,
 }
 
-pub async fn search(query: &str) -> Result<Vec<ModrinthHit>, String> {
+pub async fn search(query: &str) -> crate::PanelResult<Vec<ModrinthHit>> {
     let response: SearchResponse = crate::net::http()
         .get("https://api.modrinth.com/v2/search")
         .query(&[
@@ -158,10 +150,10 @@ pub async fn search(query: &str) -> Result<Vec<ModrinthHit>, String> {
         .await
         .map_err(|error| format!("Modrinth non raggiungibile: {error}"))?
         .error_for_status()
-        .map_err(|error| error.to_string())?
+        .map_err(|error| crate::PanelError::from(error.to_string()))?
         .json()
         .await
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| crate::PanelError::from(error.to_string()))?;
     Ok(response
         .hits
         .into_iter()
@@ -179,8 +171,8 @@ pub async fn install_project(
     root: &Path,
     project_id: &str,
     minecraft_version: &str,
-    progress: &std::sync::mpsc::Sender<crate::Progress>,
-) -> Result<(), String> {
+    progress: &crate::ProgressTx,
+) -> crate::PanelResult<()> {
     if project_id.is_empty() || project_id.contains(['/', '\\', ' ']) {
         return Err("Progetto Modrinth non valido".into());
     }
@@ -190,10 +182,10 @@ pub async fn install_project(
         .await
         .map_err(|error| format!("Versioni Modrinth non raggiungibili: {error}"))?
         .error_for_status()
-        .map_err(|error| error.to_string())?
+        .map_err(|error| crate::PanelError::from(error.to_string()))?
         .json()
         .await
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| crate::PanelError::from(error.to_string()))?;
     let mut compatible: Vec<ModrinthVersion> = versions
         .into_iter()
         .filter(|version| version_compatible(minecraft_version, &version.game_versions))
@@ -225,7 +217,7 @@ pub async fn install_project(
     let plugins = root.join("plugins");
     crate::paths::ensure_dir(&plugins)?;
     let destination = plugins.join(&file.filename);
-    let _ = progress.send(crate::Progress {
+    progress.send(crate::Progress {
         stage: "Plugin".into(),
         message: format!("Download {}...", file.filename),
         fraction: Some(0.0),

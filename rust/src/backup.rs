@@ -33,17 +33,17 @@ const ROOT_FILES: &[&str] = &[
     "paper.yml",
 ];
 
-pub fn create_zip(server_root: &Path, manifest: &BackupManifest, destination: &Path) -> Result<(), String> {
+pub fn create_zip(server_root: &Path, manifest: &BackupManifest, destination: &Path) -> crate::PanelResult<()> {
     if let Some(parent) = destination.parent() {
         crate::paths::ensure_dir(parent)?;
     }
-    let file = std::fs::File::create(destination).map_err(|error| error.to_string())?;
+    let file = std::fs::File::create(destination).map_err(|error| crate::PanelError::from(error.to_string()))?;
     let mut zip = ZipWriter::new(file);
     let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
-    let body = serde_json::to_vec_pretty(manifest).map_err(|error| error.to_string())?;
+    let body = serde_json::to_vec_pretty(manifest).map_err(|error| crate::PanelError::from(error.to_string()))?;
     zip.start_file("manifest.json", options)
-        .map_err(|error| error.to_string())?;
-    zip.write_all(&body).map_err(|error| error.to_string())?;
+        .map_err(|error| crate::PanelError::from(error.to_string()))?;
+    zip.write_all(&body).map_err(|error| crate::PanelError::from(error.to_string()))?;
 
     for name in ROOT_FILES {
         let path = server_root.join(name);
@@ -56,7 +56,7 @@ pub fn create_zip(server_root: &Path, manifest: &BackupManifest, destination: &P
     for world in crate::worlds::list(server_root, None) {
         add_tree(&mut zip, server_root, &world.path, options)?;
     }
-    zip.finish().map_err(|error| error.to_string())?;
+    zip.finish().map_err(|error| crate::PanelError::from(error.to_string()))?;
     Ok(())
 }
 
@@ -65,13 +65,13 @@ fn add_tree(
     root: &Path,
     directory: &Path,
     options: SimpleFileOptions,
-) -> Result<(), String> {
+) -> crate::PanelResult<()> {
     if !directory.is_dir() {
         return Ok(());
     }
     let mut stack = vec![directory.to_path_buf()];
     while let Some(current) = stack.pop() {
-        let entries = std::fs::read_dir(&current).map_err(|error| error.to_string())?;
+        let entries = std::fs::read_dir(&current).map_err(|error| crate::PanelError::from(error.to_string()))?;
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() {
@@ -98,16 +98,16 @@ fn add_file(
     root: &Path,
     path: &Path,
     options: SimpleFileOptions,
-) -> Result<(), String> {
+) -> crate::PanelResult<()> {
     let name = relative_name(root, path)?;
     zip.start_file(&name, options)
-        .map_err(|error| error.to_string())?;
-    let mut file = std::fs::File::open(path).map_err(|error| error.to_string())?;
-    std::io::copy(&mut file, zip).map_err(|error| error.to_string())?;
+        .map_err(|error| crate::PanelError::from(error.to_string()))?;
+    let mut file = std::fs::File::open(path).map_err(|error| crate::PanelError::from(error.to_string()))?;
+    std::io::copy(&mut file, zip).map_err(|error| crate::PanelError::from(error.to_string()))?;
     Ok(())
 }
 
-fn relative_name(root: &Path, path: &Path) -> Result<String, String> {
+fn relative_name(root: &Path, path: &Path) -> crate::PanelResult<String> {
     let relative = path
         .strip_prefix(root)
         .map_err(|_| "Percorso fuori dalla cartella del server".to_string())?;
@@ -122,13 +122,13 @@ fn relative_name(root: &Path, path: &Path) -> Result<String, String> {
     Ok(name)
 }
 
-pub fn restore_zip(server_root: &Path, archive: &Path) -> Result<(), String> {
-    let file = std::fs::File::open(archive).map_err(|error| error.to_string())?;
+pub fn restore_zip(server_root: &Path, archive: &Path) -> crate::PanelResult<()> {
+    let file = std::fs::File::open(archive).map_err(|error| crate::PanelError::from(error.to_string()))?;
     let mut zip = ZipArchive::new(file).map_err(|error| format!("Backup non valido: {error}"))?;
     for index in 0..zip.len() {
         let mut entry = zip
             .by_index(index)
-            .map_err(|error| error.to_string())?;
+            .map_err(|error| crate::PanelError::from(error.to_string()))?;
         let Some(name) = entry.enclosed_name() else {
             continue;
         };
@@ -139,24 +139,25 @@ pub fn restore_zip(server_root: &Path, archive: &Path) -> Result<(), String> {
         }
         let destination = server_root.join(name);
         if entry.is_dir() {
-            std::fs::create_dir_all(&destination).map_err(|error| error.to_string())?;
+            std::fs::create_dir_all(&destination).map_err(|error| crate::PanelError::from(error.to_string()))?;
         } else {
             if let Some(parent) = destination.parent() {
-                std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+                std::fs::create_dir_all(parent).map_err(|error| crate::PanelError::from(error.to_string()))?;
             }
-            let mut output = std::fs::File::create(&destination).map_err(|error| error.to_string())?;
-            std::io::copy(&mut entry, &mut output).map_err(|error| error.to_string())?;
+            let mut output = std::fs::File::create(&destination).map_err(|error| crate::PanelError::from(error.to_string()))?;
+            std::io::copy(&mut entry, &mut output).map_err(|error| crate::PanelError::from(error.to_string()))?;
         }
     }
     Ok(())
 }
 
-pub fn list_zip_names(archive: &Path) -> Result<Vec<String>, String> {
-    let file = std::fs::File::open(archive).map_err(|error| error.to_string())?;
-    let mut zip = ZipArchive::new(file).map_err(|error| error.to_string())?;
+#[cfg(test)]
+pub fn list_zip_names(archive: &Path) -> crate::PanelResult<Vec<String>> {
+    let file = std::fs::File::open(archive).map_err(|error| crate::PanelError::from(error.to_string()))?;
+    let mut zip = ZipArchive::new(file).map_err(|error| crate::PanelError::from(error.to_string()))?;
     let mut names = Vec::new();
     for index in 0..zip.len() {
-        let entry = zip.by_index(index).map_err(|error| error.to_string())?;
+        let entry = zip.by_index(index).map_err(|error| crate::PanelError::from(error.to_string()))?;
         if let Some(name) = entry.enclosed_name() {
             names.push(name.to_string_lossy().replace('\\', "/"));
         }
@@ -164,13 +165,13 @@ pub fn list_zip_names(archive: &Path) -> Result<Vec<String>, String> {
     Ok(names)
 }
 
-pub fn backup_files(directory: &Path) -> Result<Vec<PathBuf>, String> {
+pub fn backup_files(directory: &Path) -> crate::PanelResult<Vec<PathBuf>> {
     if !directory.exists() {
         return Ok(Vec::new());
     }
     let mut files = Vec::new();
-    for entry in std::fs::read_dir(directory).map_err(|error| error.to_string())? {
-        let entry = entry.map_err(|error| error.to_string())?;
+    for entry in std::fs::read_dir(directory).map_err(|error| crate::PanelError::from(error.to_string()))? {
+        let entry = entry.map_err(|error| crate::PanelError::from(error.to_string()))?;
         let path = entry.path();
         if path.extension().and_then(|value| value.to_str()) == Some("zip") {
             files.push(path);

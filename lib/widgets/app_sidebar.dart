@@ -3,7 +3,10 @@
 // See the LICENSE file in the project root.
 
 import 'package:flutter/material.dart';
+import 'package:voxel_panel/src/l10n.dart';
 import 'package:voxel_panel/src/theme.dart';
+
+const compactSidebarBreakpoint = 1000.0;
 
 class SidebarEntry {
   const SidebarEntry({required this.label, required this.icon});
@@ -13,70 +16,75 @@ class SidebarEntry {
 }
 
 class AppSidebar extends StatelessWidget {
-  const AppSidebar({super.key, required this.entries, required this.selected, required this.onSelected, this.onBack});
+  const AppSidebar({super.key, required this.entries, required this.selected, required this.onSelected, this.onBack, this.backLabel});
 
   final List<SidebarEntry> entries;
   final int selected;
   final ValueChanged<int> onSelected;
   final VoidCallback? onBack;
+  final String? backLabel;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 248,
-      color: panelSidebar,
+    final compact = MediaQuery.sizeOf(context).width < compactSidebarBreakpoint;
+    final colors = context.voxel;
+    final l = context.l10n;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      width: compact ? 76 : 248,
+      color: colors.sidebar,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+            padding: EdgeInsets.fromLTRB(compact ? 20 : 20, 22, compact ? 20 : 20, 18),
             child: Row(
               children: [
                 Container(
                   width: 36,
                   height: 36,
-                  decoration: BoxDecoration(color: panelAccent, borderRadius: BorderRadius.circular(10)),
+                  decoration: BoxDecoration(color: colors.accent, borderRadius: BorderRadius.circular(10)),
                   child: const Icon(Icons.view_in_ar, color: Colors.white, size: 20),
                 ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('VoxelPanel', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                      Text('Server Paper in locale', style: TextStyle(color: panelMuted, fontSize: 12)),
-                    ],
+                if (!compact) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(l.appTitle, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                        Text(l.appTagline, style: TextStyle(color: colors.muted, fontSize: 12), overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
           if (onBack != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-              child: TextButton.icon(
-                onPressed: onBack,
-                icon: const Icon(Icons.arrow_back, size: 18),
-                label: const Text('Tutti i server'),
-              ),
+              child: compact
+                  ? IconButton(tooltip: backLabel ?? l.allServers, onPressed: onBack, icon: const Icon(Icons.arrow_back))
+                  : TextButton.icon(onPressed: onBack, icon: const Icon(Icons.arrow_back, size: 18), label: Text(backLabel ?? l.allServers)),
             ),
-          for (var index = 0; index < entries.length; index++)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-              child: _NavTile(entry: entries[index], selected: index == selected, onTap: () => onSelected(index)),
-            ),
-          const Spacer(),
-          const Padding(
-            padding: EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
               children: [
-                Text('VoxelPanel v1.0.0', style: TextStyle(fontWeight: FontWeight.w600)),
-                SizedBox(height: 2),
-                Text('Open Source · AGPL-3.0', style: TextStyle(color: panelMuted, fontSize: 12)),
+                for (var index = 0; index < entries.length; index++)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                    child: _NavTile(entry: entries[index], selected: index == selected, compact: compact, onTap: () => onSelected(index)),
+                  ),
               ],
             ),
           ),
+          if (!compact)
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(l.licenseLine, style: TextStyle(color: colors.muted, fontSize: 12)),
+            ),
         ],
       ),
     );
@@ -84,16 +92,19 @@ class AppSidebar extends StatelessWidget {
 }
 
 class _NavTile extends StatelessWidget {
-  const _NavTile({required this.entry, required this.selected, required this.onTap});
+  const _NavTile({required this.entry, required this.selected, required this.compact, required this.onTap});
 
   final SidebarEntry entry;
   final bool selected;
+  final bool compact;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: selected ? panelAccent.withValues(alpha: 0.22) : Colors.transparent,
+    final colors = context.voxel;
+    final foreground = selected ? Theme.of(context).colorScheme.onSurface : colors.muted;
+    final tile = Material(
+      color: selected ? colors.accent.withValues(alpha: 0.22) : Colors.transparent,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -101,14 +112,24 @@ class _NavTile extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Row(
+            mainAxisAlignment: compact ? MainAxisAlignment.center : MainAxisAlignment.start,
             children: [
-              Icon(entry.icon, size: 20, color: selected ? Colors.white : panelMuted),
-              const SizedBox(width: 12),
-              Text(entry.label, style: TextStyle(color: selected ? Colors.white : panelMuted, fontWeight: selected ? FontWeight.w600 : FontWeight.w500)),
+              Icon(entry.icon, size: 20, color: foreground),
+              if (!compact) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    entry.label,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: foreground, fontWeight: selected ? FontWeight.w600 : FontWeight.w500),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
       ),
     );
+    return compact ? Tooltip(message: entry.label, child: tile) : tile;
   }
 }

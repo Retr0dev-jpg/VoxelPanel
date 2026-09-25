@@ -55,7 +55,7 @@ pub fn list(root: &Path, active: Option<&str>) -> Vec<WorldEntry> {
     worlds
 }
 
-pub fn resolve(root: &Path, name: &str) -> Result<PathBuf, String> {
+pub fn resolve(root: &Path, name: &str) -> crate::PanelResult<PathBuf> {
     if !crate::properties::valid_level_name(name) {
         return Err("Nome mondo non valido".into());
     }

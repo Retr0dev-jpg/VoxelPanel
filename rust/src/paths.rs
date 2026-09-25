@@ -27,8 +27,12 @@ impl Layout {
         self.root.join("catalog.json")
     }
 
+    pub fn backups_root(&self) -> PathBuf {
+        self.root.join("backups")
+    }
+
     pub fn backups(&self, server_id: &str) -> PathBuf {
-        self.root.join("backups").join(server_id)
+        self.backups_root().join(server_id)
     }
 
     pub fn default_server(&self, id: &str) -> PathBuf {
@@ -43,8 +47,8 @@ pub fn app_data_root() -> PathBuf {
     PathBuf::from(base).join("VoxelPanel")
 }
 
-pub fn ensure_dir(path: &std::path::Path) -> Result<(), String> {
-    std::fs::create_dir_all(path).map_err(|error| format!("Impossibile creare {}: {error}", path.display()))
+pub fn ensure_dir(path: &std::path::Path) -> crate::PanelResult<()> {
+    std::fs::create_dir_all(path).map_err(|error| crate::PanelError::io(format!("Impossibile creare {}: {error}", path.display())))
 }
 
 pub fn unix_now() -> i64 {

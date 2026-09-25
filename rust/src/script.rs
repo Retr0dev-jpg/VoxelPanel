@@ -9,7 +9,7 @@ use crate::jvm::is_safe_flag;
 use crate::ram::is_memory_value;
 use crate::ServerRecord;
 
-pub fn generate(root: &Path, record: &ServerRecord) -> Result<(), String> {
+pub fn generate(root: &Path, record: &ServerRecord) -> crate::PanelResult<()> {
     let java_home = record
         .java_home
         .as_ref()
@@ -22,7 +22,7 @@ pub fn generate(root: &Path, record: &ServerRecord) -> Result<(), String> {
     let jar = bat_path(root, jar)?;
     for flag in &record.jvm_flags {
         if !is_safe_flag(flag) {
-            return Err(format!("Flag JVM non consentito: {flag}"));
+            return Err(crate::PanelError::from(format!("Flag JVM non consentito: {flag}")));
         }
     }
     let flags = if record.jvm_flags.is_empty() {
@@ -35,10 +35,10 @@ pub fn generate(root: &Path, record: &ServerRecord) -> Result<(), String> {
         ram_min = record.ram_min,
         ram_max = record.ram_max,
     );
-    std::fs::write(root.join("start.bat"), content).map_err(|error| error.to_string())
+    std::fs::write(root.join("start.bat"), content).map_err(|error| crate::PanelError::from(error.to_string()))
 }
 
-fn bat_path(root: &Path, path: &Path) -> Result<String, String> {
+fn bat_path(root: &Path, path: &Path) -> crate::PanelResult<String> {
     let value = path.strip_prefix(root).unwrap_or(path);
     let text = value.to_string_lossy().replace('/', "\\");
     if text.contains('"') || text.contains('\n') || text.contains('\r') {
@@ -153,8 +153,8 @@ fn resolve_script_path(root: &Path, value: &str) -> PathBuf {
     }
 }
 
-pub fn write_eula(root: &Path) -> Result<(), String> {
-    std::fs::write(root.join("eula.txt"), "eula=true\r\n").map_err(|error| error.to_string())
+pub fn write_eula(root: &Path) -> crate::PanelResult<()> {
+    std::fs::write(root.join("eula.txt"), "eula=true\r\n").map_err(|error| crate::PanelError::from(error.to_string()))
 }
 
 #[cfg(test)]

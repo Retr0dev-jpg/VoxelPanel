@@ -178,34 +178,34 @@ pub fn read_entries(content: &str) -> Vec<(String, String)> {
     entries
 }
 
-pub fn load_entries(root: &Path) -> Result<Vec<(String, String)>, String> {
+pub fn load_entries(root: &Path) -> crate::PanelResult<Vec<(String, String)>> {
     let path = root.join("server.properties");
     if !path.is_file() {
         return Err("server.properties non trovato".into());
     }
-    let content = std::fs::read_to_string(&path).map_err(|error| error.to_string())?;
+    let content = std::fs::read_to_string(&path).map_err(|error| crate::PanelError::from(error.to_string()))?;
     Ok(read_entries(&content))
 }
 
-pub fn write_entries(root: &Path, entries: &[(String, String)]) -> Result<(), String> {
+pub fn write_entries(root: &Path, entries: &[(String, String)]) -> crate::PanelResult<()> {
     let mut seen = HashSet::new();
     let mut updates = HashMap::new();
     for (key, value) in entries {
         validate_entry(key, value)?;
         if !seen.insert(key.clone()) {
-            return Err(format!("Chiave duplicata: {key}"));
+            return Err(crate::PanelError::from(format!("Chiave duplicata: {key}")));
         }
         updates.insert(key.clone(), value.clone());
     }
     let path = root.join("server.properties");
     let current = std::fs::read_to_string(&path).unwrap_or_default();
     let next = apply_updates(&current, &updates);
-    std::fs::write(path, next).map_err(|error| error.to_string())
+    std::fs::write(path, next).map_err(|error| crate::PanelError::from(error.to_string()))
 }
 
-fn validate_entry(key: &str, value: &str) -> Result<(), String> {
+fn validate_entry(key: &str, value: &str) -> crate::PanelResult<()> {
     if key.is_empty() || key.contains(['\n', '\r', '=']) || value.contains(['\n', '\r']) {
-        return Err(format!("Proprietà non valida: {key}"));
+        return Err(crate::PanelError::from(format!("Proprietà non valida: {key}")));
     }
     match key {
         "motd" if value.chars().count() > 256 => Err("MOTD non valido".into()),
@@ -219,7 +219,7 @@ fn validate_entry(key: &str, value: &str) -> Result<(), String> {
     }
 }
 
-fn parse_range(value: &str, min: u32, max: u32, message: &str) -> Result<(), String> {
+fn parse_range(value: &str, min: u32, max: u32, message: &str) -> crate::PanelResult<()> {
     let parsed: u32 = value.parse().map_err(|_| message.to_string())?;
     if (min..=max).contains(&parsed) {
         Ok(())
@@ -236,7 +236,7 @@ pub fn read_settings(root: &Path) -> Settings {
     settings_from_map(&parse_map(&content))
 }
 
-pub fn write_settings(root: &Path, settings: &Settings) -> Result<(), String> {
+pub fn write_settings(root: &Path, settings: &Settings) -> crate::PanelResult<()> {
     validate(settings)?;
     let path = root.join("server.properties");
     let current = std::fs::read_to_string(&path).unwrap_or_default();
@@ -246,10 +246,10 @@ pub fn write_settings(root: &Path, settings: &Settings) -> Result<(), String> {
         current
     };
     let next = apply_updates(&base, &settings.to_map());
-    std::fs::write(path, next).map_err(|error| error.to_string())
+    std::fs::write(path, next).map_err(|error| crate::PanelError::from(error.to_string()))
 }
 
-pub fn validate(settings: &Settings) -> Result<(), String> {
+pub fn validate(settings: &Settings) -> crate::PanelResult<()> {
     if settings.motd.chars().count() > 256 || settings.motd.contains(['\n', '\r']) {
         return Err("MOTD non valido".into());
     }

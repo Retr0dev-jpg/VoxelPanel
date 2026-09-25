@@ -3,6 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/error.dart';
 import 'api/files.dart';
 import 'api/panel.dart';
 import 'api/types.dart';
@@ -35,7 +36,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustStreamSink<ServerRuntime> dco_decode_StreamSink_server_runtime_Sse(
+    dynamic raw,
+  );
+
+  @protected
   String dco_decode_String(dynamic raw);
+
+  @protected
+  AppPaths dco_decode_app_paths(dynamic raw);
 
   @protected
   AutoInstallRequest dco_decode_auto_install_request(dynamic raw);
@@ -53,18 +62,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double dco_decode_box_autoadd_f_64(dynamic raw);
 
   @protected
+  int dco_decode_box_autoadd_i_32(dynamic raw);
+
+  @protected
+  PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw);
+
+  @protected
   ManualInstallRequest dco_decode_box_autoadd_manual_install_request(
     dynamic raw,
   );
 
   @protected
-  ProcessStats dco_decode_box_autoadd_process_stats(dynamic raw);
-
-  @protected
-  ServerSettings dco_decode_box_autoadd_server_settings(dynamic raw);
-
-  @protected
   int dco_decode_box_autoadd_u_32(dynamic raw);
+
+  @protected
+  ErrorCode dco_decode_error_code(dynamic raw);
 
   @protected
   double dco_decode_f_64(dynamic raw);
@@ -118,6 +130,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<RamChoice> dco_decode_list_ram_choice(dynamic raw);
 
   @protected
+  List<ServerRuntime> dco_decode_list_server_runtime(dynamic raw);
+
+  @protected
   List<ServerSummary> dco_decode_list_server_summary(dynamic raw);
 
   @protected
@@ -136,16 +151,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
 
   @protected
-  ProcessStats? dco_decode_opt_box_autoadd_process_stats(dynamic raw);
+  int? dco_decode_opt_box_autoadd_i_32(dynamic raw);
+
+  @protected
+  PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw);
 
   @protected
   int? dco_decode_opt_box_autoadd_u_32(dynamic raw);
 
   @protected
-  PluginInfo dco_decode_plugin_info(dynamic raw);
+  PanelError dco_decode_panel_error(dynamic raw);
 
   @protected
-  ProcessStats dco_decode_process_stats(dynamic raw);
+  PluginInfo dco_decode_plugin_info(dynamic raw);
 
   @protected
   ProgressEvent dco_decode_progress_event(dynamic raw);
@@ -163,7 +181,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ServerDetails dco_decode_server_details(dynamic raw);
 
   @protected
-  ServerSettings dco_decode_server_settings(dynamic raw);
+  ServerRuntime dco_decode_server_runtime(dynamic raw);
 
   @protected
   ServerStatus dco_decode_server_status(dynamic raw);
@@ -197,7 +215,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustStreamSink<ServerRuntime> sse_decode_StreamSink_server_runtime_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer);
+
+  @protected
+  AppPaths sse_decode_app_paths(SseDeserializer deserializer);
 
   @protected
   AutoInstallRequest sse_decode_auto_install_request(
@@ -219,22 +245,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
 
   @protected
+  int sse_decode_box_autoadd_i_32(SseDeserializer deserializer);
+
+  @protected
+  PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer);
+
+  @protected
   ManualInstallRequest sse_decode_box_autoadd_manual_install_request(
     SseDeserializer deserializer,
   );
 
   @protected
-  ProcessStats sse_decode_box_autoadd_process_stats(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  ServerSettings sse_decode_box_autoadd_server_settings(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
+
+  @protected
+  ErrorCode sse_decode_error_code(SseDeserializer deserializer);
 
   @protected
   double sse_decode_f_64(SseDeserializer deserializer);
@@ -298,6 +323,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<RamChoice> sse_decode_list_ram_choice(SseDeserializer deserializer);
 
   @protected
+  List<ServerRuntime> sse_decode_list_server_runtime(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<ServerSummary> sse_decode_list_server_summary(
     SseDeserializer deserializer,
   );
@@ -320,18 +350,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
 
   @protected
-  ProcessStats? sse_decode_opt_box_autoadd_process_stats(
-    SseDeserializer deserializer,
-  );
+  int? sse_decode_opt_box_autoadd_i_32(SseDeserializer deserializer);
+
+  @protected
+  PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
   int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer);
 
   @protected
-  PluginInfo sse_decode_plugin_info(SseDeserializer deserializer);
+  PanelError sse_decode_panel_error(SseDeserializer deserializer);
 
   @protected
-  ProcessStats sse_decode_process_stats(SseDeserializer deserializer);
+  PluginInfo sse_decode_plugin_info(SseDeserializer deserializer);
 
   @protected
   ProgressEvent sse_decode_progress_event(SseDeserializer deserializer);
@@ -349,7 +380,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ServerDetails sse_decode_server_details(SseDeserializer deserializer);
 
   @protected
-  ServerSettings sse_decode_server_settings(SseDeserializer deserializer);
+  ServerRuntime sse_decode_server_runtime(SseDeserializer deserializer);
 
   @protected
   ServerStatus sse_decode_server_status(SseDeserializer deserializer);
@@ -388,7 +419,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_StreamSink_server_runtime_Sse(
+    RustStreamSink<ServerRuntime> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_String(String self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_app_paths(AppPaths self, SseSerializer serializer);
 
   @protected
   void sse_encode_auto_install_request(
@@ -412,25 +452,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_i_64(
+    PlatformInt64 self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_manual_install_request(
     ManualInstallRequest self,
     SseSerializer serializer,
   );
 
   @protected
-  void sse_encode_box_autoadd_process_stats(
-    ProcessStats self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_server_settings(
-    ServerSettings self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_error_code(ErrorCode self, SseSerializer serializer);
 
   @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
@@ -517,6 +557,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_server_runtime(
+    List<ServerRuntime> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_server_summary(
     List<ServerSummary> self,
     SseSerializer serializer,
@@ -547,8 +593,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
 
   @protected
-  void sse_encode_opt_box_autoadd_process_stats(
-    ProcessStats? self,
+  void sse_encode_opt_box_autoadd_i_32(int? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_64(
+    PlatformInt64? self,
     SseSerializer serializer,
   );
 
@@ -556,10 +605,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer);
 
   @protected
-  void sse_encode_plugin_info(PluginInfo self, SseSerializer serializer);
+  void sse_encode_panel_error(PanelError self, SseSerializer serializer);
 
   @protected
-  void sse_encode_process_stats(ProcessStats self, SseSerializer serializer);
+  void sse_encode_plugin_info(PluginInfo self, SseSerializer serializer);
 
   @protected
   void sse_encode_progress_event(ProgressEvent self, SseSerializer serializer);
@@ -577,10 +626,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_server_details(ServerDetails self, SseSerializer serializer);
 
   @protected
-  void sse_encode_server_settings(
-    ServerSettings self,
-    SseSerializer serializer,
-  );
+  void sse_encode_server_runtime(ServerRuntime self, SseSerializer serializer);
 
   @protected
   void sse_encode_server_status(ServerStatus self, SseSerializer serializer);

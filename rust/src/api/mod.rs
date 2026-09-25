@@ -2,7 +2,9 @@
 // Licensed under the GNU Affero General Public License v3.0 or later.
 // See the LICENSE file in the project root.
 
+pub mod error;
 pub mod files;
 pub mod panel;
+pub mod progress;
 pub mod simple;
 pub mod types;

@@ -4,15 +4,13 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'error.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'types.dart';
 
-// These functions are ignored because they are not marked as `pub`: `done_event`, `empty_to_none`, `error_event`, `finish_progress`, `forward_progress`
-
-Future<ServerStatus> statusOf({required String id}) =>
-    RustLib.instance.api.crateApiPanelStatusOf(id: id);
+// These functions are ignored because they are not marked as `pub`: `created_message`, `empty_to_none`, `to_runtime`, `to_status`
 
 Future<List<ServerSummary>> listServers() =>
     RustLib.instance.api.crateApiPanelListServers();
@@ -20,9 +18,17 @@ Future<List<ServerSummary>> listServers() =>
 Future<ServerDetails> getServer({required String id}) =>
     RustLib.instance.api.crateApiPanelGetServer(id: id);
 
+/// Current runtime state of every server that has been started in this session.
+Future<List<ServerRuntime>> runtimeSnapshots() =>
+    RustLib.instance.api.crateApiPanelRuntimeSnapshots();
+
+/// Streams runtime changes: current snapshots first, then every status, player or stats update.
+Stream<ServerRuntime> watchEvents() =>
+    RustLib.instance.api.crateApiPanelWatchEvents();
+
 bool anyServerRunning() => RustLib.instance.api.crateApiPanelAnyServerRunning();
 
-String appDataDir() => RustLib.instance.api.crateApiPanelAppDataDir();
+AppPaths appPaths() => RustLib.instance.api.crateApiPanelAppPaths();
 
 List<RamChoice> ramPresets() => RustLib.instance.api.crateApiPanelRamPresets();
 
@@ -39,9 +45,6 @@ Future<List<JavaReleaseInfo>> listJavaReleases() =>
 
 Future<List<String>> listPaperVersions() =>
     RustLib.instance.api.crateApiPanelListPaperVersions();
-
-Future<int> requiredJavaFor({required String version}) =>
-    RustLib.instance.api.crateApiPanelRequiredJavaFor(version: version);
 
 Future<ImportPreview> previewImport({required String path}) =>
     RustLib.instance.api.crateApiPanelPreviewImport(path: path);
@@ -73,6 +76,9 @@ Future<void> updateRuntimeConfig({
   jvmFlags: jvmFlags,
 );
 
+Future<void> renameServer({required String id, required String name}) =>
+    RustLib.instance.api.crateApiPanelRenameServer(id: id, name: name);
+
 Future<void> deleteServer({
   required String id,
   required bool deleteFiles,
@@ -94,12 +100,6 @@ Future<void> restartServer({required String id}) =>
 
 Future<void> sendCommand({required String id, required String command}) =>
     RustLib.instance.api.crateApiPanelSendCommand(id: id, command: command);
-
-Future<List<String>> consoleHistory({required String id}) =>
-    RustLib.instance.api.crateApiPanelConsoleHistory(id: id);
-
-Future<ProcessStats?> serverStats({required String id}) =>
-    RustLib.instance.api.crateApiPanelServerStats(id: id);
 
 Future<void> shutdownAll() => RustLib.instance.api.crateApiPanelShutdownAll();
 

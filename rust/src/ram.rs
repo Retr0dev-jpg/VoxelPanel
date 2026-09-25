@@ -25,7 +25,7 @@ pub const PRESETS: &[(u32, &str)] = &[
 ];
 
 pub fn ram_value(megabytes: u32) -> String {
-    if megabytes % 1024 == 0 {
+    if megabytes.is_multiple_of(1024) {
         format!("{}G", megabytes / 1024)
     } else {
         format!("{megabytes}M")

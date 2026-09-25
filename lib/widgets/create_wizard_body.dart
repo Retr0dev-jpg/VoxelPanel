@@ -3,8 +3,10 @@
 // See the LICENSE file in the project root.
 
 import 'package:flutter/material.dart';
+import 'package:voxel_panel/src/l10n.dart';
 import 'package:voxel_panel/src/rust/api/types.dart';
 import 'package:voxel_panel/src/theme.dart';
+import 'package:voxel_panel/widgets/common/panel_card.dart';
 
 class CreateInput {
   const CreateInput({
@@ -26,24 +28,34 @@ class CreateInput {
   final int javaMajor;
 }
 
-String? validateCreate(CreateInput input) {
+enum CreateIssue { missingName, eulaNotAccepted, missingVersion, missingVersionOrJar, missingJava }
+
+CreateIssue? validateCreate(CreateInput input) {
   if (input.name.trim().isEmpty) {
-    return 'Inserisci un nome.';
+    return CreateIssue.missingName;
   }
   if (!input.acceptEula) {
-    return "Accetta l'EULA di Minecraft per continuare.";
+    return CreateIssue.eulaNotAccepted;
   }
   if (input.automatic && input.paperVersion.isEmpty) {
-    return 'Seleziona una versione Paper.';
+    return CreateIssue.missingVersion;
   }
   if (!input.automatic && input.jarPath.isEmpty && input.paperVersion.isEmpty) {
-    return 'Seleziona una versione Paper oppure un jar.';
+    return CreateIssue.missingVersionOrJar;
   }
   if (!input.automatic && input.javaHome.isEmpty && input.javaMajor == 0) {
-    return 'Seleziona un runtime Java.';
+    return CreateIssue.missingJava;
   }
   return null;
 }
+
+String createIssueText(AppLocalizations l, CreateIssue issue) => switch (issue) {
+  CreateIssue.missingName => l.issueMissingName,
+  CreateIssue.eulaNotAccepted => l.issueEula,
+  CreateIssue.missingVersion => l.issueMissingVersion,
+  CreateIssue.missingVersionOrJar => l.issueMissingVersionOrJar,
+  CreateIssue.missingJava => l.issueMissingJava,
+};
 
 class CreateWizardBody extends StatefulWidget {
   const CreateWizardBody({
@@ -94,7 +106,7 @@ class _CreateWizardBodyState extends State<CreateWizardBody> {
   var _ramMin = '';
   var _ramMax = '';
   var _eula = false;
-  var _error = '';
+  CreateIssue? _issue;
   final _flags = <String>{};
 
   @override
@@ -102,6 +114,7 @@ class _CreateWizardBodyState extends State<CreateWizardBody> {
     super.initState();
     _ramMin = widget.suggestedMin;
     _ramMax = widget.suggestedMax;
+    _paper = widget.paperVersions.isEmpty ? '' : widget.paperVersions.first;
     for (final flag in widget.jvmFlags) {
       if (flag.recommended) {
         _flags.add(flag.flag);
@@ -118,32 +131,24 @@ class _CreateWizardBodyState extends State<CreateWizardBody> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final l = context.l10n;
+    final colors = context.voxel;
+    return PanelCard(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: panelCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: panelCardBorder),
-      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('Nome del server', style: TextStyle(fontWeight: FontWeight.w600)),
+          Text(l.serverName, style: const TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          TextField(controller: _name, decoration: const InputDecoration(prefixIcon: Icon(Icons.view_in_ar), hintText: 'Es. Il mio server')),
-          const SizedBox(height: 4),
-          const Text('Scegli un nome per identificare il tuo server.', style: TextStyle(color: panelMuted, fontSize: 12)),
+          TextField(controller: _name, decoration: InputDecoration(prefixIcon: const Icon(Icons.view_in_ar), hintText: l.serverNameHint)),
           const SizedBox(height: 16),
-          const Text('Cartella di destinazione', style: TextStyle(fontWeight: FontWeight.w600)),
+          Text(l.destinationFolder, style: const TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
-                child: TextField(
-                  controller: _root,
-                  decoration: const InputDecoration(prefixIcon: Icon(Icons.folder_outlined), hintText: 'Vuota: VoxelPanel ne crea una nei dati locali'),
-                ),
+                child: TextField(controller: _root, decoration: InputDecoration(prefixIcon: const Icon(Icons.folder_outlined), hintText: l.destinationFolderHint)),
               ),
               const SizedBox(width: 8),
               OutlinedButton.icon(
@@ -156,31 +161,26 @@ class _CreateWizardBodyState extends State<CreateWizardBody> {
                         }
                       },
                 icon: const Icon(Icons.folder_open_outlined),
-                label: const Text('Sfoglia'),
+                label: Text(l.browse),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          const Text('Metodo di installazione', style: TextStyle(fontWeight: FontWeight.w600)),
+          Text(l.installMethod, style: const TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(child: _methodButton(automatic: true, icon: Icons.auto_awesome, title: 'Automatica', subtitle: 'Scarica e configura tutto per te')),
-              const SizedBox(width: 12),
-              Expanded(child: _methodButton(automatic: false, icon: Icons.tune, title: 'Manuale', subtitle: 'Scegli ogni opzione manualmente')),
+          SegmentedButton<bool>(
+            segments: [
+              ButtonSegment(value: true, icon: const Icon(Icons.auto_awesome), label: Text(l.methodAutomatic)),
+              ButtonSegment(value: false, icon: const Icon(Icons.tune), label: Text(l.methodManual)),
             ],
+            selected: {_automatic},
+            onSelectionChanged: widget.busy ? null : (value) => setState(() => _automatic = value.first),
           ),
           const SizedBox(height: 16),
           if (_automatic) ...[
-            Row(
-              children: [
-                const Expanded(child: _FixedField(label: 'Software', value: 'Paper')),
-                const SizedBox(width: 12),
-                Expanded(child: _paperDropdown()),
-              ],
-            ),
+            _paperDropdown(context),
             const SizedBox(height: 16),
-            const Text('Memoria RAM', style: TextStyle(fontWeight: FontWeight.w600)),
+            Text(l.memoryRam, style: const TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -190,103 +190,68 @@ class _CreateWizardBodyState extends State<CreateWizardBody> {
                   ChoiceChip(
                     label: Text(choice.label),
                     selected: _ramMax == choice.value,
-                    onSelected: widget.busy
-                        ? null
-                        : (_) => setState(() {
-                            _ramMax = choice.value;
-                            if (_ramMin.isEmpty) {
-                              _ramMin = widget.suggestedMin;
-                            }
-                          }),
+                    onSelected: widget.busy ? null : (_) => setState(() => _ramMax = choice.value),
                   ),
               ],
             ),
           ] else
-            ..._manualFields(),
+            ..._manualFields(context),
           const SizedBox(height: 8),
-          Material(
-            type: MaterialType.transparency,
-            child: CheckboxListTile(
+          CheckboxListTile(
             contentPadding: EdgeInsets.zero,
             value: _eula,
             onChanged: widget.busy ? null : (value) => setState(() => _eula = value ?? false),
-            title: const Text("Accetto l'EULA di Minecraft (eula=true)"),
-            subtitle: const Text('È necessario accettare l\'EULA di Minecraft per creare il server.'),
+            title: Text(l.eulaCheckbox),
+            subtitle: Text(l.eulaHint),
           ),
-          ),
-          if (_error.isNotEmpty)
+          if (_issue != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: Text(_error, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              child: Text(createIssueText(l, _issue!), style: TextStyle(color: colors.danger)),
             ),
           FilledButton.icon(
             onPressed: widget.busy ? null : _submit,
-            icon: const Icon(Icons.play_arrow),
-            label: Text(widget.busy ? 'Installazione...' : 'Crea server'),
+            icon: widget.busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.play_arrow),
+            label: Text(widget.busy ? l.installing : l.createServer),
           ),
           if (widget.progress.isNotEmpty) ...[
             const SizedBox(height: 16),
-            for (final line in widget.progress) Text(line),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: colors.console, borderRadius: BorderRadius.circular(12)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [for (final line in widget.progress) Text(line, style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: Color(0xFFDDDDDD)))],
+              ),
+            ),
           ],
         ],
       ),
     );
   }
 
-  Widget _methodButton({required bool automatic, required IconData icon, required String title, required String subtitle}) {
-    final selected = _automatic == automatic;
-    return Material(
-      color: selected ? panelAccent : const Color(0xFF201E2C),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: widget.busy ? null : () => setState(() => _automatic = automatic),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Icon(icon, color: Colors.white),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                    Text(subtitle, style: TextStyle(color: selected ? Colors.white70 : panelMuted, fontSize: 12)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _paperDropdown() {
+  Widget _paperDropdown(BuildContext context) {
+    final l = context.l10n;
     final latest = widget.paperVersions.isEmpty ? null : widget.paperVersions.first;
     return DropdownButtonFormField<String>(
       initialValue: _paper.isEmpty ? null : _paper,
-      decoration: const InputDecoration(labelText: 'Versione'),
+      decoration: InputDecoration(labelText: l.paperVersion),
       items: [
-        for (final version in widget.paperVersions)
-          DropdownMenuItem(value: version, child: Text(version == latest ? '$version (Ultima)' : version)),
+        for (final version in widget.paperVersions) DropdownMenuItem(value: version, child: Text(version == latest ? l.latestVersion(version) : version)),
       ],
       onChanged: widget.busy ? null : (value) => setState(() => _paper = value ?? ''),
     );
   }
 
-  List<Widget> _manualFields() {
+  List<Widget> _manualFields(BuildContext context) {
+    final l = context.l10n;
     return [
       DropdownButtonFormField<String>(
         initialValue: _javaHome.isEmpty ? null : _javaHome,
-        decoration: const InputDecoration(labelText: 'Runtime Java installato', border: OutlineInputBorder()),
+        decoration: InputDecoration(labelText: l.installedJava),
         items: [
           for (final runtime in widget.runtimes)
-            DropdownMenuItem(
-              value: runtime.path,
-              child: Text(runtime.major == 0 ? runtime.name : 'Java ${runtime.major}'),
-            ),
+            DropdownMenuItem(value: runtime.path, child: Text(runtime.major == 0 ? runtime.name : 'Java ${runtime.major}')),
         ],
         onChanged: widget.busy
             ? null
@@ -297,16 +262,13 @@ class _CreateWizardBodyState extends State<CreateWizardBody> {
       ),
       Align(
         alignment: Alignment.centerLeft,
-        child: TextButton(
-          onPressed: widget.busy || widget.javaReleases.isEmpty ? null : _pickJavaRelease,
-          child: const Text('Scarica un altro Java'),
-        ),
+        child: TextButton(onPressed: widget.busy || widget.javaReleases.isEmpty ? null : _pickJavaRelease, child: Text(l.downloadOtherJava)),
       ),
-      _paperDropdown(),
+      _paperDropdown(context),
       const SizedBox(height: 12),
       ListTile(
         contentPadding: EdgeInsets.zero,
-        title: Text(_jar.isEmpty ? 'Nessun jar locale' : _jar),
+        title: Text(_jar.isEmpty ? l.noLocalJar : _jar),
         trailing: TextButton(
           onPressed: widget.busy
               ? null
@@ -316,28 +278,20 @@ class _CreateWizardBodyState extends State<CreateWizardBody> {
                     setState(() => _jar = path);
                   }
                 },
-          child: const Text('Scegli jar'),
+          child: Text(l.chooseJar),
         ),
       ),
-      _ramDropdown('RAM minima', _ramMin, (value) => _ramMin = value),
+      _ramDropdown(l.ramMin, _ramMin, (value) => _ramMin = value),
       const SizedBox(height: 12),
-      _ramDropdown('RAM massima', _ramMax, (value) => _ramMax = value),
+      _ramDropdown(l.ramMax, _ramMax, (value) => _ramMax = value),
       const SizedBox(height: 12),
-      const Text('Flag JVM'),
+      Text(l.jvmFlags),
       for (final flag in widget.jvmFlags)
         CheckboxListTile(
           contentPadding: EdgeInsets.zero,
           value: _flags.contains(flag.flag),
-          title: Text(flag.flag),
-          onChanged: widget.busy
-              ? null
-              : (checked) => setState(() {
-                  if (checked ?? false) {
-                    _flags.add(flag.flag);
-                  } else {
-                    _flags.remove(flag.flag);
-                  }
-                }),
+          title: Text(flag.flag, style: const TextStyle(fontFamily: 'monospace')),
+          onChanged: widget.busy ? null : (checked) => setState(() => (checked ?? false) ? _flags.add(flag.flag) : _flags.remove(flag.flag)),
         ),
     ];
   }
@@ -345,26 +299,21 @@ class _CreateWizardBodyState extends State<CreateWizardBody> {
   Widget _ramDropdown(String label, String current, void Function(String value) assign) {
     return DropdownButtonFormField<String>(
       initialValue: widget.ramChoices.any((choice) => choice.value == current) ? current : null,
-      decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
-      items: [
-        for (final choice in widget.ramChoices)
-          DropdownMenuItem(value: choice.value, child: Text('${choice.label} (${choice.value})')),
-      ],
+      decoration: InputDecoration(labelText: label),
+      items: [for (final choice in widget.ramChoices) DropdownMenuItem(value: choice.value, child: Text('${choice.label} (${choice.value})'))],
       onChanged: widget.busy ? null : (value) => setState(() => assign(value ?? current)),
     );
   }
 
   Future<void> _pickJavaRelease() async {
+    final l = context.l10n;
     final major = await showDialog<int>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text('Versione Java'),
+        title: Text(l.javaVersion),
         children: [
           for (final release in widget.javaReleases)
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(context, release.major),
-              child: Text('Java ${release.major}${release.lts ? ' LTS' : ''}'),
-            ),
+            SimpleDialogOption(onPressed: () => Navigator.pop(context, release.major), child: Text('Java ${release.major}${release.lts ? ' LTS' : ''}')),
         ],
       ),
     );
@@ -380,7 +329,7 @@ class _CreateWizardBodyState extends State<CreateWizardBody> {
   }
 
   Future<void> _submit() async {
-    final error = validateCreate(
+    final issue = validateCreate(
       CreateInput(
         name: _name.text,
         acceptEula: _eula,
@@ -391,21 +340,13 @@ class _CreateWizardBodyState extends State<CreateWizardBody> {
         javaMajor: _javaMajor,
       ),
     );
-    if (error != null) {
-      setState(() => _error = error);
+    setState(() => _issue = issue);
+    if (issue != null) {
       return;
     }
-    setState(() => _error = '');
     if (_automatic) {
       await widget.onAuto(
-        AutoInstallRequest(
-          name: _name.text.trim(),
-          root: _root.text.trim(),
-          paperVersion: _paper,
-          acceptEula: true,
-          ramMin: _ramMin,
-          ramMax: _ramMax,
-        ),
+        AutoInstallRequest(name: _name.text.trim(), root: _root.text.trim(), paperVersion: _paper, acceptEula: true, ramMin: _ramMin, ramMax: _ramMax),
       );
       return;
     }
@@ -422,21 +363,6 @@ class _CreateWizardBodyState extends State<CreateWizardBody> {
         jvmFlags: _flags.toList(),
         acceptEula: true,
       ),
-    );
-  }
-}
-
-class _FixedField extends StatelessWidget {
-  const _FixedField({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return InputDecorator(
-      decoration: InputDecoration(labelText: label),
-      child: Text(value),
     );
   }
 }

@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root.
 
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::Sender;
 
 use uuid::Uuid;
 
@@ -36,8 +35,8 @@ pub struct ManualRequest {
 pub async fn install_auto(
     layout: &Layout,
     request: AutoRequest,
-    progress: &Sender<Progress>,
-) -> Result<String, String> {
+    progress: &crate::ProgressTx,
+) -> crate::PanelResult<String> {
     let name = clean_name(&request.name)?;
     if !request.accept_eula {
         return Err("Devi accettare l'EULA di Minecraft per creare il server.".into());
@@ -75,8 +74,10 @@ pub async fn install_auto(
         eula_accepted: true,
         created_unix: crate::paths::unix_now(),
     };
-    let mut settings = crate::properties::Settings::default();
-    settings.port = free_port(layout, &id);
+    let settings = crate::properties::Settings {
+        port: free_port(layout, &id),
+        ..Default::default()
+    };
     persist(layout, &record, &settings)?;
     emit(progress, "Fatto", "Installazione automatica completata.".into(), Some(1.0));
     Ok(id)
@@ -85,8 +86,8 @@ pub async fn install_auto(
 pub async fn install_manual(
     layout: &Layout,
     request: ManualRequest,
-    progress: &Sender<Progress>,
-) -> Result<String, String> {
+    progress: &crate::ProgressTx,
+) -> crate::PanelResult<String> {
     let name = clean_name(&request.name)?;
     if !request.accept_eula {
         return Err("Devi accettare l'EULA di Minecraft per creare il server.".into());
@@ -124,14 +125,16 @@ pub async fn install_manual(
         eula_accepted: true,
         created_unix: crate::paths::unix_now(),
     };
-    let mut settings = crate::properties::Settings::default();
-    settings.port = free_port(layout, &id);
+    let settings = crate::properties::Settings {
+        port: free_port(layout, &id),
+        ..Default::default()
+    };
     persist(layout, &record, &settings)?;
     emit(progress, "Fatto", "Installazione manuale completata.".into(), Some(1.0));
     Ok(id)
 }
 
-pub async fn install_java(layout: &Layout, major: u32, progress: &Sender<Progress>) -> Result<String, String> {
+pub async fn install_java(layout: &Layout, major: u32, progress: &crate::ProgressTx) -> crate::PanelResult<String> {
     let home = crate::java_runtime::ensure_major(&layout.runtimes(), major, progress).await?;
     Ok(home.to_string_lossy().to_string())
 }
@@ -141,7 +144,7 @@ pub fn import_folder(
     path: &Path,
     name: &str,
     accept_eula: bool,
-) -> Result<String, String> {
+) -> crate::PanelResult<String> {
     if !path.is_dir() {
         return Err("Cartella non trovata".into());
     }
@@ -189,8 +192,8 @@ pub fn update_runtime(
     ram_min: &str,
     ram_max: &str,
     jvm_flags: &[String],
-) -> Result<(), String> {
-    ensure_stopped(id)?;
+) -> crate::PanelResult<()> {
+    crate::process::ensure_stopped(id)?;
     if !crate::ram::is_memory_value(ram_min) || !crate::ram::is_memory_value(ram_max) {
         return Err("RAM non valida. Usa valori come 2G o 4096M.".into());
     }
@@ -211,22 +214,28 @@ pub fn update_runtime(
     crate::catalog::save(layout, &record)
 }
 
-pub fn accept_eula(layout: &Layout, id: &str) -> Result<(), String> {
+pub fn rename(layout: &Layout, id: &str, name: &str) -> crate::PanelResult<()> {
+    let mut record = crate::catalog::get(layout, id)?;
+    record.name = clean_name(name)?;
+    crate::catalog::save(layout, &record)
+}
+
+pub fn accept_eula(layout: &Layout, id: &str) -> crate::PanelResult<()> {
     let mut record = crate::catalog::get(layout, id)?;
     crate::script::write_eula(&record.root)?;
     record.eula_accepted = true;
     crate::catalog::save(layout, &record)
 }
 
-pub async fn delete_server(layout: &Layout, id: &str, delete_files: bool, delete_backups: bool) -> Result<(), String> {
-    ensure_stopped(id)?;
+pub async fn delete_server(layout: &Layout, id: &str, delete_files: bool, delete_backups: bool) -> crate::PanelResult<()> {
+    crate::process::ensure_stopped(id)?;
     let record = crate::catalog::remove(layout, id)?;
     if delete_files {
         if let Some(record) = record {
             if record.root.exists() {
                 tokio::fs::remove_dir_all(&record.root)
                     .await
-                    .map_err(|error| error.to_string())?;
+                    .map_err(|error| crate::PanelError::from(error.to_string()))?;
             }
         }
     }
@@ -235,26 +244,29 @@ pub async fn delete_server(layout: &Layout, id: &str, delete_files: bool, delete
         if backups.exists() {
             tokio::fs::remove_dir_all(backups)
                 .await
-                .map_err(|error| error.to_string())?;
+                .map_err(|error| crate::PanelError::from(error.to_string()))?;
         }
     }
     Ok(())
 }
 
-pub async fn launch(layout: &Layout, id: &str) -> Result<(), String> {
+pub async fn launch(layout: &Layout, id: &str) -> crate::PanelResult<()> {
     let record = crate::catalog::get(layout, id)?;
     if !record.eula_accepted {
-        return Err("Accetta l'EULA prima di avviare il server.".into());
+        return Err(crate::PanelError::new(
+            crate::ErrorCode::EulaRequired,
+            "Accetta l'EULA prima di avviare il server.",
+        ));
     }
     crate::script::write_eula(&record.root)?;
     let java_home = record.java_home.as_ref().ok_or("Runtime Java non configurato")?;
     let java = crate::java_runtime::java_executable(java_home);
     if !java.exists() {
-        return Err(format!("Java non trovato: {}", java.display()));
+        return Err(crate::PanelError::from(format!("Java non trovato: {}", java.display())));
     }
     let jar = record.jar_path.as_ref().ok_or("Jar server non configurato")?;
     if !jar.exists() {
-        return Err(format!("Jar non trovato: {}", jar.display()));
+        return Err(crate::PanelError::from(format!("Jar non trovato: {}", jar.display())));
     }
     if !crate::ram::is_memory_value(&record.ram_min) || !crate::ram::is_memory_value(&record.ram_max) {
         return Err("RAM non valida.".into());
@@ -271,24 +283,20 @@ pub async fn launch(layout: &Layout, id: &str) -> Result<(), String> {
     crate::process::start(id, &java, &args, &record.root).await
 }
 
-pub fn save_settings(layout: &Layout, id: &str, settings: &crate::properties::Settings) -> Result<(), String> {
+pub fn save_settings(layout: &Layout, id: &str, settings: &crate::properties::Settings) -> crate::PanelResult<()> {
     let record = crate::catalog::get(layout, id)?;
     let used = crate::catalog::used_ports(layout, id);
     if used.contains(&settings.port) {
-        return Err(format!("La porta {} è già usata da un altro server.", settings.port));
+        return Err(crate::PanelError::new(
+            crate::ErrorCode::PortInUse,
+            format!("La porta {} è già usata da un altro server.", settings.port),
+        ));
     }
     crate::properties::write_settings(&record.root, settings)
 }
 
-fn ensure_stopped(id: &str) -> Result<(), String> {
-    if crate::process::pid_of(id).is_some() {
-        Err("Ferma il server prima di continuare.".into())
-    } else {
-        Ok(())
-    }
-}
 
-fn persist(layout: &Layout, record: &ServerRecord, settings: &crate::properties::Settings) -> Result<(), String> {
+fn persist(layout: &Layout, record: &ServerRecord, settings: &crate::properties::Settings) -> crate::PanelResult<()> {
     crate::script::write_eula(&record.root)?;
     crate::properties::write_settings(&record.root, settings)?;
     crate::paths::ensure_dir(&record.root.join("plugins"))?;
@@ -308,8 +316,8 @@ fn free_port(layout: &Layout, id: &str) -> u32 {
 async fn resolve_java(
     layout: &Layout,
     request: &ManualRequest,
-    progress: &Sender<Progress>,
-) -> Result<(PathBuf, Option<u32>), String> {
+    progress: &crate::ProgressTx,
+) -> crate::PanelResult<(PathBuf, Option<u32>)> {
     if let Some(home) = request.java_home.as_ref().filter(|value| !value.trim().is_empty()) {
         let home = PathBuf::from(home);
         if !crate::java_runtime::java_executable(&home).exists() {
@@ -326,8 +334,8 @@ async fn resolve_java(
 async fn resolve_jar(
     root: &Path,
     request: &ManualRequest,
-    progress: &Sender<Progress>,
-) -> Result<(PathBuf, Option<String>), String> {
+    progress: &crate::ProgressTx,
+) -> crate::PanelResult<(PathBuf, Option<String>)> {
     if let Some(jar) = request.jar_path.as_ref().filter(|value| !value.trim().is_empty()) {
         let source = PathBuf::from(jar);
         if !source.is_file() {
@@ -363,7 +371,7 @@ async fn resolve_jar(
     Ok((jar, Some(version.clone())))
 }
 
-fn prepare_root(layout: &Layout, requested: &str, id: &str) -> Result<PathBuf, String> {
+fn prepare_root(layout: &Layout, requested: &str, id: &str) -> crate::PanelResult<PathBuf> {
     let root = if requested.trim().is_empty() {
         layout.default_server(id)
     } else {
@@ -381,7 +389,7 @@ fn prepare_root(layout: &Layout, requested: &str, id: &str) -> Result<PathBuf, S
     Ok(root)
 }
 
-fn clean_name(name: &str) -> Result<String, String> {
+fn clean_name(name: &str) -> crate::PanelResult<String> {
     let name = name.trim();
     if name.is_empty() || name.chars().count() > 64 || name.contains(['\n', '\r', '/', '\\']) {
         return Err("Nome server non valido".into());
@@ -389,7 +397,7 @@ fn clean_name(name: &str) -> Result<String, String> {
     Ok(name.to_string())
 }
 
-fn choose_ram(value: &str, fallback: &str) -> Result<String, String> {
+fn choose_ram(value: &str, fallback: &str) -> crate::PanelResult<String> {
     let value = if value.trim().is_empty() { fallback } else { value.trim() };
     if !crate::ram::is_memory_value(value) {
         return Err("RAM non valida. Usa valori come 2G o 4096M.".into());
@@ -397,8 +405,8 @@ fn choose_ram(value: &str, fallback: &str) -> Result<String, String> {
     Ok(value.to_string())
 }
 
-fn emit(progress: &Sender<Progress>, stage: &str, message: String, fraction: Option<f64>) {
-    let _ = progress.send(Progress {
+fn emit(progress: &crate::ProgressTx, stage: &str, message: String, fraction: Option<f64>) {
+    progress.send(Progress {
         stage: stage.to_string(),
         message,
         fraction,

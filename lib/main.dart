@@ -5,9 +5,11 @@
 import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxel_panel/screens/home_screen.dart';
 import 'package:voxel_panel/screens/launcher_settings_screen.dart';
+import 'package:voxel_panel/src/l10n.dart';
 import 'package:voxel_panel/src/theme.dart';
 import 'package:voxel_panel/src/rust/api/panel.dart';
 import 'package:voxel_panel/src/rust/frb_generated.dart';
@@ -17,7 +19,7 @@ import 'package:window_manager/window_manager.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
-  const options = WindowOptions(titleBarStyle: TitleBarStyle.hidden, title: 'VoxelPanel');
+  const options = WindowOptions(titleBarStyle: TitleBarStyle.hidden, title: 'VoxelPanel', minimumSize: Size(720, 520));
   await windowManager.waitUntilReadyToShow(options, () async {
     await windowManager.show();
     await windowManager.focus();
@@ -51,7 +53,6 @@ class _VoxelAppState extends State<VoxelApp> with WidgetsBindingObserver {
   @override
   Future<AppExitResponse> didRequestAppExit() async {
     if (!anyServerRunning()) {
-      await shutdownAll();
       return AppExitResponse.exit;
     }
     final context = _navigatorKey.currentContext;
@@ -59,14 +60,15 @@ class _VoxelAppState extends State<VoxelApp> with WidgetsBindingObserver {
       await shutdownAll();
       return AppExitResponse.exit;
     }
+    final l = context.l10n;
     final leave = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Chiudere VoxelPanel?'),
-        content: const Text('I server avviati da VoxelPanel verranno fermati.'),
+        title: Text(l.exitTitle),
+        content: Text(l.exitMessage),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annulla')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Ferma e chiudi')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(l.exitConfirm)),
         ],
       ),
     );
@@ -82,10 +84,17 @@ class _VoxelAppState extends State<VoxelApp> with WidgetsBindingObserver {
     return MaterialApp(
       navigatorKey: _navigatorKey,
       title: 'VoxelPanel',
+      debugShowCheckedModeBanner: false,
       theme: voxelTheme(),
-      builder: (context, child) {
-        return _LauncherShell(child: child ?? const SizedBox.shrink());
-      },
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('it'),
+      builder: (context, child) => _LauncherShell(child: child ?? const SizedBox.shrink()),
       home: const HomeScreen(),
     );
   }
@@ -118,7 +127,7 @@ class _LauncherShellState extends State<_LauncherShell> {
       builder: (context) => Positioned.fill(
         top: 40,
         child: Material(
-          color: panelBackground,
+          color: context.voxel.background,
           child: LauncherSettingsScreen(onClose: _toggleSettings),
         ),
       ),

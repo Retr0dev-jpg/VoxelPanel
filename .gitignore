@@ -51,4 +51,4 @@ app.*.map.json
 /rust/target/
 
 
-.cursor/
+.cursor/lib/l10n/generated/

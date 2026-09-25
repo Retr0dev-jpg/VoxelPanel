@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root.
 
 import 'package:flutter/material.dart';
+import 'package:voxel_panel/src/l10n.dart';
 import 'package:voxel_panel/src/theme.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -13,33 +14,31 @@ class WindowTitleBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.voxel;
+    final l = context.l10n;
     return Material(
-      color: panelSidebar,
+      color: colors.sidebar,
       child: SizedBox(
-      height: 40,
-      width: MediaQuery.sizeOf(context).width,
-      child: Row(
+        height: 40,
+        width: MediaQuery.sizeOf(context).width,
+        child: Row(
           children: [
             Expanded(
               child: DragToMoveArea(
-                child: const Padding(
-                  padding: EdgeInsets.only(left: 16),
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16),
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: Text('VoxelPanel', style: TextStyle(color: panelMuted, fontSize: 13)),
+                    child: Text(l.appTitle, style: TextStyle(color: colors.muted, fontSize: 13)),
                   ),
                 ),
               ),
             ),
-            IconButton(
-              tooltip: 'Impostazioni',
-              onPressed: onSettings,
-              icon: const Icon(Icons.settings_outlined, size: 18),
-            ),
-            _CaptionButton(icon: Icons.remove, tooltip: 'Riduci', onPressed: windowManager.minimize),
+            IconButton(tooltip: l.settings, onPressed: onSettings, icon: const Icon(Icons.settings_outlined, size: 18)),
+            _CaptionButton(icon: Icons.remove, tooltip: l.windowMinimize, onPressed: windowManager.minimize),
             _CaptionButton(
               icon: Icons.crop_square,
-              tooltip: 'Ingrandisci',
+              tooltip: l.windowMaximize,
               onPressed: () async {
                 if (await windowManager.isMaximized()) {
                   await windowManager.unmaximize();
@@ -48,7 +47,7 @@ class WindowTitleBar extends StatelessWidget {
                 }
               },
             ),
-            _CaptionButton(icon: Icons.close, tooltip: 'Chiudi', onPressed: windowManager.close),
+            _CaptionButton(icon: Icons.close, tooltip: l.windowClose, onPressed: windowManager.close),
           ],
         ),
       ),

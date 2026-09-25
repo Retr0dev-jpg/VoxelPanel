@@ -9,6 +9,34 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
+class AppPaths {
+  final String data;
+  final String servers;
+  final String runtimes;
+  final String backups;
+
+  const AppPaths({
+    required this.data,
+    required this.servers,
+    required this.runtimes,
+    required this.backups,
+  });
+
+  @override
+  int get hashCode =>
+      data.hashCode ^ servers.hashCode ^ runtimes.hashCode ^ backups.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AppPaths &&
+          runtimeType == other.runtimeType &&
+          data == other.data &&
+          servers == other.servers &&
+          runtimes == other.runtimes &&
+          backups == other.backups;
+}
+
 class AutoInstallRequest {
   final String name;
   final String root;
@@ -164,18 +192,15 @@ class JavaRuntimeInfo {
   final String name;
   final int major;
   final String path;
-  final bool lts;
 
   const JavaRuntimeInfo({
     required this.name,
     required this.major,
     required this.path,
-    required this.lts,
   });
 
   @override
-  int get hashCode =>
-      name.hashCode ^ major.hashCode ^ path.hashCode ^ lts.hashCode;
+  int get hashCode => name.hashCode ^ major.hashCode ^ path.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -184,8 +209,7 @@ class JavaRuntimeInfo {
           runtimeType == other.runtimeType &&
           name == other.name &&
           major == other.major &&
-          path == other.path &&
-          lts == other.lts;
+          path == other.path;
 }
 
 class JvmFlagChoice {
@@ -320,30 +344,6 @@ class PluginInfo {
           sizeBytes == other.sizeBytes;
 }
 
-class ProcessStats {
-  final double cpuPercent;
-  final PlatformInt64 memoryBytes;
-  final int pid;
-
-  const ProcessStats({
-    required this.cpuPercent,
-    required this.memoryBytes,
-    required this.pid,
-  });
-
-  @override
-  int get hashCode => cpuPercent.hashCode ^ memoryBytes.hashCode ^ pid.hashCode;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ProcessStats &&
-          runtimeType == other.runtimeType &&
-          cpuPercent == other.cpuPercent &&
-          memoryBytes == other.memoryBytes &&
-          pid == other.pid;
-}
-
 class ProgressEvent {
   final String stage;
   final String message;
@@ -462,8 +462,7 @@ class ServerDetails {
   final List<String> jvmFlags;
   final bool eulaAccepted;
   final PlatformInt64 createdUnix;
-  final ServerStatus status;
-  final int onlinePlayers;
+  final int port;
   final int maxPlayers;
 
   const ServerDetails({
@@ -479,8 +478,7 @@ class ServerDetails {
     required this.jvmFlags,
     required this.eulaAccepted,
     required this.createdUnix,
-    required this.status,
-    required this.onlinePlayers,
+    required this.port,
     required this.maxPlayers,
   });
 
@@ -498,8 +496,7 @@ class ServerDetails {
       jvmFlags.hashCode ^
       eulaAccepted.hashCode ^
       createdUnix.hashCode ^
-      status.hashCode ^
-      onlinePlayers.hashCode ^
+      port.hashCode ^
       maxPlayers.hashCode;
 
   @override
@@ -519,76 +516,60 @@ class ServerDetails {
           jvmFlags == other.jvmFlags &&
           eulaAccepted == other.eulaAccepted &&
           createdUnix == other.createdUnix &&
-          status == other.status &&
-          onlinePlayers == other.onlinePlayers &&
+          port == other.port &&
           maxPlayers == other.maxPlayers;
 }
 
-class ServerSettings {
-  final String motd;
-  final int port;
-  final int maxPlayers;
-  final bool onlineMode;
-  final String difficulty;
-  final String gamemode;
-  final int viewDistance;
-  final int simulationDistance;
-  final bool whiteList;
-  final bool pvp;
-  final int spawnProtection;
-  final String levelName;
-  final String levelSeed;
+/// Live state of one server, pushed by `watch_events` whenever something changes.
+class ServerRuntime {
+  final String serverId;
+  final ServerStatus status;
+  final int? pid;
+  final PlatformInt64? startedUnix;
+  final List<String> players;
+  final double cpuPercent;
+  final PlatformInt64 memoryBytes;
+  final int? lastExitCode;
+  final bool crashed;
 
-  const ServerSettings({
-    required this.motd,
-    required this.port,
-    required this.maxPlayers,
-    required this.onlineMode,
-    required this.difficulty,
-    required this.gamemode,
-    required this.viewDistance,
-    required this.simulationDistance,
-    required this.whiteList,
-    required this.pvp,
-    required this.spawnProtection,
-    required this.levelName,
-    required this.levelSeed,
+  const ServerRuntime({
+    required this.serverId,
+    required this.status,
+    this.pid,
+    this.startedUnix,
+    required this.players,
+    required this.cpuPercent,
+    required this.memoryBytes,
+    this.lastExitCode,
+    required this.crashed,
   });
 
   @override
   int get hashCode =>
-      motd.hashCode ^
-      port.hashCode ^
-      maxPlayers.hashCode ^
-      onlineMode.hashCode ^
-      difficulty.hashCode ^
-      gamemode.hashCode ^
-      viewDistance.hashCode ^
-      simulationDistance.hashCode ^
-      whiteList.hashCode ^
-      pvp.hashCode ^
-      spawnProtection.hashCode ^
-      levelName.hashCode ^
-      levelSeed.hashCode;
+      serverId.hashCode ^
+      status.hashCode ^
+      pid.hashCode ^
+      startedUnix.hashCode ^
+      players.hashCode ^
+      cpuPercent.hashCode ^
+      memoryBytes.hashCode ^
+      lastExitCode.hashCode ^
+      crashed.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is ServerSettings &&
+      other is ServerRuntime &&
           runtimeType == other.runtimeType &&
-          motd == other.motd &&
-          port == other.port &&
-          maxPlayers == other.maxPlayers &&
-          onlineMode == other.onlineMode &&
-          difficulty == other.difficulty &&
-          gamemode == other.gamemode &&
-          viewDistance == other.viewDistance &&
-          simulationDistance == other.simulationDistance &&
-          whiteList == other.whiteList &&
-          pvp == other.pvp &&
-          spawnProtection == other.spawnProtection &&
-          levelName == other.levelName &&
-          levelSeed == other.levelSeed;
+          serverId == other.serverId &&
+          status == other.status &&
+          pid == other.pid &&
+          startedUnix == other.startedUnix &&
+          players == other.players &&
+          cpuPercent == other.cpuPercent &&
+          memoryBytes == other.memoryBytes &&
+          lastExitCode == other.lastExitCode &&
+          crashed == other.crashed;
 }
 
 enum ServerStatus { stopped, starting, running, stopping }
@@ -602,10 +583,7 @@ class ServerSummary {
   final String ramMin;
   final String ramMax;
   final int port;
-  final int onlinePlayers;
   final int maxPlayers;
-  final ServerStatus status;
-  final int? pid;
 
   const ServerSummary({
     required this.id,
@@ -616,10 +594,7 @@ class ServerSummary {
     required this.ramMin,
     required this.ramMax,
     required this.port,
-    required this.onlinePlayers,
     required this.maxPlayers,
-    required this.status,
-    this.pid,
   });
 
   @override
@@ -632,10 +607,7 @@ class ServerSummary {
       ramMin.hashCode ^
       ramMax.hashCode ^
       port.hashCode ^
-      onlinePlayers.hashCode ^
-      maxPlayers.hashCode ^
-      status.hashCode ^
-      pid.hashCode;
+      maxPlayers.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -650,10 +622,7 @@ class ServerSummary {
           ramMin == other.ramMin &&
           ramMax == other.ramMax &&
           port == other.port &&
-          onlinePlayers == other.onlinePlayers &&
-          maxPlayers == other.maxPlayers &&
-          status == other.status &&
-          pid == other.pid;
+          maxPlayers == other.maxPlayers;
 }
 
 class WorldInfo {

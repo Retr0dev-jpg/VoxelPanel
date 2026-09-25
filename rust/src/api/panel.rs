@@ -2,18 +2,17 @@
 // Licensed under the GNU Affero General Public License v3.0 or later.
 // See the LICENSE file in the project root.
 
-use std::sync::mpsc;
-
 use crate::frb_generated::StreamSink;
 use crate::install::{self, AutoRequest, ManualRequest};
 use crate::paths::Layout;
-use crate::process::{self, RunStatus};
-use crate::Progress;
+use crate::process::{self, RunStatus, RuntimeSnapshot};
+use crate::{PanelError, PanelResult};
 
+use super::progress::report;
 use super::types::*;
 
-pub fn status_of(id: &str) -> ServerStatus {
-    match process::status_of(id) {
+fn to_status(status: RunStatus) -> ServerStatus {
+    match status {
         RunStatus::Stopped => ServerStatus::Stopped,
         RunStatus::Starting => ServerStatus::Starting,
         RunStatus::Running => ServerStatus::Running,
@@ -21,39 +20,46 @@ pub fn status_of(id: &str) -> ServerStatus {
     }
 }
 
-pub async fn list_servers() -> Result<Vec<ServerSummary>, String> {
+fn to_runtime(snapshot: RuntimeSnapshot) -> ServerRuntime {
+    ServerRuntime {
+        server_id: snapshot.id,
+        status: to_status(snapshot.status),
+        pid: snapshot.pid,
+        started_unix: snapshot.started_unix,
+        players: snapshot.players,
+        cpu_percent: snapshot.cpu_percent,
+        memory_bytes: snapshot.memory_bytes as i64,
+        last_exit_code: snapshot.last_exit_code,
+        crashed: snapshot.crashed,
+    }
+}
+
+pub async fn list_servers() -> PanelResult<Vec<ServerSummary>> {
     let layout = Layout::app();
-    let records = crate::catalog::list(&layout)?;
+    let records = crate::catalog::refresh(&layout)?;
     Ok(records
         .into_iter()
         .map(|record| {
-            let id = record.id.clone();
-            let online_players = process::online_players(&id);
-            let max_players = crate::properties::read_settings(&record.root).max_players;
+            let settings = crate::properties::read_settings(&record.root);
             ServerSummary {
-                port: crate::properties::read_port(&record.root).unwrap_or(25565),
-                status: status_of(&id),
-                pid: process::pid_of(&id),
-                id,
+                id: record.id,
                 name: record.name,
                 root: record.root.to_string_lossy().to_string(),
                 paper_version: record.paper_version,
                 java_major: record.java_major,
                 ram_min: record.ram_min,
                 ram_max: record.ram_max,
-                online_players,
-                max_players,
+                port: settings.port,
+                max_players: settings.max_players,
             }
         })
         .collect())
 }
 
-pub async fn get_server(id: String) -> Result<ServerDetails, String> {
+pub async fn get_server(id: String) -> PanelResult<ServerDetails> {
     let record = crate::catalog::get(&Layout::app(), &id)?;
-    let online_players = process::online_players(&record.id);
-    let max_players = crate::properties::read_settings(&record.root).max_players;
+    let settings = crate::properties::read_settings(&record.root);
     Ok(ServerDetails {
-        status: status_of(&record.id),
         java_home: record
             .java_home
             .as_ref()
@@ -74,9 +80,35 @@ pub async fn get_server(id: String) -> Result<ServerDetails, String> {
         jvm_flags: record.jvm_flags,
         eula_accepted: record.eula_accepted,
         created_unix: record.created_unix,
-        online_players,
-        max_players,
+        port: settings.port,
+        max_players: settings.max_players,
     })
+}
+
+/// Current runtime state of every server that has been started in this session.
+pub async fn runtime_snapshots() -> Vec<ServerRuntime> {
+    process::all_snapshots().into_iter().map(to_runtime).collect()
+}
+
+/// Streams runtime changes: current snapshots first, then every status, player or stats update.
+pub async fn watch_events(sink: StreamSink<ServerRuntime>) -> PanelResult<()> {
+    let mut receiver = process::subscribe_events();
+    for snapshot in process::all_snapshots() {
+        if sink.add(to_runtime(snapshot)).is_err() {
+            return Ok(());
+        }
+    }
+    loop {
+        match receiver.recv().await {
+            Ok(snapshot) => {
+                if sink.add(to_runtime(snapshot)).is_err() {
+                    return Ok(());
+                }
+            }
+            Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+            Err(tokio::sync::broadcast::error::RecvError::Closed) => return Ok(()),
+        }
+    }
 }
 
 #[flutter_rust_bridge::frb(sync)]
@@ -85,8 +117,18 @@ pub fn any_server_running() -> bool {
 }
 
 #[flutter_rust_bridge::frb(sync)]
-pub fn app_data_dir() -> String {
-    crate::paths::app_data_root().to_string_lossy().to_string()
+pub fn app_paths() -> AppPaths {
+    let layout = Layout::app();
+    let text = |path: std::path::PathBuf| {
+        let _ = std::fs::create_dir_all(&path);
+        path.to_string_lossy().to_string()
+    };
+    AppPaths {
+        servers: text(layout.servers()),
+        runtimes: text(layout.runtimes()),
+        backups: text(layout.backups_root()),
+        data: text(layout.root),
+    }
 }
 
 #[flutter_rust_bridge::frb(sync)]
@@ -122,19 +164,18 @@ pub fn jvm_flag_choices() -> Vec<JvmFlagChoice> {
         .collect()
 }
 
-pub async fn list_runtimes() -> Result<Vec<JavaRuntimeInfo>, String> {
+pub async fn list_runtimes() -> PanelResult<Vec<JavaRuntimeInfo>> {
     Ok(crate::java_runtime::collect(&Layout::app())
         .into_iter()
         .map(|runtime| JavaRuntimeInfo {
             major: runtime.major.unwrap_or(0),
-            lts: false,
             name: runtime.name,
             path: runtime.home.to_string_lossy().to_string(),
         })
         .collect())
 }
 
-pub async fn list_java_releases() -> Result<Vec<JavaReleaseInfo>, String> {
+pub async fn list_java_releases() -> PanelResult<Vec<JavaReleaseInfo>> {
     let releases = crate::java_runtime::list_releases().await?;
     Ok(releases
         .into_iter()
@@ -145,18 +186,14 @@ pub async fn list_java_releases() -> Result<Vec<JavaReleaseInfo>, String> {
         .collect())
 }
 
-pub async fn list_paper_versions() -> Result<Vec<String>, String> {
+pub async fn list_paper_versions() -> PanelResult<Vec<String>> {
     crate::paper::fetch_versions().await
 }
 
-pub async fn required_java_for(version: String) -> Result<u32, String> {
-    crate::paper::required_java(&version).await
-}
-
-pub async fn preview_import(path: String) -> Result<ImportPreview, String> {
+pub async fn preview_import(path: String) -> PanelResult<ImportPreview> {
     let root = std::path::PathBuf::from(&path);
     if !root.is_dir() {
-        return Err("Cartella non trovata".into());
+        return Err(PanelError::not_found("Cartella non trovata"));
     }
     let detected = crate::scan::detect(&root);
     Ok(ImportPreview {
@@ -185,11 +222,11 @@ pub async fn preview_import(path: String) -> Result<ImportPreview, String> {
     })
 }
 
-pub async fn import_server(path: String, name: String, accept_eula: bool) -> Result<String, String> {
+pub async fn import_server(path: String, name: String, accept_eula: bool) -> PanelResult<String> {
     install::import_folder(&Layout::app(), std::path::Path::new(&path), &name, accept_eula)
 }
 
-pub async fn accept_server_eula(id: String) -> Result<(), String> {
+pub async fn accept_server_eula(id: String) -> PanelResult<()> {
     install::accept_eula(&Layout::app(), &id)
 }
 
@@ -199,125 +236,96 @@ pub async fn update_runtime_config(
     ram_min: String,
     ram_max: String,
     jvm_flags: Vec<String>,
-) -> Result<(), String> {
+) -> PanelResult<()> {
     install::update_runtime(&Layout::app(), &id, &java_home, &ram_min, &ram_max, &jvm_flags)
 }
 
-pub async fn delete_server(id: String, delete_files: bool, delete_backups: bool) -> Result<(), String> {
+pub async fn rename_server(id: String, name: String) -> PanelResult<()> {
+    install::rename(&Layout::app(), &id, &name)
+}
+
+pub async fn delete_server(id: String, delete_files: bool, delete_backups: bool) -> PanelResult<()> {
     install::delete_server(&Layout::app(), &id, delete_files, delete_backups).await
 }
 
-pub async fn start_server(id: String) -> Result<(), String> {
+pub async fn start_server(id: String) -> PanelResult<()> {
     install::launch(&Layout::app(), &id).await
 }
 
-pub async fn stop_server(id: String) -> Result<(), String> {
-    process::stop(&id).await
+pub async fn stop_server(id: String) -> PanelResult<()> {
+    process::stop(&id, process::DEFAULT_STOP_TIMEOUT).await
 }
 
-pub async fn restart_server(id: String) -> Result<(), String> {
-    if process::pid_of(&id).is_some() {
-        process::stop(&id).await?;
+pub async fn restart_server(id: String) -> PanelResult<()> {
+    if process::is_running(&id) {
+        process::stop(&id, process::DEFAULT_STOP_TIMEOUT).await?;
     }
     install::launch(&Layout::app(), &id).await
 }
 
-pub async fn send_command(id: String, command: String) -> Result<(), String> {
+pub async fn send_command(id: String, command: String) -> PanelResult<()> {
     process::send_command(&id, &command).await
 }
 
-pub async fn console_history(id: String) -> Result<Vec<String>, String> {
-    let _ = crate::catalog::get(&Layout::app(), &id)?;
-    Ok(process::console_history(&id))
-}
-
-pub async fn server_stats(id: String) -> Result<Option<ProcessStats>, String> {
-    let Some(pid) = process::pid_of(&id) else {
-        return Ok(None);
-    };
-    Ok(process::process_usage(pid).map(|(cpu_percent, memory_bytes)| ProcessStats {
-        cpu_percent,
-        memory_bytes,
-        pid,
-    }))
-}
-
-pub async fn shutdown_all() -> Result<(), String> {
-    process::shutdown_all().await;
+pub async fn shutdown_all() -> PanelResult<()> {
+    process::shutdown_all(process::DEFAULT_STOP_TIMEOUT).await;
     Ok(())
 }
 
-pub async fn install_auto(
-    request: AutoInstallRequest,
-    sink: StreamSink<ProgressEvent>,
-) -> Result<(), String> {
-    let (tx, rx) = mpsc::channel();
-    let result = install::install_auto(
-        &Layout::app(),
-        AutoRequest {
-            name: request.name,
-            root: request.root,
-            paper_version: request.paper_version,
-            accept_eula: request.accept_eula,
-            ram_min: request.ram_min,
-            ram_max: request.ram_max,
-        },
-        &tx,
+pub async fn install_auto(request: AutoInstallRequest, sink: StreamSink<ProgressEvent>) -> PanelResult<()> {
+    report(sink, "Fatto", created_message, |tx| async move {
+        install::install_auto(
+            &Layout::app(),
+            AutoRequest {
+                name: request.name,
+                root: request.root,
+                paper_version: request.paper_version,
+                accept_eula: request.accept_eula,
+                ram_min: request.ram_min,
+                ram_max: request.ram_max,
+            },
+            &tx,
+        )
+        .await
+    })
+    .await
+}
+
+pub async fn install_manual(request: ManualInstallRequest, sink: StreamSink<ProgressEvent>) -> PanelResult<()> {
+    let java_major = (request.java_major != 0).then_some(request.java_major);
+    report(sink, "Fatto", created_message, |tx| async move {
+        install::install_manual(
+            &Layout::app(),
+            ManualRequest {
+                name: request.name,
+                root: request.root,
+                paper_version: empty_to_none(request.paper_version),
+                jar_path: empty_to_none(request.jar_path),
+                java_major,
+                java_home: empty_to_none(request.java_home),
+                ram_min: request.ram_min,
+                ram_max: request.ram_max,
+                jvm_flags: request.jvm_flags,
+                accept_eula: request.accept_eula,
+            },
+            &tx,
+        )
+        .await
+    })
+    .await
+}
+
+pub async fn install_java(major: u32, sink: StreamSink<ProgressEvent>) -> PanelResult<()> {
+    report(
+        sink,
+        "Java",
+        |path: &String| (format!("Java installato in {path}"), None),
+        |tx| async move { install::install_java(&Layout::app(), major, &tx).await },
     )
-    .await;
-    drop(tx);
-    finish_progress(&sink, &rx, result)
+    .await
 }
 
-pub async fn install_manual(
-    request: ManualInstallRequest,
-    sink: StreamSink<ProgressEvent>,
-) -> Result<(), String> {
-    let (tx, rx) = mpsc::channel();
-    let java_major = if request.java_major == 0 {
-        None
-    } else {
-        Some(request.java_major)
-    };
-    let result = install::install_manual(
-        &Layout::app(),
-        ManualRequest {
-            name: request.name,
-            root: request.root,
-            paper_version: empty_to_none(request.paper_version),
-            jar_path: empty_to_none(request.jar_path),
-            java_major,
-            java_home: empty_to_none(request.java_home),
-            ram_min: request.ram_min,
-            ram_max: request.ram_max,
-            jvm_flags: request.jvm_flags,
-            accept_eula: request.accept_eula,
-        },
-        &tx,
-    )
-    .await;
-    drop(tx);
-    finish_progress(&sink, &rx, result)
-}
-
-pub async fn install_java(major: u32, sink: StreamSink<ProgressEvent>) -> Result<(), String> {
-    let (tx, rx) = mpsc::channel();
-    let result = install::install_java(&Layout::app(), major, &tx).await;
-    drop(tx);
-    forward_progress(&sink, &rx);
-    match result {
-        Ok(path) => {
-            let _ = sink.add(done_event("Java", format!("Java installato in {path}"), None));
-            Ok(())
-        }
-        Err(error) => {
-            let _ = sink.add(error_event(error.clone()));
-            Err(error)
-        }
-    }
-}
-
-pub async fn watch_console(id: String, sink: StreamSink<String>) -> Result<(), String> {
+pub async fn watch_console(id: String, sink: StreamSink<String>) -> PanelResult<()> {
     let _ = crate::catalog::get(&Layout::app(), &id)?;
     let (history, mut receiver) = process::subscribe(&id);
     for line in history {
@@ -338,64 +346,12 @@ pub async fn watch_console(id: String, sink: StreamSink<String>) -> Result<(), S
     }
 }
 
+#[allow(clippy::ptr_arg)]
+fn created_message(id: &String) -> (String, Option<String>) {
+    ("Operazione completata.".into(), Some(id.to_string()))
+}
+
 fn empty_to_none(value: String) -> Option<String> {
     let value = value.trim();
-    if value.is_empty() {
-        None
-    } else {
-        Some(value.to_string())
-    }
-}
-
-fn finish_progress(
-    sink: &StreamSink<ProgressEvent>,
-    rx: &mpsc::Receiver<Progress>,
-    result: Result<String, String>,
-) -> Result<(), String> {
-    forward_progress(sink, rx);
-    match result {
-        Ok(id) => {
-            let _ = sink.add(done_event("Fatto", "Operazione completata.".into(), Some(id)));
-            Ok(())
-        }
-        Err(error) => {
-            let _ = sink.add(error_event(error.clone()));
-            Err(error)
-        }
-    }
-}
-
-fn forward_progress(sink: &StreamSink<ProgressEvent>, rx: &mpsc::Receiver<Progress>) {
-    while let Ok(progress) = rx.try_recv() {
-        let _ = sink.add(ProgressEvent {
-            stage: progress.stage,
-            message: progress.message,
-            fraction: progress.fraction,
-            done: false,
-            error: None,
-            server_id: None,
-        });
-    }
-}
-
-fn done_event(stage: &str, message: String, server_id: Option<String>) -> ProgressEvent {
-    ProgressEvent {
-        stage: stage.to_string(),
-        message,
-        fraction: Some(1.0),
-        done: true,
-        error: None,
-        server_id,
-    }
-}
-
-fn error_event(error: String) -> ProgressEvent {
-    ProgressEvent {
-        stage: "Errore".into(),
-        message: error.clone(),
-        fraction: None,
-        done: true,
-        error: Some(error),
-        server_id: None,
-    }
+    (!value.is_empty()).then(|| value.to_string())
 }

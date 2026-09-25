@@ -1283,6 +1283,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sysinfo",
+ "thiserror",
  "tokio",
  "uuid",
  "windows 0.61.3",

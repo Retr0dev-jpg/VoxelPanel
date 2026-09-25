@@ -228,7 +228,7 @@ class MinecraftLogLine extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text.rich(
       TextSpan(children: minecraftLogSpans(line)),
-      style: const TextStyle(fontFamily: 'Consolas', fontSize: 13, height: 1.3),
+      style: const TextStyle(fontFamily: 'monospace', fontFamilyFallback: ['Consolas', 'Menlo', 'DejaVu Sans Mono'], fontSize: 13, height: 1.3),
     );
   }
 }

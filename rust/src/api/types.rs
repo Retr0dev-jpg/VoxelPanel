@@ -20,10 +20,7 @@ pub struct ServerSummary {
     pub ram_min: String,
     pub ram_max: String,
     pub port: u32,
-    pub online_players: u32,
     pub max_players: u32,
-    pub status: ServerStatus,
-    pub pid: Option<u32>,
 }
 
 #[derive(Debug, Clone)]
@@ -40,8 +37,7 @@ pub struct ServerDetails {
     pub jvm_flags: Vec<String>,
     pub eula_accepted: bool,
     pub created_unix: i64,
-    pub status: ServerStatus,
-    pub online_players: u32,
+    pub port: u32,
     pub max_players: u32,
 }
 
@@ -70,7 +66,6 @@ pub struct JavaRuntimeInfo {
     pub name: String,
     pub major: u32,
     pub path: String,
-    pub lts: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -129,34 +124,24 @@ pub struct ProgressEvent {
     pub server_id: Option<String>,
 }
 
+/// Live state of one server, pushed by `watch_events` whenever something changes.
 #[derive(Debug, Clone)]
-pub struct ProcessStats {
+pub struct ServerRuntime {
+    pub server_id: String,
+    pub status: ServerStatus,
+    pub pid: Option<u32>,
+    pub started_unix: Option<i64>,
+    pub players: Vec<String>,
     pub cpu_percent: f64,
     pub memory_bytes: i64,
-    pub pid: u32,
+    pub last_exit_code: Option<i32>,
+    pub crashed: bool,
 }
 
 #[derive(Debug, Clone)]
 pub struct PropertyEntry {
     pub key: String,
     pub value: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct ServerSettings {
-    pub motd: String,
-    pub port: u32,
-    pub max_players: u32,
-    pub online_mode: bool,
-    pub difficulty: String,
-    pub gamemode: String,
-    pub view_distance: u32,
-    pub simulation_distance: u32,
-    pub white_list: bool,
-    pub pvp: bool,
-    pub spawn_protection: u32,
-    pub level_name: String,
-    pub level_seed: String,
 }
 
 #[derive(Debug, Clone)]
@@ -190,4 +175,12 @@ pub struct BackupInfo {
     pub path: String,
     pub size_bytes: i64,
     pub created_ms: i64,
+}
+
+#[derive(Debug, Clone)]
+pub struct AppPaths {
+    pub data: String,
+    pub servers: String,
+    pub runtimes: String,
+    pub backups: String,
 }
