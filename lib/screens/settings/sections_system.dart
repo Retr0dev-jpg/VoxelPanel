@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root.
 
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +21,12 @@ import 'package:voxel_panel/src/theme.dart';
 import 'package:voxel_panel/widgets/common/feedback.dart';
 
 const repositoryUrl = 'https://github.com/Retr0dev-jpg/VoxelPanel';
+
+/// GitHub "new issue" page with the environment prefilled in the app language.
+Uri newIssueUri(AppLocalizations l, String version) {
+  final system = '${Platform.operatingSystem} ${Platform.operatingSystemVersion}';
+  return Uri.parse('$repositoryUrl/issues/new').replace(queryParameters: {'body': l.issueTemplate(version, system)});
+}
 
 final javaRuntimesProvider = FutureProvider.autoDispose<List<JavaRuntimeInfo>>((ref) => listRuntimes());
 
@@ -364,12 +371,24 @@ class AboutSection extends ConsumerWidget {
         Text(l.aboutVersion(version), style: const TextStyle(fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
         Text(l.licenseLine, style: TextStyle(color: context.voxel.muted)),
+        const SizedBox(height: 4),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: InkWell(
+            onTap: () => launchUrl(Uri.parse(repositoryUrl)),
+            child: Text(repositoryUrl, style: TextStyle(color: context.voxel.accent, decoration: TextDecoration.underline, decorationColor: context.voxel.accent)),
+          ),
+        ),
         const SizedBox(height: 16),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
             OutlinedButton.icon(onPressed: () => launchUrl(Uri.parse(repositoryUrl)), icon: const Icon(Icons.code), label: Text(l.aboutRepository)),
+            Tooltip(
+              message: l.aboutReportIssueHint,
+              child: OutlinedButton.icon(onPressed: () => launchUrl(newIssueUri(l, version)), icon: const Icon(Icons.bug_report_outlined), label: Text(l.aboutReportIssue)),
+            ),
             OutlinedButton.icon(
               onPressed: () => showLicensePage(context: context, applicationName: 'VoxelPanel', applicationVersion: version, applicationLegalese: 'AGPL-3.0-or-later'),
               icon: const Icon(Icons.gavel),

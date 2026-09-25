@@ -418,6 +418,19 @@
   },
   "aboutRepository": "Codice sorgente",
   "aboutLicenses": "Licenze",
+  "aboutReportIssue": "Segnala un problema",
+  "aboutReportIssueHint": "Apre una nuova issue su GitHub con versione e sistema già compilati.",
+  "issueTemplate": "## Descrizione\n\n\n## Passaggi per riprodurre\n1. \n\n## Comportamento atteso\n\n\n## Ambiente\n- VoxelPanel: {version}\n- Sistema: {system}\n\n<!-- Se utile, allega il log dell'app: Impostazioni → Avanzate → Apri cartella log. -->",
+  "@issueTemplate": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "system": {
+        "type": "String"
+      }
+    }
+  },
   "checkUpdatesNow": "Controlla aggiornamenti",
   "upToDate": "Stai usando l'ultima versione.",
   "updateAvailable": "È disponibile VoxelPanel {version}.",
