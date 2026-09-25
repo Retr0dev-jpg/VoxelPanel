@@ -5,6 +5,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:voxel_panel/screens/create/create_wizard.dart';
+import 'package:voxel_panel/screens/create/modpack_form.dart';
 import 'package:voxel_panel/src/l10n.dart';
 import 'package:voxel_panel/src/rust/api/panel.dart';
 import 'package:voxel_panel/src/rust/api/types.dart';
@@ -24,8 +25,10 @@ class CreateServerScreen extends StatefulWidget {
   State<CreateServerScreen> createState() => _CreateServerScreenState();
 }
 
+enum _CreateMode { create, modpack, import }
+
 class _CreateServerScreenState extends State<CreateServerScreen> {
-  late var _importing = widget.startOnImport;
+  late var _mode = widget.startOnImport ? _CreateMode.import : _CreateMode.create;
   var _busy = false;
   final _importPath = TextEditingController();
   ImportPreview? _preview;
@@ -57,27 +60,36 @@ class _CreateServerScreenState extends State<CreateServerScreen> {
                 Row(
                   children: [
                     _ModeCard(
-                      selected: !_importing,
+                      selected: _mode == _CreateMode.create,
                       icon: Icons.view_in_ar,
                       title: l.createMode,
                       subtitle: l.createModeSubtitle,
-                      onTap: _busy ? null : () => setState(() => _importing = false),
+                      onTap: _busy ? null : () => setState(() => _mode = _CreateMode.create),
                     ),
                     const SizedBox(width: 12),
                     _ModeCard(
-                      selected: _importing,
+                      selected: _mode == _CreateMode.modpack,
+                      icon: Icons.inventory_2_outlined,
+                      title: l.modpackMode,
+                      subtitle: l.modpackModeSubtitle,
+                      onTap: _busy ? null : () => setState(() => _mode = _CreateMode.modpack),
+                    ),
+                    const SizedBox(width: 12),
+                    _ModeCard(
+                      selected: _mode == _CreateMode.import,
                       icon: Icons.download_outlined,
                       title: l.importServer,
                       subtitle: l.importModeSubtitle,
-                      onTap: _busy ? null : () => setState(() => _importing = true),
+                      onTap: _busy ? null : () => setState(() => _mode = _CreateMode.import),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                if (_importing)
-                  _importForm(context)
-                else
-                  CreateWizard(onCreated: (_) => Navigator.pop(context, true), onBusyChanged: (busy) => setState(() => _busy = busy)),
+                switch (_mode) {
+                  _CreateMode.create => CreateWizard(onCreated: (_) => Navigator.pop(context, true), onBusyChanged: (busy) => setState(() => _busy = busy)),
+                  _CreateMode.modpack => ModpackForm(onCreated: (_) => Navigator.pop(context, true), onBusyChanged: (busy) => setState(() => _busy = busy)),
+                  _CreateMode.import => _importForm(context),
+                },
               ],
             ),
           ),

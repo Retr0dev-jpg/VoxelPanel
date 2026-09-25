@@ -6,6 +6,7 @@
 // Static analysis wrongly picks the IO variant, thus ignore this
 // ignore_for_file: argument_type_not_assignable
 
+import 'api/content.dart';
 import 'api/error.dart';
 import 'api/files.dart';
 import 'api/panel.dart';
@@ -55,6 +56,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AddonKind dco_decode_addon_kind(dynamic raw);
 
   @protected
+  AddonUpdate dco_decode_addon_update(dynamic raw);
+
+  @protected
   AdvancedSettings dco_decode_advanced_settings(dynamic raw);
 
   @protected
@@ -76,6 +80,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_bool(dynamic raw);
 
   @protected
+  ContentSourceKind dco_decode_box_autoadd_content_source_kind(dynamic raw);
+
+  @protected
   CreateServerRequest dco_decode_box_autoadd_create_server_request(dynamic raw);
 
   @protected
@@ -89,6 +96,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LauncherSettings dco_decode_box_autoadd_launcher_settings(dynamic raw);
+
+  @protected
+  ModpackRequest dco_decode_box_autoadd_modpack_request(dynamic raw);
 
   @protected
   ServerConfig dco_decode_box_autoadd_server_config(dynamic raw);
@@ -107,6 +117,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ConsoleSettings dco_decode_console_settings(dynamic raw);
+
+  @protected
+  ContentPage dco_decode_content_page(dynamic raw);
+
+  @protected
+  ContentProject dco_decode_content_project(dynamic raw);
+
+  @protected
+  ContentSourceKind dco_decode_content_source_kind(dynamic raw);
+
+  @protected
+  ContentVersion dco_decode_content_version(dynamic raw);
 
   @protected
   CreateServerRequest dco_decode_create_server_request(dynamic raw);
@@ -163,10 +185,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<AddonInfo> dco_decode_list_addon_info(dynamic raw);
 
   @protected
+  List<AddonUpdate> dco_decode_list_addon_update(dynamic raw);
+
+  @protected
   List<BackupInfo> dco_decode_list_backup_info(dynamic raw);
 
   @protected
   List<BuildEntry> dco_decode_list_build_entry(dynamic raw);
+
+  @protected
+  List<ContentProject> dco_decode_list_content_project(dynamic raw);
+
+  @protected
+  List<ContentSourceKind> dco_decode_list_content_source_kind(dynamic raw);
+
+  @protected
+  List<ContentVersion> dco_decode_list_content_version(dynamic raw);
 
   @protected
   List<FileEntry> dco_decode_list_file_entry(dynamic raw);
@@ -185,9 +219,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<LogFileInfo> dco_decode_list_log_file_info(dynamic raw);
-
-  @protected
-  List<ModrinthProject> dco_decode_list_modrinth_project(dynamic raw);
 
   @protected
   List<PlayerEntry> dco_decode_list_player_entry(dynamic raw);
@@ -232,7 +263,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ManagedFolder dco_decode_managed_folder(dynamic raw);
 
   @protected
-  ModrinthProject dco_decode_modrinth_project(dynamic raw);
+  ModpackRequest dco_decode_modpack_request(dynamic raw);
 
   @protected
   NetworkSettings dco_decode_network_settings(dynamic raw);
@@ -242,6 +273,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  ContentSourceKind? dco_decode_opt_box_autoadd_content_source_kind(
+    dynamic raw,
+  );
 
   @protected
   double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
@@ -376,6 +412,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AddonKind sse_decode_addon_kind(SseDeserializer deserializer);
 
   @protected
+  AddonUpdate sse_decode_addon_update(SseDeserializer deserializer);
+
+  @protected
   AdvancedSettings sse_decode_advanced_settings(SseDeserializer deserializer);
 
   @protected
@@ -399,6 +438,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
+  ContentSourceKind sse_decode_box_autoadd_content_source_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CreateServerRequest sse_decode_box_autoadd_create_server_request(
     SseDeserializer deserializer,
   );
@@ -414,6 +458,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   LauncherSettings sse_decode_box_autoadd_launcher_settings(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ModpackRequest sse_decode_box_autoadd_modpack_request(
     SseDeserializer deserializer,
   );
 
@@ -436,6 +485,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ConsoleSettings sse_decode_console_settings(SseDeserializer deserializer);
+
+  @protected
+  ContentPage sse_decode_content_page(SseDeserializer deserializer);
+
+  @protected
+  ContentProject sse_decode_content_project(SseDeserializer deserializer);
+
+  @protected
+  ContentSourceKind sse_decode_content_source_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ContentVersion sse_decode_content_version(SseDeserializer deserializer);
 
   @protected
   CreateServerRequest sse_decode_create_server_request(
@@ -494,10 +557,28 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<AddonInfo> sse_decode_list_addon_info(SseDeserializer deserializer);
 
   @protected
+  List<AddonUpdate> sse_decode_list_addon_update(SseDeserializer deserializer);
+
+  @protected
   List<BackupInfo> sse_decode_list_backup_info(SseDeserializer deserializer);
 
   @protected
   List<BuildEntry> sse_decode_list_build_entry(SseDeserializer deserializer);
+
+  @protected
+  List<ContentProject> sse_decode_list_content_project(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<ContentSourceKind> sse_decode_list_content_source_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<ContentVersion> sse_decode_list_content_version(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<FileEntry> sse_decode_list_file_entry(SseDeserializer deserializer);
@@ -522,11 +603,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<LogFileInfo> sse_decode_list_log_file_info(SseDeserializer deserializer);
-
-  @protected
-  List<ModrinthProject> sse_decode_list_modrinth_project(
-    SseDeserializer deserializer,
-  );
 
   @protected
   List<PlayerEntry> sse_decode_list_player_entry(SseDeserializer deserializer);
@@ -585,7 +661,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ManagedFolder sse_decode_managed_folder(SseDeserializer deserializer);
 
   @protected
-  ModrinthProject sse_decode_modrinth_project(SseDeserializer deserializer);
+  ModpackRequest sse_decode_modpack_request(SseDeserializer deserializer);
 
   @protected
   NetworkSettings sse_decode_network_settings(SseDeserializer deserializer);
@@ -597,6 +673,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  ContentSourceKind? sse_decode_opt_box_autoadd_content_source_kind(
+    SseDeserializer deserializer,
+  );
 
   @protected
   double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
@@ -739,6 +820,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_addon_kind(AddonKind self, SseSerializer serializer);
 
   @protected
+  void sse_encode_addon_update(AddonUpdate self, SseSerializer serializer);
+
+  @protected
   void sse_encode_advanced_settings(
     AdvancedSettings self,
     SseSerializer serializer,
@@ -769,6 +853,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_content_source_kind(
+    ContentSourceKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_create_server_request(
     CreateServerRequest self,
     SseSerializer serializer,
@@ -789,6 +879,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_launcher_settings(
     LauncherSettings self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_modpack_request(
+    ModpackRequest self,
     SseSerializer serializer,
   );
 
@@ -816,6 +912,27 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_console_settings(
     ConsoleSettings self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_content_page(ContentPage self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_content_project(
+    ContentProject self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_content_source_kind(
+    ContentSourceKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_content_version(
+    ContentVersion self,
     SseSerializer serializer,
   );
 
@@ -895,6 +1012,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_addon_update(
+    List<AddonUpdate> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_backup_info(
     List<BackupInfo> self,
     SseSerializer serializer,
@@ -903,6 +1026,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_build_entry(
     List<BuildEntry> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_content_project(
+    List<ContentProject> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_content_source_kind(
+    List<ContentSourceKind> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_content_version(
+    List<ContentVersion> self,
     SseSerializer serializer,
   );
 
@@ -936,12 +1077,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_log_file_info(
     List<LogFileInfo> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_modrinth_project(
-    List<ModrinthProject> self,
     SseSerializer serializer,
   );
 
@@ -1021,8 +1156,8 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_managed_folder(ManagedFolder self, SseSerializer serializer);
 
   @protected
-  void sse_encode_modrinth_project(
-    ModrinthProject self,
+  void sse_encode_modpack_request(
+    ModpackRequest self,
     SseSerializer serializer,
   );
 
@@ -1040,6 +1175,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_content_source_kind(
+    ContentSourceKind? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);

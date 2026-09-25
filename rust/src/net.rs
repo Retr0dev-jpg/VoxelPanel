@@ -36,6 +36,7 @@ pub fn reset_client() {
 
 #[derive(Debug, Clone)]
 pub enum Checksum {
+    Sha512(String),
     Sha256(String),
     Sha1(String),
     Md5(String),
@@ -44,6 +45,7 @@ pub enum Checksum {
 impl Checksum {
     fn hasher(&self) -> Box<dyn sha2::digest::DynDigest + Send> {
         match self {
+            Checksum::Sha512(_) => Box::new(sha2::Sha512::default()),
             Checksum::Sha256(_) => Box::new(sha2::Sha256::default()),
             Checksum::Sha1(_) => Box::new(sha1::Sha1::default()),
             Checksum::Md5(_) => Box::new(md5::Md5::default()),
@@ -52,7 +54,7 @@ impl Checksum {
 
     fn expected(&self) -> &str {
         match self {
-            Checksum::Sha256(value) | Checksum::Sha1(value) | Checksum::Md5(value) => value,
+            Checksum::Sha512(value) | Checksum::Sha256(value) | Checksum::Sha1(value) | Checksum::Md5(value) => value,
         }
     }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:voxel_panel/screens/content/content_browser.dart';
 import 'package:voxel_panel/screens/create/create_validation.dart';
 import 'package:voxel_panel/screens/server/console_tab.dart';
 import 'package:voxel_panel/screens/server/server_screen.dart';
@@ -126,6 +127,13 @@ void main() {
     expect(parts.first.style?.fontStyle, FontStyle.italic);
     expect(parts.any((part) => part.text == 'chunks' && part.style?.fontWeight == FontWeight.w600), isTrue);
     controller.dispose();
+  });
+
+  test('i contatori dei download sono compatti', () {
+    expect(compactCount(950), '950');
+    expect(compactCount(12500), '12.5k');
+    expect(compactCount(3400000), '3.4M');
+    expect(sourceLabel(ContentSourceKind.spiget), 'SpigotMC');
   });
 
   test('i valori di memoria si convertono in entrambi i sensi', () {

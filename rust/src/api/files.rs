@@ -41,12 +41,21 @@ pub async fn save_properties(id: String, entries: Vec<PropertyEntry>) -> PanelRe
 
 pub async fn list_addons(id: String, kind: AddonKind) -> PanelResult<Vec<AddonInfo>> {
     let record = crate::catalog::get(&Layout::app(), &id)?;
-    Ok(crate::addons::list(&record.root, kind)
+    let root = record.root.clone();
+    let addons = tokio::task::spawn_blocking(move || crate::addons::list(&root, kind)).await?;
+    Ok(addons
         .into_iter()
-        .map(|addon| AddonInfo {
-            file_name: addon.file_name,
-            enabled: addon.enabled,
-            size_bytes: addon.size_bytes as i64,
+        .map(|addon| {
+            let metadata = addon.metadata.unwrap_or_default();
+            AddonInfo {
+                file_name: addon.file_name,
+                enabled: addon.enabled,
+                size_bytes: addon.size_bytes as i64,
+                name: metadata.name,
+                version: metadata.version,
+                description: metadata.description,
+                authors: metadata.authors,
+            }
         })
         .collect())
 }
@@ -67,34 +76,6 @@ pub async fn install_addon_file(id: String, kind: AddonKind, source_path: String
     process::ensure_stopped(&id)?;
     let record = crate::catalog::get(&Layout::app(), &id)?;
     crate::addons::install_file(&record.root, kind, std::path::Path::new(&source_path))
-}
-
-/// Searches Modrinth for plugins or mods compatible with this server's software and version.
-pub async fn search_modrinth(id: String, kind: AddonKind, query: String) -> PanelResult<Vec<ModrinthProject>> {
-    let record = crate::catalog::get(&Layout::app(), &id)?;
-    Ok(crate::addons::search(&record, kind, &query)
-        .await?
-        .into_iter()
-        .map(|hit| ModrinthProject {
-            project_id: hit.project_id,
-            slug: hit.slug,
-            title: hit.title,
-            description: hit.description,
-            downloads: hit.downloads,
-        })
-        .collect())
-}
-
-pub async fn install_modrinth_project(id: String, kind: AddonKind, project_id: String, sink: StreamSink<ProgressEvent>) -> PanelResult<()> {
-    process::ensure_stopped(&id)?;
-    let record = crate::catalog::get(&Layout::app(), &id)?;
-    report(
-        sink,
-        "Modrinth",
-        move |_: &()| ("Installazione completata.".into(), Some(id)),
-        |tx| async move { crate::addons::install_project(&record, kind, &project_id, &tx).await },
-    )
-    .await
 }
 
 pub async fn list_worlds(id: String) -> PanelResult<Vec<WorldInfo>> {

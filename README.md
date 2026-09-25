@@ -20,7 +20,10 @@ L’interfaccia è in Flutter (Material 3, italiano e inglese). Il motore è in 
   - giocatori online (via RCON) con espulsione, ban, operatore e modalità di gioco; whitelist, operatori, giocatori e IP bannati, modificati con i comandi a server acceso o nei file a server fermo;
   - log correnti, archivi `.gz` e crash report con ricerca ed esportazione;
   - mondi raggruppati per dimensione, con importazione da zip o cartella, rinomina, rigenerazione con nuovo seed e backup del singolo mondo.
-- Gestisce plugin e mod locali o da Modrinth, backup e ripristino.
+- Plugin e mod da Modrinth, Hangar, SpigotMC (Spiget, solo risorse gratuite) e CurseForge (con chiave API), filtrati per software e versione del server, con installazione automatica delle dipendenze obbligatorie e verifica del checksum.
+- Elenco dei plugin e delle mod installati con nome, versione e autori letti dai jar (`plugin.yml`, `fabric.mod.json`, `mods.toml`...), controllo degli aggiornamenti tramite hash su Modrinth e aggiornamento in blocco.
+- Creazione di server da modpack: `.mrpack` di Modrinth (solo i file lato server, più `overrides` e `server-overrides`) e modpack CurseForge (`manifest.json`), da file locale o dai cataloghi, con download in parallelo.
+- Backup e ripristino.
 - Rinomina ed elimina i server (anche più server insieme), con scelta se cancellare file e backup.
 - Impostazioni del launcher: lingua, tema chiaro o scuro con colore di accento, avvio con il sistema, chiusura nel tray, cartelle di server, backup, runtime e cache (spostabili con migrazione guidata), runtime Java installati e di sistema con versione preferita, valori predefiniti per i nuovi server (RAM, preset JVM Aikar/G1/ZGC, porta), console, backup (conservazione, compressione, esclusioni), proxy e timeout di rete, chiave CurseForge, notifiche desktop, log dell'app, esportazione e importazione.
 
@@ -76,6 +79,7 @@ I backup stanno in `backups/`, fuori dalla cartella del server.
 - `rust/src/api/`: funzioni esposte a Flutter. Gli errori sono `PanelError` (codice più messaggio), le operazioni lunghe inviano `ProgressEvent` in tempo reale, `watch_events` trasmette lo stato di runtime di ogni server.
 - `rust/src/providers/`: un modulo per fonte di software (trait `Provider`: versioni, build, Java richiesto, installazione) e rilevamento del software all’import.
 - `rust/src/rcon.rs`, `players.rs`, `server_files.rs`, `server_logs.rs`, `properties_schema.rs`: RCON, liste dei giocatori, file manager sicuro, log e schema di `server.properties`.
+- `rust/src/content/`: sorgenti di contenuti (trait `ContentSource`), metadati dei jar, aggiornamenti e modpack.
 - `rust/src/cache.rs`: cache su disco delle risposte delle API con scadenza e uso offline.
 - `rust/src/process.rs`: supervisor dei processi (stato, giocatori, uscita, campionamento CPU e RAM).
 - `rust/src/platform/`: codice specifico per sistema operativo (eseguibile Java, gruppi di processi e job object, arresto forzato, script di avvio, apertura cartelle).
@@ -107,7 +111,7 @@ flutter_rust_bridge_codegen generate
 I test che contattano le API reali dei provider sono esclusi di default:
 
 ```bash
-cd rust && cargo test live_ -- --ignored
+cd rust && cargo test live_ -- --ignored   # provider e cataloghi di contenuti
 # installer veri di Quilt, Forge e NeoForge (serve un Java recente)
 VOXELPANEL_TEST_JAVA=/percorso/java cargo test live_runs_installers -- --ignored
 ```

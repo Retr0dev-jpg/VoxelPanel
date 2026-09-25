@@ -7,21 +7,38 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `hash`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `hash`, `hash`
 
 class AddonInfo {
   final String fileName;
   final bool enabled;
   final PlatformInt64 sizeBytes;
 
+  /// Read from `plugin.yml`, `fabric.mod.json`, `mods.toml`...; empty when unknown.
+  final String name;
+  final String version;
+  final String description;
+  final List<String> authors;
+
   const AddonInfo({
     required this.fileName,
     required this.enabled,
     required this.sizeBytes,
+    required this.name,
+    required this.version,
+    required this.description,
+    required this.authors,
   });
 
   @override
-  int get hashCode => fileName.hashCode ^ enabled.hashCode ^ sizeBytes.hashCode;
+  int get hashCode =>
+      fileName.hashCode ^
+      enabled.hashCode ^
+      sizeBytes.hashCode ^
+      name.hashCode ^
+      version.hashCode ^
+      description.hashCode ^
+      authors.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -30,10 +47,49 @@ class AddonInfo {
           runtimeType == other.runtimeType &&
           fileName == other.fileName &&
           enabled == other.enabled &&
-          sizeBytes == other.sizeBytes;
+          sizeBytes == other.sizeBytes &&
+          name == other.name &&
+          version == other.version &&
+          description == other.description &&
+          authors == other.authors;
 }
 
 enum AddonKind { plugin, mod }
+
+class AddonUpdate {
+  final String fileName;
+  final String projectId;
+  final String currentVersion;
+  final String newVersionId;
+  final String newVersion;
+
+  const AddonUpdate({
+    required this.fileName,
+    required this.projectId,
+    required this.currentVersion,
+    required this.newVersionId,
+    required this.newVersion,
+  });
+
+  @override
+  int get hashCode =>
+      fileName.hashCode ^
+      projectId.hashCode ^
+      currentVersion.hashCode ^
+      newVersionId.hashCode ^
+      newVersion.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AddonUpdate &&
+          runtimeType == other.runtimeType &&
+          fileName == other.fileName &&
+          projectId == other.projectId &&
+          currentVersion == other.currentVersion &&
+          newVersionId == other.newVersionId &&
+          newVersion == other.newVersion;
+}
 
 class AppPaths {
   final String data;
@@ -127,6 +183,122 @@ class BuildEntry {
           id == other.id &&
           stable == other.stable &&
           label == other.label;
+}
+
+class ContentPage {
+  final List<ContentProject> projects;
+  final int total;
+
+  const ContentPage({required this.projects, required this.total});
+
+  @override
+  int get hashCode => projects.hashCode ^ total.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ContentPage &&
+          runtimeType == other.runtimeType &&
+          projects == other.projects &&
+          total == other.total;
+}
+
+class ContentProject {
+  final ContentSourceKind source;
+  final String id;
+  final String slug;
+  final String title;
+  final String description;
+  final String author;
+  final PlatformInt64 downloads;
+  final String iconUrl;
+  final String pageUrl;
+
+  const ContentProject({
+    required this.source,
+    required this.id,
+    required this.slug,
+    required this.title,
+    required this.description,
+    required this.author,
+    required this.downloads,
+    required this.iconUrl,
+    required this.pageUrl,
+  });
+
+  @override
+  int get hashCode =>
+      source.hashCode ^
+      id.hashCode ^
+      slug.hashCode ^
+      title.hashCode ^
+      description.hashCode ^
+      author.hashCode ^
+      downloads.hashCode ^
+      iconUrl.hashCode ^
+      pageUrl.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ContentProject &&
+          runtimeType == other.runtimeType &&
+          source == other.source &&
+          id == other.id &&
+          slug == other.slug &&
+          title == other.title &&
+          description == other.description &&
+          author == other.author &&
+          downloads == other.downloads &&
+          iconUrl == other.iconUrl &&
+          pageUrl == other.pageUrl;
+}
+
+enum ContentSourceKind { modrinth, hangar, spiget, curseForge }
+
+class ContentVersion {
+  final String id;
+  final String name;
+  final List<String> gameVersions;
+  final List<String> loaders;
+  final String published;
+  final bool stable;
+
+  /// Matches the server's loaders and Minecraft version.
+  final bool compatible;
+
+  const ContentVersion({
+    required this.id,
+    required this.name,
+    required this.gameVersions,
+    required this.loaders,
+    required this.published,
+    required this.stable,
+    required this.compatible,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      name.hashCode ^
+      gameVersions.hashCode ^
+      loaders.hashCode ^
+      published.hashCode ^
+      stable.hashCode ^
+      compatible.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ContentVersion &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          gameVersions == other.gameVersions &&
+          loaders == other.loaders &&
+          published == other.published &&
+          stable == other.stable &&
+          compatible == other.compatible;
 }
 
 class CreateServerRequest {
@@ -448,39 +620,65 @@ class LogFileInfo {
 
 enum LogFileKind { latest, archive, crash }
 
-class ModrinthProject {
-  final String projectId;
-  final String slug;
-  final String title;
-  final String description;
-  final PlatformInt64 downloads;
+class ModpackRequest {
+  final String name;
+  final String root;
 
-  const ModrinthProject({
+  /// `.mrpack` (Modrinth) or `.zip` with `manifest.json` (CurseForge); empty when using `source`.
+  final String filePath;
+  final ContentSourceKind? source;
+  final String projectId;
+  final String versionId;
+  final String javaHome;
+  final String ramMin;
+  final String ramMax;
+  final List<String> jvmFlags;
+  final bool acceptEula;
+
+  const ModpackRequest({
+    required this.name,
+    required this.root,
+    required this.filePath,
+    this.source,
     required this.projectId,
-    required this.slug,
-    required this.title,
-    required this.description,
-    required this.downloads,
+    required this.versionId,
+    required this.javaHome,
+    required this.ramMin,
+    required this.ramMax,
+    required this.jvmFlags,
+    required this.acceptEula,
   });
 
   @override
   int get hashCode =>
+      name.hashCode ^
+      root.hashCode ^
+      filePath.hashCode ^
+      source.hashCode ^
       projectId.hashCode ^
-      slug.hashCode ^
-      title.hashCode ^
-      description.hashCode ^
-      downloads.hashCode;
+      versionId.hashCode ^
+      javaHome.hashCode ^
+      ramMin.hashCode ^
+      ramMax.hashCode ^
+      jvmFlags.hashCode ^
+      acceptEula.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is ModrinthProject &&
+      other is ModpackRequest &&
           runtimeType == other.runtimeType &&
+          name == other.name &&
+          root == other.root &&
+          filePath == other.filePath &&
+          source == other.source &&
           projectId == other.projectId &&
-          slug == other.slug &&
-          title == other.title &&
-          description == other.description &&
-          downloads == other.downloads;
+          versionId == other.versionId &&
+          javaHome == other.javaHome &&
+          ramMin == other.ramMin &&
+          ramMax == other.ramMax &&
+          jvmFlags == other.jvmFlags &&
+          acceptEula == other.acceptEula;
 }
 
 class PlayerEntry {

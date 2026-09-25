@@ -174,21 +174,10 @@
   "gamemodeAdventure": "Avventura",
   "gamemodeSpectator": "Spettatore",
   "installJar": "Installa jar",
-  "searchModrinth": "Cerca su Modrinth",
   "stopToEditPlugins": "Ferma il server prima di modificare i plugin.",
   "noPlugins": "Nessun plugin installato.",
   "deletePluginTitle": "Eliminare il plugin?",
   "pluginJarTitle": "Jar del plugin",
-  "searchPlugins": "Cerca plugin",
-  "downloadsCount": "{count} download",
-  "@downloadsCount": {
-    "placeholders": {
-      "count": {
-        "type": "int",
-        "format": "compact"
-      }
-    }
-  },
   "noWorlds": "Nessun mondo. Verrà creato al primo avvio.",
   "worldActive": "{name} (attivo)",
   "@worldActive": {
@@ -550,7 +539,6 @@
   "installModJar": "Installa mod (.jar)",
   "stopToEditMods": "Ferma il server prima di modificare le mod.",
   "noMods": "Nessuna mod installata.",
-  "searchMods": "Cerca mod",
   "tabPlayers": "Giocatori",
   "tabSettings": "Impostazioni",
   "tabFiles": "File",
@@ -667,5 +655,59 @@
   "stopToEditWorlds": "Ferma il server per importare, rinominare o eliminare i mondi.",
   "dimensionOverworld": "Overworld",
   "dimensionNether": "Nether",
-  "dimensionEnd": "End"
+  "dimensionEnd": "End",
+  "browsePlugins": "Sfoglia plugin",
+  "browseMods": "Sfoglia mod",
+  "searchCatalog": "Cerca nel catalogo",
+  "noSearchResultsCatalog": "Nessun risultato.",
+  "loadMore": "Carica altri",
+  "openPage": "Apri la pagina del progetto",
+  "install": "Installa",
+  "noVersions": "Nessuna versione disponibile.",
+  "compatibleVersions": "{compatible} versioni compatibili su {total}",
+  "@compatibleVersions": {
+    "placeholders": {
+      "compatible": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "newestCompatible": "Ultima versione compatibile",
+  "curseforgeKeyHint": "CurseForge richiede una chiave API (Impostazioni → Rete).",
+  "checkUpdates": "Controlla aggiornamenti",
+  "checkingUpdates": "Controllo degli aggiornamenti su Modrinth...",
+  "allUpToDate": "Tutto aggiornato (controllati i file riconosciuti da Modrinth).",
+  "updatesAvailable": "{count, plural, =1{1 aggiornamento disponibile} other{{count} aggiornamenti disponibili}}",
+  "@updatesAvailable": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "updateAll": "Aggiorna tutti ({count})",
+  "@updateAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "filter": "Filtra",
+  "modpackMode": "Da modpack",
+  "modpackModeSubtitle": "Modrinth, CurseForge o file .mrpack",
+  "modpackSource": "Origine del modpack",
+  "modpackFile": "File locale",
+  "modpackNoFile": "Nessun file scelto",
+  "modpackFileHint": "File .mrpack di Modrinth o .zip di CurseForge con manifest.json.",
+  "searchModpacks": "Cerca modpack",
+  "latestVersionShort": "Ultima versione",
+  "modpackNameHint": "Vuoto: nome del modpack",
+  "modpackRamHint": "I modpack grandi richiedono spesso 6 GB o più.",
+  "modpackChooseSource": "Scegli un file di modpack.",
+  "modpackChooseProject": "Scegli un modpack dall'elenco.",
+  "createFromModpack": "Crea dal modpack"
 }

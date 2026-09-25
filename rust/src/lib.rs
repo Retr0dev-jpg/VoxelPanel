@@ -6,6 +6,7 @@ pub mod api;
 mod backup;
 mod cache;
 mod catalog;
+mod content;
 mod frb_generated;
 mod install;
 mod java_runtime;

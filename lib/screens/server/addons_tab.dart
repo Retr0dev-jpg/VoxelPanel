@@ -4,8 +4,10 @@
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:voxel_panel/screens/content/content_browser.dart';
 import 'package:voxel_panel/src/l10n.dart';
 import 'package:voxel_panel/src/labels.dart';
+import 'package:voxel_panel/src/rust/api/content.dart';
 import 'package:voxel_panel/src/rust/api/files.dart';
 import 'package:voxel_panel/src/rust/api/types.dart';
 import 'package:voxel_panel/src/theme.dart';
@@ -24,9 +26,14 @@ class AddonsTab extends StatefulWidget {
 }
 
 class _AddonsTabState extends State<AddonsTab> {
-  List<AddonInfo> _plugins = [];
+  List<AddonInfo>? _addons;
+  Map<String, AddonUpdate> _updates = {};
   Object? _error;
   var _busy = false;
+  var _filter = '';
+  String _status = '';
+
+  bool get _isMod => widget.kind == AddonKind.mod;
 
   @override
   void initState() {
@@ -36,10 +43,10 @@ class _AddonsTabState extends State<AddonsTab> {
 
   Future<void> _load() async {
     try {
-      final plugins = await listAddons(id: widget.serverId, kind: widget.kind);
+      final addons = await listAddons(id: widget.serverId, kind: widget.kind);
       if (mounted) {
         setState(() {
-          _plugins = plugins;
+          _addons = addons;
           _error = null;
         });
       }
@@ -59,11 +66,68 @@ class _AddonsTabState extends State<AddonsTab> {
     }
   }
 
+  Future<void> _checkUpdates() async {
+    final l = context.l10n;
+    setState(() {
+      _busy = true;
+      _status = l.checkingUpdates;
+    });
+    try {
+      final updates = await checkAddonUpdates(id: widget.serverId, kind: widget.kind);
+      if (mounted) {
+        setState(() {
+          _updates = {for (final update in updates) update.fileName: update};
+          _status = updates.isEmpty ? l.allUpToDate : l.updatesAvailable(updates.length);
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _status = describeError(context, error));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _applyUpdates(List<AddonUpdate> updates) async {
+    setState(() => _busy = true);
+    try {
+      await for (final event in updateAddons(id: widget.serverId, kind: widget.kind, updates: updates)) {
+        if (!mounted) {
+          return;
+        }
+        setState(() => _status = event.message);
+        if (event.error != null) {
+          throw Exception(event.error);
+        }
+      }
+      setState(() => _updates = {});
+    } catch (error) {
+      if (mounted) {
+        setState(() => _status = describeError(context, error));
+      }
+    } finally {
+      await _load();
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _browse() async {
+    final installed = await Navigator.push<bool>(context, MaterialPageRoute(builder: (context) => ContentBrowserPage(serverId: widget.serverId, kind: widget.kind)));
+    if (installed == true) {
+      await _load();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
+    final colors = context.voxel;
     final locked = widget.running || _busy;
-    final isMod = widget.kind == AddonKind.mod;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -72,26 +136,22 @@ class _AddonsTabState extends State<AddonsTab> {
           child: Wrap(
             spacing: 8,
             runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              FilledButton.icon(
-                onPressed: locked ? null : _pickJar,
-                icon: const Icon(Icons.upload_file),
-                label: Text(isMod ? l.installModJar : l.installJar),
-              ),
-              FilledButton.tonalIcon(
-                onPressed: locked ? null : () => _search(context),
-                icon: const Icon(Icons.travel_explore),
-                label: Text(l.searchModrinth),
+              FilledButton.icon(onPressed: locked ? null : _browse, icon: const Icon(Icons.travel_explore), label: Text(_isMod ? l.browseMods : l.browsePlugins)),
+              OutlinedButton.icon(onPressed: locked ? null : _pickJar, icon: const Icon(Icons.upload_file), label: Text(_isMod ? l.installModJar : l.installJar)),
+              OutlinedButton.icon(onPressed: _busy ? null : _checkUpdates, icon: const Icon(Icons.update), label: Text(l.checkUpdates)),
+              if (_updates.isNotEmpty) FilledButton.tonalIcon(onPressed: locked ? null : () => _applyUpdates(_updates.values.toList()), icon: const Icon(Icons.system_update_alt), label: Text(l.updateAll(_updates.length))),
+              SizedBox(
+                width: 220,
+                child: TextField(decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: l.filter, isDense: true), onChanged: (value) => setState(() => _filter = value.trim().toLowerCase())),
               ),
               IconButton(tooltip: l.refresh, onPressed: _load, icon: const Icon(Icons.refresh)),
             ],
           ),
         ),
-        if (widget.running)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Text(isMod ? l.stopToEditMods : l.stopToEditPlugins, style: TextStyle(color: context.voxel.warning)),
-          ),
+        if (widget.running) Padding(padding: const EdgeInsets.symmetric(horizontal: 28), child: Text(_isMod ? l.stopToEditMods : l.stopToEditPlugins, style: TextStyle(color: colors.warning))),
+        if (_status.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 4), child: Text(_status, style: TextStyle(color: colors.muted))),
         if (_busy) const LinearProgressIndicator(),
         Expanded(child: _body(context, locked)),
       ],
@@ -100,36 +160,65 @@ class _AddonsTabState extends State<AddonsTab> {
 
   Widget _body(BuildContext context, bool locked) {
     final l = context.l10n;
+    final colors = context.voxel;
+    final addons = _addons;
     if (_error != null) {
       return ErrorState(error: _error!, onRetry: _load);
     }
-    if (_plugins.isEmpty) {
-      return EmptyState(icon: Icons.extension_outlined, message: widget.kind == AddonKind.mod ? l.noMods : l.noPlugins);
+    if (addons == null) {
+      return const Center(child: CircularProgressIndicator());
     }
+    if (addons.isEmpty) {
+      return EmptyState(icon: Icons.extension_outlined, message: _isMod ? l.noMods : l.noPlugins, action: FilledButton.icon(onPressed: locked ? null : _browse, icon: const Icon(Icons.travel_explore), label: Text(_isMod ? l.browseMods : l.browsePlugins)));
+    }
+    final visible = addons.where((addon) => _filter.isEmpty || addon.fileName.toLowerCase().contains(_filter) || addon.name.toLowerCase().contains(_filter)).toList();
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-      itemCount: _plugins.length,
+      itemCount: visible.length,
       itemBuilder: (context, index) {
-        final plugin = _plugins[index];
+        final addon = visible[index];
+        final update = _updates[addon.fileName];
+        final title = addon.name.isEmpty ? addon.fileName : '${addon.name}${addon.version.isEmpty ? '' : ' ${addon.version}'}';
         return ListTile(
-          leading: Icon(Icons.extension, color: plugin.enabled ? context.voxel.accent : context.voxel.muted),
-          title: Text(plugin.fileName),
-          subtitle: Text(formatBytes(plugin.sizeBytes)),
+          leading: Icon(Icons.extension, color: addon.enabled ? colors.accent : colors.muted),
+          title: Row(
+            children: [
+              Flexible(child: Text(title, overflow: TextOverflow.ellipsis)),
+              if (update != null) ...[
+                const SizedBox(width: 8),
+                ActionChip(
+                  avatar: const Icon(Icons.arrow_upward, size: 14),
+                  label: Text(update.newVersion),
+                  onPressed: locked ? null : () => _applyUpdates([update]),
+                ),
+              ],
+            ],
+          ),
+          subtitle: Text(
+            [
+              if (addon.name.isNotEmpty) addon.fileName,
+              formatBytes(addon.sizeBytes),
+              if (addon.authors.isNotEmpty) addon.authors.take(3).join(', '),
+              if (addon.description.isNotEmpty) addon.description,
+            ].join(' · '),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
           trailing: Wrap(
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Switch(
-                value: plugin.enabled,
-                onChanged: locked ? null : (value) => _act(() => setAddonEnabled(id: widget.serverId, kind: widget.kind, fileName: plugin.fileName, enabled: value)),
+                value: addon.enabled,
+                onChanged: locked ? null : (value) => _act(() => setAddonEnabled(id: widget.serverId, kind: widget.kind, fileName: addon.fileName, enabled: value)),
               ),
               IconButton(
                 tooltip: l.delete,
                 onPressed: locked
                     ? null
                     : () async {
-                        final ok = await confirmAction(context, title: l.deletePluginTitle, message: plugin.fileName, destructive: true, confirmLabel: l.delete);
+                        final ok = await confirmAction(context, title: l.deletePluginTitle, message: addon.fileName, destructive: true, confirmLabel: l.delete);
                         if (ok) {
-                          await _act(() => deleteAddon(id: widget.serverId, kind: widget.kind, fileName: plugin.fileName));
+                          await _act(() => deleteAddon(id: widget.serverId, kind: widget.kind, fileName: addon.fileName));
                         }
                       },
                 icon: const Icon(Icons.delete_outline),
@@ -143,107 +232,9 @@ class _AddonsTabState extends State<AddonsTab> {
 
   Future<void> _pickJar() async {
     final files = await FilePicker.pickFiles(dialogTitle: context.l10n.pluginJarTitle, type: FileType.custom, allowedExtensions: const ['jar']);
-    final path = files.isEmpty ? null : files.first.path;
-    if (path != null) {
+    final paths = files.map((file) => file.path).whereType<String>().toList();
+    for (final path in paths) {
       await _act(() => installAddonFile(id: widget.serverId, kind: widget.kind, sourcePath: path));
     }
-  }
-
-  Future<void> _search(BuildContext context) async {
-    final projectId = await showDialog<String>(context: context, builder: (context) => _ModrinthDialog(serverId: widget.serverId, kind: widget.kind));
-    if (projectId == null) {
-      return;
-    }
-    await _act(() async {
-      await for (final event in installModrinthProject(id: widget.serverId, kind: widget.kind, projectId: projectId)) {
-        if (event.error != null) {
-          throw Exception(event.error);
-        }
-      }
-    });
-  }
-}
-
-class _ModrinthDialog extends StatefulWidget {
-  const _ModrinthDialog({required this.serverId, required this.kind});
-
-  final String serverId;
-  final AddonKind kind;
-
-  @override
-  State<_ModrinthDialog> createState() => _ModrinthDialogState();
-}
-
-class _ModrinthDialogState extends State<_ModrinthDialog> {
-  final _query = TextEditingController();
-  List<ModrinthProject> _hits = [];
-  var _loading = false;
-  Object? _error;
-
-  @override
-  void dispose() {
-    _query.dispose();
-    super.dispose();
-  }
-
-  Future<void> _run(String query) async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final hits = await searchModrinth(id: widget.serverId, kind: widget.kind, query: query);
-      if (mounted) {
-        setState(() => _hits = hits);
-      }
-    } catch (error) {
-      if (mounted) {
-        setState(() => _error = error);
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = context.l10n;
-    return AlertDialog(
-      title: const Text('Modrinth'),
-      content: SizedBox(
-        width: 520,
-        height: 380,
-        child: Column(
-          children: [
-            TextField(
-              controller: _query,
-              autofocus: true,
-              decoration: InputDecoration(labelText: widget.kind == AddonKind.mod ? l.searchMods : l.searchPlugins, suffixIcon: IconButton(onPressed: () => _run(_query.text), icon: const Icon(Icons.search))),
-              onSubmitted: _run,
-            ),
-            const SizedBox(height: 8),
-            if (_loading) const LinearProgressIndicator(),
-            Expanded(
-              child: _error != null
-                  ? ErrorState(error: _error!)
-                  : ListView(
-                      children: [
-                        for (final hit in _hits)
-                          ListTile(
-                            title: Text(hit.title),
-                            subtitle: Text(hit.description, maxLines: 2, overflow: TextOverflow.ellipsis),
-                            trailing: Text(l.downloadsCount(hit.downloads)),
-                            onTap: () => Navigator.pop(context, hit.projectId),
-                          ),
-                      ],
-                    ),
-            ),
-          ],
-        ),
-      ),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(l.close))],
-    );
   }
 }

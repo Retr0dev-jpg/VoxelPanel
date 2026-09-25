@@ -234,15 +234,75 @@ pub struct AddonInfo {
     pub file_name: String,
     pub enabled: bool,
     pub size_bytes: i64,
+    /// Read from `plugin.yml`, `fabric.mod.json`, `mods.toml`...; empty when unknown.
+    pub name: String,
+    pub version: String,
+    pub description: String,
+    pub authors: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ContentSourceKind {
+    Modrinth,
+    Hangar,
+    Spiget,
+    CurseForge,
 }
 
 #[derive(Debug, Clone)]
-pub struct ModrinthProject {
-    pub project_id: String,
+pub struct ContentProject {
+    pub source: ContentSourceKind,
+    pub id: String,
     pub slug: String,
     pub title: String,
     pub description: String,
+    pub author: String,
     pub downloads: i64,
+    pub icon_url: String,
+    pub page_url: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct ContentPage {
+    pub projects: Vec<ContentProject>,
+    pub total: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct ContentVersion {
+    pub id: String,
+    pub name: String,
+    pub game_versions: Vec<String>,
+    pub loaders: Vec<String>,
+    pub published: String,
+    pub stable: bool,
+    /// Matches the server's loaders and Minecraft version.
+    pub compatible: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct AddonUpdate {
+    pub file_name: String,
+    pub project_id: String,
+    pub current_version: String,
+    pub new_version_id: String,
+    pub new_version: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct ModpackRequest {
+    pub name: String,
+    pub root: String,
+    /// `.mrpack` (Modrinth) or `.zip` with `manifest.json` (CurseForge); empty when using `source`.
+    pub file_path: String,
+    pub source: Option<ContentSourceKind>,
+    pub project_id: String,
+    pub version_id: String,
+    pub java_home: String,
+    pub ram_min: String,
+    pub ram_max: String,
+    pub jvm_flags: Vec<String>,
+    pub accept_eula: bool,
 }
 
 #[derive(Debug, Clone)]

@@ -58,27 +58,6 @@ Future<void> installAddonFile({
   sourcePath: sourcePath,
 );
 
-/// Searches Modrinth for plugins or mods compatible with this server's software and version.
-Future<List<ModrinthProject>> searchModrinth({
-  required String id,
-  required AddonKind kind,
-  required String query,
-}) => RustLib.instance.api.crateApiFilesSearchModrinth(
-  id: id,
-  kind: kind,
-  query: query,
-);
-
-Stream<ProgressEvent> installModrinthProject({
-  required String id,
-  required AddonKind kind,
-  required String projectId,
-}) => RustLib.instance.api.crateApiFilesInstallModrinthProject(
-  id: id,
-  kind: kind,
-  projectId: projectId,
-);
-
 Future<List<WorldInfo>> listWorlds({required String id}) =>
     RustLib.instance.api.crateApiFilesListWorlds(id: id);
 
