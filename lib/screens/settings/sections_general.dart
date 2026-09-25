@@ -154,6 +154,15 @@ class AppearanceSection extends ConsumerWidget {
           value: appearance.compact,
           onChanged: (value) => save(appearance.copyWith(compact: value)),
         ),
+        SettingsRow(
+          title: l.settingContentLayout,
+          subtitle: l.settingContentLayoutHint,
+          child: SettingsDropdown<ContentLayout>(
+            value: appearance.contentLayout,
+            items: {ContentLayout.list: l.layoutList, ContentLayout.grid: l.layoutGrid},
+            onChanged: (value) => save(appearance.copyWith(contentLayout: value)),
+          ),
+        ),
       ],
     );
   }

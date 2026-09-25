@@ -30,7 +30,7 @@ L’interfaccia è in Flutter (Material 3, italiano e inglese). Il motore è in 
   - avvio automatico dei server contrassegnati all’apertura di VoxelPanel;
   - notifiche desktop e area di notifica collegate agli eventi dei server.
 - Rinomina ed elimina i server (anche più server insieme), con scelta se cancellare file e backup.
-- Impostazioni del launcher: lingua, tema chiaro o scuro con colore di accento, avvio con il sistema, chiusura nel tray, cartelle di server, backup, runtime e cache (spostabili con migrazione guidata), runtime Java installati e di sistema (con la distribuzione riconosciuta dal file `release`) e versione preferita, distribuzione Java per i download, valori predefiniti per i nuovi server (RAM, preset JVM Aikar/G1/ZGC, porta), console, backup (conservazione, compressione, esclusioni), proxy e timeout di rete, chiave CurseForge, notifiche desktop, log dell'app, esportazione e importazione.
+- Impostazioni del launcher: lingua, tema chiaro o scuro con colore di accento, vista a elenco o a griglia per plugin, mod e catalogo, avvio con il sistema, chiusura nel tray, cartelle di server, backup, runtime e cache (spostabili con migrazione guidata), runtime Java installati e di sistema (con la distribuzione riconosciuta dal file `release`) e versione preferita, distribuzione Java per i download, valori predefiniti per i nuovi server (RAM, preset JVM Aikar/G1/ZGC, porta), console, backup (conservazione, compressione, esclusioni), proxy e timeout di rete, chiave CurseForge, notifiche desktop, log dell'app, esportazione e importazione.
 
 La rete serve solo per installare o aggiornare Java, Paper o un plugin. Stato, console e file restano sul disco.
 

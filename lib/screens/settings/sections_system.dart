@@ -165,11 +165,11 @@ class _JavaSectionState extends ConsumerState<JavaSection> {
         if (entry.major != major) entry,
       if (path != null) PreferredJava(major: major, path: path),
     ]..sort((a, b) => b.major.compareTo(a.major));
-    saveSettings(context, ref, widget.settings.copyWith(java: JavaSettings(preferred: preferred, vendor: widget.settings.java.vendor)));
+    saveSettings(context, ref, widget.settings.copyWith(java: widget.settings.java.copyWith(preferred: preferred)));
   }
 
   void _setVendor(JavaVendor vendor) {
-    saveSettings(context, ref, widget.settings.copyWith(java: JavaSettings(preferred: widget.settings.java.preferred, vendor: vendor)));
+    saveSettings(context, ref, widget.settings.copyWith(java: widget.settings.java.copyWith(vendor: vendor)));
   }
 
   @override

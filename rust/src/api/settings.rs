@@ -71,6 +71,15 @@ impl Default for GeneralSettings {
     }
 }
 
+/// How plugin, mod and catalogue lists are shown.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ContentLayout {
+    #[default]
+    List,
+    Grid,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AppearanceSettings {
@@ -79,6 +88,7 @@ pub struct AppearanceSettings {
     pub accent_color: u32,
     pub text_scale: f64,
     pub compact: bool,
+    pub content_layout: ContentLayout,
 }
 
 impl Default for AppearanceSettings {
@@ -88,6 +98,7 @@ impl Default for AppearanceSettings {
             accent_color: 0xFF7C4DFF,
             text_scale: 1.0,
             compact: false,
+            content_layout: ContentLayout::List,
         }
     }
 }

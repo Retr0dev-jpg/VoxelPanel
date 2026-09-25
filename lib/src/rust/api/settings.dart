@@ -8,7 +8,7 @@ import 'error.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 Future<LauncherSettings> getLauncherSettings() =>
     RustLib.instance.api.crateApiSettingsGetLauncherSettings();
@@ -95,12 +95,14 @@ class AppearanceSettings {
   final int accentColor;
   final double textScale;
   final bool compact;
+  final ContentLayout contentLayout;
 
   const AppearanceSettings({
     required this.theme,
     required this.accentColor,
     required this.textScale,
     required this.compact,
+    required this.contentLayout,
   });
 
   static Future<AppearanceSettings> default_() =>
@@ -111,7 +113,8 @@ class AppearanceSettings {
       theme.hashCode ^
       accentColor.hashCode ^
       textScale.hashCode ^
-      compact.hashCode;
+      compact.hashCode ^
+      contentLayout.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -121,7 +124,8 @@ class AppearanceSettings {
           theme == other.theme &&
           accentColor == other.accentColor &&
           textScale == other.textScale &&
-          compact == other.compact;
+          compact == other.compact &&
+          contentLayout == other.contentLayout;
 }
 
 class BackupSettings {
@@ -196,6 +200,15 @@ class ConsoleSettings {
           timestamps == other.timestamps &&
           fontSize == other.fontSize &&
           wrap == other.wrap;
+}
+
+/// How plugin, mod and catalogue lists are shown.
+enum ContentLayout {
+  list,
+  grid;
+
+  static Future<ContentLayout> default_() =>
+      RustLib.instance.api.crateApiSettingsContentLayoutDefault();
 }
 
 class DefaultsSettings {

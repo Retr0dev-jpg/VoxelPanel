@@ -121,6 +121,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ConsoleSettings dco_decode_console_settings(dynamic raw);
 
   @protected
+  ContentLayout dco_decode_content_layout(dynamic raw);
+
+  @protected
   ContentPage dco_decode_content_page(dynamic raw);
 
   @protected
@@ -514,6 +517,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ConsoleSettings sse_decode_console_settings(SseDeserializer deserializer);
+
+  @protected
+  ContentLayout sse_decode_content_layout(SseDeserializer deserializer);
 
   @protected
   ContentPage sse_decode_content_page(SseDeserializer deserializer);
@@ -979,6 +985,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     ConsoleSettings self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_content_layout(ContentLayout self, SseSerializer serializer);
 
   @protected
   void sse_encode_content_page(ContentPage self, SseSerializer serializer);

@@ -82,12 +82,17 @@ extension GeneralSettingsCopy on GeneralSettings {
 }
 
 extension AppearanceSettingsCopy on AppearanceSettings {
-  AppearanceSettings copyWith({ThemePreference? theme, int? accentColor, double? textScale, bool? compact}) => AppearanceSettings(
+  AppearanceSettings copyWith({ThemePreference? theme, int? accentColor, double? textScale, bool? compact, ContentLayout? contentLayout}) => AppearanceSettings(
     theme: theme ?? this.theme,
     accentColor: accentColor ?? this.accentColor,
     textScale: textScale ?? this.textScale,
     compact: compact ?? this.compact,
+    contentLayout: contentLayout ?? this.contentLayout,
   );
+}
+
+extension JavaSettingsCopy on JavaSettings {
+  JavaSettings copyWith({List<PreferredJava>? preferred, JavaVendor? vendor}) => JavaSettings(preferred: preferred ?? this.preferred, vendor: vendor ?? this.vendor);
 }
 
 extension DefaultsSettingsCopy on DefaultsSettings {

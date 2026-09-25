@@ -720,6 +720,10 @@
       }
     }
   },
+  "settingContentLayout": "Vista di plugin e mod",
+  "settingContentLayoutHint": "Elenco o griglia, per i plugin e mod installati e per il catalogo. Si cambia anche dal pulsante accanto alla ricerca.",
+  "layoutList": "Vista a elenco",
+  "layoutGrid": "Vista a griglia",
   "filter": "Filtra",
   "modpackMode": "Da modpack",
   "modpackModeSubtitle": "Modrinth, CurseForge o file .mrpack",
