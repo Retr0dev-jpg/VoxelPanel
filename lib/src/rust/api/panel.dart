@@ -73,11 +73,15 @@ Future<void> updateRuntimeConfig({
   jvmFlags: jvmFlags,
 );
 
-Future<void> deleteServer({required String id, required bool deleteFiles}) =>
-    RustLib.instance.api.crateApiPanelDeleteServer(
-      id: id,
-      deleteFiles: deleteFiles,
-    );
+Future<void> deleteServer({
+  required String id,
+  required bool deleteFiles,
+  required bool deleteBackups,
+}) => RustLib.instance.api.crateApiPanelDeleteServer(
+  id: id,
+  deleteFiles: deleteFiles,
+  deleteBackups: deleteBackups,
+);
 
 Future<void> startServer({required String id}) =>
     RustLib.instance.api.crateApiPanelStartServer(id: id);

@@ -8,7 +8,7 @@ String statusLabel(ServerStatus status) {
   return switch (status) {
     ServerStatus.stopped => 'Fermo',
     ServerStatus.starting => 'Avvio',
-    ServerStatus.running => 'In esecuzione',
+    ServerStatus.running => 'Online',
     ServerStatus.stopping => 'Arresto',
   };
 }

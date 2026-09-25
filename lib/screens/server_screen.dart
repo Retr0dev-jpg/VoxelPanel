@@ -7,6 +7,9 @@ import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:voxel_panel/src/labels.dart';
+import 'package:voxel_panel/widgets/app_sidebar.dart';
+import 'package:voxel_panel/widgets/server_dashboard.dart';
+import 'package:voxel_panel/widgets/minecraft_log.dart';
 import 'package:voxel_panel/src/rust/api/files.dart';
 import 'package:voxel_panel/src/rust/api/panel.dart';
 import 'package:voxel_panel/src/rust/api/types.dart';
@@ -20,8 +23,8 @@ class ServerScreen extends StatefulWidget {
   State<ServerScreen> createState() => _ServerScreenState();
 }
 
-class _ServerScreenState extends State<ServerScreen> with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 6, vsync: this);
+class _ServerScreenState extends State<ServerScreen> {
+  var _section = 0;
   ServerDetails? _details;
   ProcessStats? _stats;
   Timer? _timer;
@@ -37,7 +40,6 @@ class _ServerScreenState extends State<ServerScreen> with SingleTickerProviderSt
   @override
   void dispose() {
     _timer?.cancel();
-    _tabs.dispose();
     super.dispose();
   }
 
@@ -77,241 +79,74 @@ class _ServerScreenState extends State<ServerScreen> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     final details = _details;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(details?.name ?? 'Server'),
-        bottom: TabBar(
-          controller: _tabs,
-          isScrollable: true,
-          tabs: const [
-            Tab(text: 'Panoramica'),
-            Tab(text: 'Console'),
-            Tab(text: 'Proprietà'),
-            Tab(text: 'Plugin'),
-            Tab(text: 'Mondi'),
-            Tab(text: 'Backup'),
-          ],
-        ),
+      body: Row(
+        children: [
+          AppSidebar(
+            onBack: () => Navigator.pop(context),
+            selected: _section,
+            onSelected: (index) => setState(() => _section = index),
+            entries: const [
+              SidebarEntry(label: 'Panoramica', icon: Icons.space_dashboard_outlined),
+              SidebarEntry(label: 'Console', icon: Icons.terminal_outlined),
+              SidebarEntry(label: 'Proprietà', icon: Icons.tune),
+              SidebarEntry(label: 'Plugin', icon: Icons.extension_outlined),
+              SidebarEntry(label: 'Mondi', icon: Icons.public_outlined),
+              SidebarEntry(label: 'Backup', icon: Icons.inventory_2_outlined),
+            ],
+          ),
+          Expanded(
+            child: details == null
+                ? Center(child: _error.isEmpty ? const CircularProgressIndicator() : Text(_error))
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (_section != 0)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(28, 22, 28, 8),
+                          child: Text(details.name, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700)),
+                        ),
+                      Expanded(
+                        child: IndexedStack(
+                          index: _section,
+                          children: [
+                            OverviewTab(details: details, stats: _stats, onAction: _act),
+                            ConsoleTab(serverId: widget.serverId, running: details.status == ServerStatus.running),
+                            PropertiesTab(serverId: widget.serverId),
+                            PluginsTab(serverId: widget.serverId, running: details.status != ServerStatus.stopped),
+                            WorldsTab(serverId: widget.serverId, running: details.status != ServerStatus.stopped),
+                            BackupsTab(serverId: widget.serverId, running: details.status != ServerStatus.stopped),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ],
       ),
-      body: details == null
-          ? Center(child: _error.isEmpty ? const CircularProgressIndicator() : Text(_error))
-          : TabBarView(
-              controller: _tabs,
-              children: [
-                OverviewTab(details: details, stats: _stats, onAction: _act, onReload: _reload),
-                ConsoleTab(serverId: widget.serverId, running: details.status == ServerStatus.running),
-                PropertiesTab(serverId: widget.serverId),
-                PluginsTab(serverId: widget.serverId, running: details.status != ServerStatus.stopped),
-                WorldsTab(serverId: widget.serverId, running: details.status != ServerStatus.stopped),
-                BackupsTab(serverId: widget.serverId, running: details.status != ServerStatus.stopped),
-              ],
-            ),
     );
   }
 }
 
 class OverviewTab extends StatelessWidget {
-  const OverviewTab({
-    super.key,
-    required this.details,
-    required this.stats,
-    required this.onAction,
-    required this.onReload,
-  });
+  const OverviewTab({super.key, required this.details, required this.stats, required this.onAction});
 
   final ServerDetails details;
   final ProcessStats? stats;
   final Future<bool> Function(Future<void> Function() action) onAction;
-  final Future<void> Function() onReload;
 
   @override
   Widget build(BuildContext context) {
-    final running = details.status == ServerStatus.running || details.status == ServerStatus.starting;
     return ListView(
-      padding: const EdgeInsets.all(24),
       children: [
-        Text(statusLabel(details.status), style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 8),
-        Text('Paper ${details.paperVersion ?? 'n/d'} · Java ${details.javaMajor ?? 'n/d'}'),
-        Text('RAM ${details.ramMin} / ${details.ramMax}'),
-        Text(details.root),
-        if (stats != null) ...[
-          const SizedBox(height: 8),
-          Text('PID ${stats!.pid} · CPU ${stats!.cpuPercent.toStringAsFixed(1)}% · RAM ${formatBytes(stats!.memoryBytes)}'),
-        ],
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 8,
-          children: [
-            FilledButton(
-              onPressed: running ? null : () => onAction(() => startServer(id: details.id)),
-              child: const Text('Avvia'),
-            ),
-            FilledButton.tonal(
-              onPressed: running ? () => onAction(() => stopServer(id: details.id)) : null,
-              child: const Text('Stop'),
-            ),
-            OutlinedButton(
-              onPressed: () => onAction(() => restartServer(id: details.id)),
-              child: const Text('Riavvia'),
-            ),
-            OutlinedButton(
-              onPressed: () => onAction(() => openInExplorer(path: details.root)),
-              child: const Text('Apri cartella'),
-            ),
-          ],
-        ),
+        ServerDashboard(details: details, stats: stats, onAction: onAction),
         if (!details.eulaAccepted)
           Padding(
-            padding: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.fromLTRB(28, 0, 28, 28),
             child: FilledButton(
               onPressed: () => onAction(() => acceptServerEula(id: details.id)),
               child: const Text("Accetta l'EULA"),
             ),
           ),
-        const SizedBox(height: 24),
-        RuntimeEditor(details: details, onAction: onAction, onReload: onReload),
-        const SizedBox(height: 24),
-        OutlinedButton(
-          onPressed: () => _delete(context),
-          child: const Text('Elimina server'),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _delete(BuildContext context) async {
-    var deleteFiles = false;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Eliminare il server?'),
-          content: CheckboxListTile(
-            contentPadding: EdgeInsets.zero,
-            value: deleteFiles,
-            onChanged: (value) => setState(() => deleteFiles = value ?? false),
-            title: const Text('Elimina anche i file sul disco'),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annulla')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Elimina')),
-          ],
-        ),
-      ),
-    );
-    if (confirmed == true && context.mounted) {
-      final removed = await onAction(() => deleteServer(id: details.id, deleteFiles: deleteFiles));
-      if (removed && context.mounted) {
-        Navigator.pop(context);
-      }
-    }
-  }
-}
-
-class RuntimeEditor extends StatefulWidget {
-  const RuntimeEditor({super.key, required this.details, required this.onAction, required this.onReload});
-
-  final ServerDetails details;
-  final Future<bool> Function(Future<void> Function() action) onAction;
-  final Future<void> Function() onReload;
-
-  @override
-  State<RuntimeEditor> createState() => _RuntimeEditorState();
-}
-
-class _RuntimeEditorState extends State<RuntimeEditor> {
-  List<JavaRuntimeInfo> _runtimes = [];
-  List<RamChoice> _ram = [];
-  List<JvmFlagChoice> _flags = [];
-  var _java = '';
-  var _min = '';
-  var _max = '';
-  final _selected = <String>{};
-  var _ready = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _java = widget.details.javaHome;
-    _min = widget.details.ramMin;
-    _max = widget.details.ramMax;
-    _selected.addAll(widget.details.jvmFlags);
-    _load();
-  }
-
-  Future<void> _load() async {
-    final runtimes = await listRuntimes();
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _runtimes = runtimes;
-      _ram = ramPresets();
-      _flags = jvmFlagChoices();
-      _ready = true;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_ready) {
-      return const LinearProgressIndicator();
-    }
-    final homes = <String>{
-      for (final runtime in _runtimes) runtime.path,
-      if (_java.isNotEmpty) _java,
-    };
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Runtime e memoria', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          initialValue: homes.contains(_java) ? _java : null,
-          decoration: const InputDecoration(labelText: 'Java', border: OutlineInputBorder()),
-          items: [for (final path in homes) DropdownMenuItem(value: path, child: Text(path))],
-          onChanged: (value) => setState(() => _java = value ?? _java),
-        ),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          initialValue: _ram.any((choice) => choice.value == _min) ? _min : null,
-          decoration: const InputDecoration(labelText: 'RAM minima', border: OutlineInputBorder()),
-          items: [for (final choice in _ram) DropdownMenuItem(value: choice.value, child: Text(choice.label))],
-          onChanged: (value) => setState(() => _min = value ?? _min),
-        ),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          initialValue: _ram.any((choice) => choice.value == _max) ? _max : null,
-          decoration: const InputDecoration(labelText: 'RAM massima', border: OutlineInputBorder()),
-          items: [for (final choice in _ram) DropdownMenuItem(value: choice.value, child: Text(choice.label))],
-          onChanged: (value) => setState(() => _max = value ?? _max),
-        ),
-        for (final flag in _flags)
-          CheckboxListTile(
-            contentPadding: EdgeInsets.zero,
-            value: _selected.contains(flag.flag),
-            title: Text(flag.flag),
-            onChanged: (checked) => setState(() {
-              if (checked ?? false) {
-                _selected.add(flag.flag);
-              } else {
-                _selected.remove(flag.flag);
-              }
-            }),
-          ),
-        FilledButton(
-          onPressed: () => widget.onAction(() async {
-            await updateRuntimeConfig(
-              id: widget.details.id,
-              javaHome: _java,
-              ramMin: _min,
-              ramMax: _max,
-              jvmFlags: _selected.toList(),
-            );
-            await widget.onReload();
-          }),
-          child: const Text('Salva runtime'),
-        ),
       ],
     );
   }
@@ -367,7 +202,7 @@ class _ConsoleTabState extends State<ConsoleTab> {
             itemCount: _lines.length,
             itemBuilder: (context, index) => Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-              child: Text(_lines[index], style: const TextStyle(fontFamily: 'Consolas', fontSize: 13)),
+              child: MinecraftLogLine(_lines[index]),
             ),
           ),
         ),
@@ -397,6 +232,74 @@ class _ConsoleTabState extends State<ConsoleTab> {
   }
 }
 
+const _propertyLabels = {
+  'motd': 'MOTD',
+  'server-port': 'Porta',
+  'max-players': 'Giocatori massimi',
+  'difficulty': 'Difficoltà',
+  'gamemode': 'Gamemode',
+  'view-distance': 'View distance',
+  'simulation-distance': 'Simulation distance',
+  'spawn-protection': 'Spawn protection',
+  'level-name': 'Nome mondo',
+  'level-seed': 'Seed',
+  'online-mode': 'Online mode',
+  'white-list': 'Whitelist',
+  'pvp': 'PvP',
+};
+
+const _difficultyOptions = {
+  'peaceful': 'Pacifica',
+  'easy': 'Facile',
+  'normal': 'Normale',
+  'hard': 'Difficile',
+};
+
+const _gamemodeOptions = {
+  'survival': 'Survival',
+  'creative': 'Creative',
+  'adventure': 'Adventure',
+  'spectator': 'Spectator',
+};
+
+enum _PropertyKind { text, toggle, difficulty, gamemode }
+
+class _PropertyField {
+  _PropertyField(this.key, String value)
+    : kind = _kindFor(key, value),
+      controller = _kindFor(key, value) == _PropertyKind.toggle ? null : TextEditingController(text: value),
+      enabled = value.toLowerCase() == 'true';
+
+  final String key;
+  final _PropertyKind kind;
+  final TextEditingController? controller;
+  bool enabled;
+
+  static _PropertyKind _kindFor(String key, String value) {
+    if (key == 'difficulty' && _difficultyOptions.containsKey(value)) {
+      return _PropertyKind.difficulty;
+    }
+    if (key == 'gamemode' && _gamemodeOptions.containsKey(value)) {
+      return _PropertyKind.gamemode;
+    }
+    if (value == 'true' || value == 'false') {
+      return _PropertyKind.toggle;
+    }
+    return _PropertyKind.text;
+  }
+
+  String get value {
+    if (kind == _PropertyKind.toggle) {
+      return enabled ? 'true' : 'false';
+    }
+    return controller?.text ?? '';
+  }
+
+  String get label => _propertyLabels[key] ?? key;
+
+  void dispose() => controller?.dispose();
+}
+
 class PropertiesTab extends StatefulWidget {
   const PropertiesTab({super.key, required this.serverId});
 
@@ -407,19 +310,8 @@ class PropertiesTab extends StatefulWidget {
 }
 
 class _PropertiesTabState extends State<PropertiesTab> {
-  final _motd = TextEditingController();
-  final _port = TextEditingController();
-  final _players = TextEditingController();
-  final _view = TextEditingController();
-  final _simulation = TextEditingController();
-  final _spawn = TextEditingController();
-  final _level = TextEditingController();
-  final _seed = TextEditingController();
-  var _online = true;
-  var _whitelist = false;
-  var _pvp = true;
-  var _difficulty = 'easy';
-  var _gamemode = 'survival';
+  final _fields = <_PropertyField>[];
+  String? _error;
   var _ready = false;
 
   @override
@@ -430,33 +322,34 @@ class _PropertiesTabState extends State<PropertiesTab> {
 
   @override
   void dispose() {
-    for (final controller in [_motd, _port, _players, _view, _simulation, _spawn, _level, _seed]) {
-      controller.dispose();
+    for (final field in _fields) {
+      field.dispose();
     }
     super.dispose();
   }
 
   Future<void> _load() async {
-    final settings = await getSettings(id: widget.serverId);
-    if (!mounted) {
-      return;
+    try {
+      final entries = await listProperties(id: widget.serverId);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _fields
+          ..clear()
+          ..addAll(entries.map((entry) => _PropertyField(entry.key, entry.value)));
+        _error = null;
+        _ready = true;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _error = readableError(error);
+        _ready = true;
+      });
     }
-    _motd.text = settings.motd;
-    _port.text = settings.port.toString();
-    _players.text = settings.maxPlayers.toString();
-    _view.text = settings.viewDistance.toString();
-    _simulation.text = settings.simulationDistance.toString();
-    _spawn.text = settings.spawnProtection.toString();
-    _level.text = settings.levelName;
-    _seed.text = settings.levelSeed;
-    setState(() {
-      _online = settings.onlineMode;
-      _whitelist = settings.whiteList;
-      _pvp = settings.pvp;
-      _difficulty = settings.difficulty;
-      _gamemode = settings.gamemode;
-      _ready = true;
-    });
   }
 
   @override
@@ -464,67 +357,60 @@ class _PropertiesTabState extends State<PropertiesTab> {
     if (!_ready) {
       return const Center(child: CircularProgressIndicator());
     }
+    if (_error != null) {
+      return Center(child: Text(_error!));
+    }
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        TextField(controller: _motd, decoration: const InputDecoration(labelText: 'MOTD')),
-        TextField(controller: _port, decoration: const InputDecoration(labelText: 'Porta')),
-        TextField(controller: _players, decoration: const InputDecoration(labelText: 'Giocatori massimi')),
-        DropdownButtonFormField<String>(
-          initialValue: _difficulty,
-          decoration: const InputDecoration(labelText: 'Difficoltà'),
-          items: const [
-            DropdownMenuItem(value: 'peaceful', child: Text('Pacifica')),
-            DropdownMenuItem(value: 'easy', child: Text('Facile')),
-            DropdownMenuItem(value: 'normal', child: Text('Normale')),
-            DropdownMenuItem(value: 'hard', child: Text('Difficile')),
-          ],
-          onChanged: (value) => setState(() => _difficulty = value ?? _difficulty),
-        ),
-        DropdownButtonFormField<String>(
-          initialValue: _gamemode,
-          decoration: const InputDecoration(labelText: 'Gamemode'),
-          items: const [
-            DropdownMenuItem(value: 'survival', child: Text('Survival')),
-            DropdownMenuItem(value: 'creative', child: Text('Creative')),
-            DropdownMenuItem(value: 'adventure', child: Text('Adventure')),
-            DropdownMenuItem(value: 'spectator', child: Text('Spectator')),
-          ],
-          onChanged: (value) => setState(() => _gamemode = value ?? _gamemode),
-        ),
-        TextField(controller: _view, decoration: const InputDecoration(labelText: 'View distance')),
-        TextField(controller: _simulation, decoration: const InputDecoration(labelText: 'Simulation distance')),
-        TextField(controller: _spawn, decoration: const InputDecoration(labelText: 'Spawn protection')),
-        TextField(controller: _level, decoration: const InputDecoration(labelText: 'Nome mondo')),
-        TextField(controller: _seed, decoration: const InputDecoration(labelText: 'Seed')),
-        SwitchListTile(value: _online, onChanged: (value) => setState(() => _online = value), title: const Text('Online mode')),
-        SwitchListTile(value: _whitelist, onChanged: (value) => setState(() => _whitelist = value), title: const Text('Whitelist')),
-        SwitchListTile(value: _pvp, onChanged: (value) => setState(() => _pvp = value), title: const Text('PvP')),
+        for (final field in _fields) _editor(field),
         const SizedBox(height: 12),
         FilledButton(onPressed: _save, child: const Text('Salva proprietà')),
       ],
     );
   }
 
+  Widget _editor(_PropertyField field) {
+    switch (field.kind) {
+      case _PropertyKind.toggle:
+        return SwitchListTile(
+          value: field.enabled,
+          title: Text(field.label),
+          subtitle: field.label == field.key ? null : Text(field.key),
+          onChanged: (value) => setState(() => field.enabled = value),
+        );
+      case _PropertyKind.difficulty:
+        return _choice(field, _difficultyOptions);
+      case _PropertyKind.gamemode:
+        return _choice(field, _gamemodeOptions);
+      case _PropertyKind.text:
+        return TextField(
+          controller: field.controller,
+          decoration: InputDecoration(labelText: field.label, helperText: field.label == field.key ? null : field.key),
+        );
+    }
+  }
+
+  Widget _choice(_PropertyField field, Map<String, String> options) {
+    return DropdownButtonFormField<String>(
+      initialValue: field.controller?.text,
+      decoration: InputDecoration(labelText: field.label),
+      items: [
+        for (final option in options.entries) DropdownMenuItem(value: option.key, child: Text(option.value)),
+      ],
+      onChanged: (value) {
+        if (value != null) {
+          field.controller?.text = value;
+        }
+      },
+    );
+  }
+
   Future<void> _save() async {
     try {
-      await saveSettings(
+      await saveProperties(
         id: widget.serverId,
-        settings: ServerSettings(
-          motd: _motd.text,
-          port: int.parse(_port.text),
-          maxPlayers: int.parse(_players.text),
-          onlineMode: _online,
-          difficulty: _difficulty,
-          gamemode: _gamemode,
-          viewDistance: int.parse(_view.text),
-          simulationDistance: int.parse(_simulation.text),
-          whiteList: _whitelist,
-          pvp: _pvp,
-          spawnProtection: int.parse(_spawn.text),
-          levelName: _level.text,
-          levelSeed: _seed.text,
-        ),
+        entries: [for (final field in _fields) PropertyEntry(key: field.key, value: field.value)],
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Proprietà salvate. Riavvia il server per applicarle.')));

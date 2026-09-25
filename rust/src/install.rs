@@ -218,7 +218,7 @@ pub fn accept_eula(layout: &Layout, id: &str) -> Result<(), String> {
     crate::catalog::save(layout, &record)
 }
 
-pub async fn delete_server(layout: &Layout, id: &str, delete_files: bool) -> Result<(), String> {
+pub async fn delete_server(layout: &Layout, id: &str, delete_files: bool, delete_backups: bool) -> Result<(), String> {
     ensure_stopped(id)?;
     let record = crate::catalog::remove(layout, id)?;
     if delete_files {
@@ -229,6 +229,8 @@ pub async fn delete_server(layout: &Layout, id: &str, delete_files: bool) -> Res
                     .map_err(|error| error.to_string())?;
             }
         }
+    }
+    if delete_backups {
         let backups = layout.backups(id);
         if backups.exists() {
             tokio::fs::remove_dir_all(backups)

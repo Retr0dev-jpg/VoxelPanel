@@ -112,6 +112,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
+  List<PropertyEntry> dco_decode_list_property_entry(dynamic raw);
+
+  @protected
   List<RamChoice> dco_decode_list_ram_choice(dynamic raw);
 
   @protected
@@ -146,6 +149,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ProgressEvent dco_decode_progress_event(dynamic raw);
+
+  @protected
+  PropertyEntry dco_decode_property_entry(dynamic raw);
 
   @protected
   RamChoice dco_decode_ram_choice(dynamic raw);
@@ -284,6 +290,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
+  List<PropertyEntry> sse_decode_list_property_entry(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<RamChoice> sse_decode_list_ram_choice(SseDeserializer deserializer);
 
   @protected
@@ -324,6 +335,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ProgressEvent sse_decode_progress_event(SseDeserializer deserializer);
+
+  @protected
+  PropertyEntry sse_decode_property_entry(SseDeserializer deserializer);
 
   @protected
   RamChoice sse_decode_ram_choice(SseDeserializer deserializer);
@@ -491,6 +505,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_property_entry(
+    List<PropertyEntry> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_ram_choice(
     List<RamChoice> self,
     SseSerializer serializer,
@@ -543,6 +563,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_progress_event(ProgressEvent self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_property_entry(PropertyEntry self, SseSerializer serializer);
 
   @protected
   void sse_encode_ram_choice(RamChoice self, SseSerializer serializer);

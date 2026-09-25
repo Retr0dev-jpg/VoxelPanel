@@ -2,7 +2,6 @@
 // Licensed under the GNU Affero General Public License v3.0 or later.
 // See the LICENSE file in the project root.
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxel_panel/screens/create_server_screen.dart';
@@ -10,6 +9,8 @@ import 'package:voxel_panel/screens/server_screen.dart';
 import 'package:voxel_panel/src/labels.dart';
 import 'package:voxel_panel/src/rust/api/panel.dart';
 import 'package:voxel_panel/src/rust/api/types.dart';
+import 'package:voxel_panel/src/theme.dart';
+import 'package:voxel_panel/widgets/app_sidebar.dart';
 import 'package:voxel_panel/widgets/server_list_view.dart';
 
 final serverListProvider = AsyncNotifierProvider<ServerListNotifier, List<ServerSummary>>(
@@ -26,61 +27,100 @@ class ServerListNotifier extends AsyncNotifier<List<ServerSummary>> {
   }
 }
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  var _query = '';
+
+  @override
+  Widget build(BuildContext context) {
     final servers = ref.watch(serverListProvider);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('VoxelPanel'),
-        actions: [
-          IconButton(
-            tooltip: 'Aggiorna',
-            onPressed: () => ref.read(serverListProvider.notifier).reload(),
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
-      body: servers.when(
-        data: (items) => ServerListView(
-          servers: items,
-          onOpen: (server) => _open(context, ref, server.id),
-          onStart: (server) => _run(context, ref, () => startServer(id: server.id)),
-          onStop: (server) => _run(context, ref, () => stopServer(id: server.id)),
-        ),
-        error: (error, stack) => Center(child: Text(readableError(error))),
-        loading: () => const Center(child: CircularProgressIndicator()),
-      ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
+      body: Row(
         children: [
-          FloatingActionButton.extended(
-            heroTag: 'import',
-            onPressed: () => _import(context, ref),
-            icon: const Icon(Icons.drive_folder_upload),
-            label: const Text('Importa'),
+          AppSidebar(
+            entries: const [SidebarEntry(label: 'Server', icon: Icons.dns_outlined)],
+            selected: 0,
+            onSelected: (_) {},
           ),
-          const SizedBox(height: 12),
-          FloatingActionButton.extended(
-            heroTag: 'create',
-            onPressed: () async {
-              final created = await Navigator.push<bool>(
-                context,
-                MaterialPageRoute(builder: (context) => const CreateServerScreen()),
-              );
-              if (created == true) {
-                await ref.read(serverListProvider.notifier).reload();
-              }
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('Nuovo server'),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(28, 24, 28, 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Server', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700)),
+                            SizedBox(height: 4),
+                            Text('Crea, gestisci e avvia i tuoi server Paper in locale.', style: TextStyle(color: panelMuted)),
+                          ],
+                        ),
+                      ),
+                      SizedBox(
+                        width: 260,
+                        child: TextField(
+                          decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Cerca server...'),
+                          onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton.icon(
+                        onPressed: _create,
+                        style: FilledButton.styleFrom(minimumSize: const Size(0, 56), padding: const EdgeInsets.symmetric(horizontal: 18)),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Nuovo server'),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: servers.when(
+                    data: (items) {
+                      final visible = items.where((server) {
+                        if (_query.isEmpty) {
+                          return true;
+                        }
+                        return server.name.toLowerCase().contains(_query) || '${server.port}'.contains(_query);
+                      }).toList();
+                      return ServerListView(
+                        servers: visible,
+                        onOpen: (server) => _open(context, ref, server.id),
+                        onStart: (server) => _run(context, ref, () => startServer(id: server.id)),
+                        onStop: (server) => _run(context, ref, () => stopServer(id: server.id)),
+                        onRestart: (server) => _run(context, ref, () => restartServer(id: server.id)),
+                      );
+                    },
+                    error: (error, stack) => Center(child: Text(readableError(error))),
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _create({bool importing = false}) async {
+    final created = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (context) => CreateServerScreen(startOnImport: importing)),
+    );
+    if (created == true) {
+      await ref.read(serverListProvider.notifier).reload();
+    }
   }
 
   Future<void> _open(BuildContext context, WidgetRef ref, String id) async {
@@ -99,56 +139,4 @@ class HomeScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _import(BuildContext context, WidgetRef ref) async {
-    final path = await FilePicker.getDirectoryPath(dialogTitle: 'Cartella del server');
-    if (path == null || !context.mounted) {
-      return;
-    }
-    try {
-      final preview = await previewImport(path: path);
-      if (!context.mounted) {
-        return;
-      }
-      var acceptEula = preview.hasEula;
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => StatefulBuilder(
-          builder: (context, setState) => AlertDialog(
-            title: const Text('Importa cartella'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(preview.root),
-                const SizedBox(height: 8),
-                Text('Paper: ${preview.paperVersion.isEmpty ? 'non rilevato' : preview.paperVersion}'),
-                Text('Java: ${preview.javaMajor == 0 ? 'non rilevato' : preview.javaMajor}'),
-                Text('RAM: ${preview.ramMin} / ${preview.ramMax}'),
-                Text('Plugin: ${preview.pluginCount} · Mondi: ${preview.worldCount}'),
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: acceptEula,
-                  onChanged: (value) => setState(() => acceptEula = value ?? false),
-                  title: const Text("Accetto l'EULA di Minecraft"),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annulla')),
-              FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Importa')),
-            ],
-          ),
-        ),
-      );
-      if (confirmed != true) {
-        return;
-      }
-      await importServer(path: path, name: preview.name, acceptEula: acceptEula);
-      await ref.read(serverListProvider.notifier).reload();
-    } catch (error) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(readableError(error))));
-      }
-    }
-  }
 }

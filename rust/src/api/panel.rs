@@ -28,6 +28,8 @@ pub async fn list_servers() -> Result<Vec<ServerSummary>, String> {
         .into_iter()
         .map(|record| {
             let id = record.id.clone();
+            let online_players = process::online_players(&id);
+            let max_players = crate::properties::read_settings(&record.root).max_players;
             ServerSummary {
                 port: crate::properties::read_port(&record.root).unwrap_or(25565),
                 status: status_of(&id),
@@ -39,6 +41,8 @@ pub async fn list_servers() -> Result<Vec<ServerSummary>, String> {
                 java_major: record.java_major,
                 ram_min: record.ram_min,
                 ram_max: record.ram_max,
+                online_players,
+                max_players,
             }
         })
         .collect())
@@ -46,6 +50,8 @@ pub async fn list_servers() -> Result<Vec<ServerSummary>, String> {
 
 pub async fn get_server(id: String) -> Result<ServerDetails, String> {
     let record = crate::catalog::get(&Layout::app(), &id)?;
+    let online_players = process::online_players(&record.id);
+    let max_players = crate::properties::read_settings(&record.root).max_players;
     Ok(ServerDetails {
         status: status_of(&record.id),
         java_home: record
@@ -68,6 +74,8 @@ pub async fn get_server(id: String) -> Result<ServerDetails, String> {
         jvm_flags: record.jvm_flags,
         eula_accepted: record.eula_accepted,
         created_unix: record.created_unix,
+        online_players,
+        max_players,
     })
 }
 
@@ -195,8 +203,8 @@ pub async fn update_runtime_config(
     install::update_runtime(&Layout::app(), &id, &java_home, &ram_min, &ram_max, &jvm_flags)
 }
 
-pub async fn delete_server(id: String, delete_files: bool) -> Result<(), String> {
-    install::delete_server(&Layout::app(), &id, delete_files).await
+pub async fn delete_server(id: String, delete_files: bool, delete_backups: bool) -> Result<(), String> {
+    install::delete_server(&Layout::app(), &id, delete_files, delete_backups).await
 }
 
 pub async fn start_server(id: String) -> Result<(), String> {

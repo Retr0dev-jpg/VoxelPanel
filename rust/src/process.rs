@@ -110,6 +110,42 @@ pub fn console_history(id: &str) -> Vec<String> {
     guard.snapshot().0
 }
 
+pub fn online_players(id: &str) -> u32 {
+    if !matches!(status_of(id), RunStatus::Running | RunStatus::Starting) {
+        return 0;
+    }
+    let mut online: i32 = 0;
+    for line in console_history(id) {
+        let plain = strip_ansi(&line);
+        if plain.contains(" joined the game") {
+            online += 1;
+        } else if plain.contains(" left the game") {
+            online = (online - 1).max(0);
+        }
+    }
+    online as u32
+}
+
+fn strip_ansi(line: &str) -> String {
+    let mut out = String::with_capacity(line.len());
+    let mut chars = line.chars().peekable();
+    while let Some(char) = chars.next() {
+        if char == '\u{1b}' {
+            if chars.peek() == Some(&'[') {
+                chars.next();
+                for next in chars.by_ref() {
+                    if next.is_ascii_alphabetic() {
+                        break;
+                    }
+                }
+            }
+            continue;
+        }
+        out.push(char);
+    }
+    out
+}
+
 pub fn subscribe(id: &str) -> (Vec<String>, broadcast::Receiver<String>) {
     let logs = ensure_logs(id);
     let guard = logs.lock().unwrap_or_else(|error| error.into_inner());

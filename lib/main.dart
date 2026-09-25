@@ -7,11 +7,21 @@ import 'dart:ui' show AppExitResponse;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxel_panel/screens/home_screen.dart';
+import 'package:voxel_panel/screens/launcher_settings_screen.dart';
+import 'package:voxel_panel/src/theme.dart';
 import 'package:voxel_panel/src/rust/api/panel.dart';
 import 'package:voxel_panel/src/rust/frb_generated.dart';
+import 'package:voxel_panel/widgets/window_title_bar.dart';
+import 'package:window_manager/window_manager.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await windowManager.ensureInitialized();
+  const options = WindowOptions(titleBarStyle: TitleBarStyle.hidden, title: 'VoxelPanel');
+  await windowManager.waitUntilReadyToShow(options, () async {
+    await windowManager.show();
+    await windowManager.focus();
+  });
   await RustLib.init();
   runApp(const ProviderScope(child: VoxelApp()));
 }
@@ -72,11 +82,71 @@ class _VoxelAppState extends State<VoxelApp> with WidgetsBindingObserver {
     return MaterialApp(
       navigatorKey: _navigatorKey,
       title: 'VoxelPanel',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1F8A70), brightness: Brightness.dark),
-        useMaterial3: true,
-      ),
+      theme: voxelTheme(),
+      builder: (context, child) {
+        return _LauncherShell(child: child ?? const SizedBox.shrink());
+      },
       home: const HomeScreen(),
+    );
+  }
+}
+
+class _LauncherShell extends StatefulWidget {
+  const _LauncherShell({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_LauncherShell> createState() => _LauncherShellState();
+}
+
+class _LauncherShellState extends State<_LauncherShell> {
+  final _overlayKey = GlobalKey<OverlayState>();
+  OverlayEntry? _settings;
+
+  void _toggleSettings() {
+    final overlay = _overlayKey.currentState;
+    if (overlay == null) {
+      return;
+    }
+    if (_settings != null) {
+      _settings!.remove();
+      _settings = null;
+      return;
+    }
+    _settings = OverlayEntry(
+      builder: (context) => Positioned.fill(
+        top: 40,
+        child: Material(
+          color: panelBackground,
+          child: LauncherSettingsScreen(onClose: _toggleSettings),
+        ),
+      ),
+    );
+    overlay.insert(_settings!);
+  }
+
+  @override
+  void dispose() {
+    _settings?.remove();
+    _settings = null;
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Overlay(
+      key: _overlayKey,
+      initialEntries: [
+        OverlayEntry(
+          builder: (context) => Column(
+            children: [
+              WindowTitleBar(onSettings: _toggleSettings),
+              Expanded(child: widget.child),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

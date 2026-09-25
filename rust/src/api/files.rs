@@ -12,6 +12,31 @@ use crate::process;
 use super::panel::status_of;
 use super::types::*;
 
+pub async fn list_properties(id: String) -> Result<Vec<PropertyEntry>, String> {
+    let record = crate::catalog::get(&Layout::app(), &id)?;
+    Ok(crate::properties::load_entries(&record.root)?
+        .into_iter()
+        .map(|(key, value)| PropertyEntry { key, value })
+        .collect())
+}
+
+pub async fn save_properties(id: String, entries: Vec<PropertyEntry>) -> Result<(), String> {
+    let record = crate::catalog::get(&Layout::app(), &id)?;
+    let pairs: Vec<(String, String)> = entries
+        .into_iter()
+        .map(|entry| (entry.key, entry.value))
+        .collect();
+    if let Some((_, port)) = pairs.iter().find(|(key, _)| key == "server-port") {
+        if let Ok(port) = port.parse::<u32>() {
+            let used = crate::catalog::used_ports(&Layout::app(), &id);
+            if used.contains(&port) {
+                return Err(format!("La porta {port} è già usata da un altro server."));
+            }
+        }
+    }
+    crate::properties::write_entries(&record.root, &pairs)
+}
+
 pub async fn get_settings(id: String) -> Result<ServerSettings, String> {
     let record = crate::catalog::get(&Layout::app(), &id)?;
     let settings = crate::properties::read_settings(&record.root);
@@ -153,11 +178,50 @@ pub async fn delete_world(id: String, name: String) -> Result<(), String> {
 
 pub async fn open_in_explorer(path: String) -> Result<(), String> {
     let path = std::path::PathBuf::from(&path);
-    if !path.exists() {
+    if !path.is_dir() {
         return Err("Cartella non trovata".into());
     }
-    std::process::Command::new("explorer")
-        .arg(&path)
+    // explorer.exe parses its own command line. Rust quotes arguments that contain
+    // spaces (typical under C:\Users\Marco Simone\...), and a quoted directory makes
+    // explorer open Documents instead of that folder. ShellExecuteW passes the path
+    // as a wide string and skips that parser.
+    open_directory(&path)
+}
+
+#[cfg(windows)]
+fn open_directory(path: &std::path::Path) -> Result<(), String> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows::core::PCWSTR;
+    use windows::Win32::UI::Shell::ShellExecuteW;
+    use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+
+    let mut file: Vec<u16> = path.as_os_str().encode_wide().collect();
+    file.push(0);
+    let operation: Vec<u16> = "explore".encode_utf16().chain(std::iter::once(0)).collect();
+    let code = unsafe {
+        ShellExecuteW(
+            None,
+            PCWSTR(operation.as_ptr()),
+            PCWSTR(file.as_ptr()),
+            PCWSTR::null(),
+            PCWSTR::null(),
+            SW_SHOWNORMAL,
+        )
+    };
+    // Values <= 32 are Win32 error codes, not an instance handle.
+    if (code.0 as isize) <= 32 {
+        return Err(format!(
+            "Impossibile aprire la cartella (codice {})",
+            code.0 as isize
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn open_directory(path: &std::path::Path) -> Result<(), String> {
+    std::process::Command::new("xdg-open")
+        .arg(path)
         .spawn()
         .map_err(|error| format!("Impossibile aprire la cartella: {error}"))?;
     Ok(())
@@ -351,4 +415,30 @@ fn from_settings(settings: ServerSettings) -> crate::properties::Settings {
 
 pub fn server_is_running(id: &str) -> bool {
     !matches!(status_of(id), ServerStatus::Stopped)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::open_in_explorer;
+
+    #[tokio::test]
+    async fn missing_directory_does_not_open_explorer() {
+        let missing = std::env::temp_dir().join(format!("voxel-missing-{}", uuid::Uuid::new_v4()));
+        let error = open_in_explorer(missing.to_string_lossy().to_string())
+            .await
+            .expect_err("missing path");
+        assert_eq!(error, "Cartella non trovata");
+    }
+
+    /// Opens a real Explorer window. Ignored so `cargo test` does not steal focus.
+    #[tokio::test]
+    #[ignore]
+    async fn opens_directory_whose_path_contains_spaces() {
+        let directory = std::env::temp_dir().join(format!("voxel panel {}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&directory).unwrap();
+        open_in_explorer(directory.to_string_lossy().to_string())
+            .await
+            .unwrap();
+        let _ = std::fs::remove_dir_all(&directory);
+    }
 }

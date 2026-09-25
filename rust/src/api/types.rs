@@ -20,6 +20,8 @@ pub struct ServerSummary {
     pub ram_min: String,
     pub ram_max: String,
     pub port: u32,
+    pub online_players: u32,
+    pub max_players: u32,
     pub status: ServerStatus,
     pub pid: Option<u32>,
 }
@@ -39,6 +41,8 @@ pub struct ServerDetails {
     pub eula_accepted: bool,
     pub created_unix: i64,
     pub status: ServerStatus,
+    pub online_players: u32,
+    pub max_players: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -130,6 +134,12 @@ pub struct ProcessStats {
     pub cpu_percent: f64,
     pub memory_bytes: i64,
     pub pid: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct PropertyEntry {
+    pub key: String,
+    pub value: String,
 }
 
 #[derive(Debug, Clone)]

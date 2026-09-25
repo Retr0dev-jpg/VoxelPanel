@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 class AutoInstallRequest {
   final String name;
@@ -383,6 +383,24 @@ class ProgressEvent {
           serverId == other.serverId;
 }
 
+class PropertyEntry {
+  final String key;
+  final String value;
+
+  const PropertyEntry({required this.key, required this.value});
+
+  @override
+  int get hashCode => key.hashCode ^ value.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PropertyEntry &&
+          runtimeType == other.runtimeType &&
+          key == other.key &&
+          value == other.value;
+}
+
 class RamChoice {
   final int megabytes;
   final String label;
@@ -445,6 +463,8 @@ class ServerDetails {
   final bool eulaAccepted;
   final PlatformInt64 createdUnix;
   final ServerStatus status;
+  final int onlinePlayers;
+  final int maxPlayers;
 
   const ServerDetails({
     required this.id,
@@ -460,6 +480,8 @@ class ServerDetails {
     required this.eulaAccepted,
     required this.createdUnix,
     required this.status,
+    required this.onlinePlayers,
+    required this.maxPlayers,
   });
 
   @override
@@ -476,7 +498,9 @@ class ServerDetails {
       jvmFlags.hashCode ^
       eulaAccepted.hashCode ^
       createdUnix.hashCode ^
-      status.hashCode;
+      status.hashCode ^
+      onlinePlayers.hashCode ^
+      maxPlayers.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -495,7 +519,9 @@ class ServerDetails {
           jvmFlags == other.jvmFlags &&
           eulaAccepted == other.eulaAccepted &&
           createdUnix == other.createdUnix &&
-          status == other.status;
+          status == other.status &&
+          onlinePlayers == other.onlinePlayers &&
+          maxPlayers == other.maxPlayers;
 }
 
 class ServerSettings {
@@ -576,6 +602,8 @@ class ServerSummary {
   final String ramMin;
   final String ramMax;
   final int port;
+  final int onlinePlayers;
+  final int maxPlayers;
   final ServerStatus status;
   final int? pid;
 
@@ -588,6 +616,8 @@ class ServerSummary {
     required this.ramMin,
     required this.ramMax,
     required this.port,
+    required this.onlinePlayers,
+    required this.maxPlayers,
     required this.status,
     this.pid,
   });
@@ -602,6 +632,8 @@ class ServerSummary {
       ramMin.hashCode ^
       ramMax.hashCode ^
       port.hashCode ^
+      onlinePlayers.hashCode ^
+      maxPlayers.hashCode ^
       status.hashCode ^
       pid.hashCode;
 
@@ -618,6 +650,8 @@ class ServerSummary {
           ramMin == other.ramMin &&
           ramMax == other.ramMax &&
           port == other.port &&
+          onlinePlayers == other.onlinePlayers &&
+          maxPlayers == other.maxPlayers &&
           status == other.status &&
           pid == other.pid;
 }

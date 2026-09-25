@@ -163,6 +163,71 @@ pub fn apply_updates(content: &str, updates: &HashMap<String, String>) -> String
     out
 }
 
+pub fn read_entries(content: &str) -> Vec<(String, String)> {
+    let mut entries = Vec::new();
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+        let Some((key, value)) = trimmed.split_once('=') else {
+            continue;
+        };
+        entries.push((key.trim().to_string(), value.trim().to_string()));
+    }
+    entries
+}
+
+pub fn load_entries(root: &Path) -> Result<Vec<(String, String)>, String> {
+    let path = root.join("server.properties");
+    if !path.is_file() {
+        return Err("server.properties non trovato".into());
+    }
+    let content = std::fs::read_to_string(&path).map_err(|error| error.to_string())?;
+    Ok(read_entries(&content))
+}
+
+pub fn write_entries(root: &Path, entries: &[(String, String)]) -> Result<(), String> {
+    let mut seen = HashSet::new();
+    let mut updates = HashMap::new();
+    for (key, value) in entries {
+        validate_entry(key, value)?;
+        if !seen.insert(key.clone()) {
+            return Err(format!("Chiave duplicata: {key}"));
+        }
+        updates.insert(key.clone(), value.clone());
+    }
+    let path = root.join("server.properties");
+    let current = std::fs::read_to_string(&path).unwrap_or_default();
+    let next = apply_updates(&current, &updates);
+    std::fs::write(path, next).map_err(|error| error.to_string())
+}
+
+fn validate_entry(key: &str, value: &str) -> Result<(), String> {
+    if key.is_empty() || key.contains(['\n', '\r', '=']) || value.contains(['\n', '\r']) {
+        return Err(format!("Proprietà non valida: {key}"));
+    }
+    match key {
+        "motd" if value.chars().count() > 256 => Err("MOTD non valido".into()),
+        "server-port" => parse_range(value, 1, 65535, "Porta non valida"),
+        "max-players" => parse_range(value, 1, 100_000, "Numero massimo di giocatori non valido"),
+        "view-distance" | "simulation-distance" => parse_range(value, 2, 64, "Distanza di visualizzazione non valida"),
+        "spawn-protection" => parse_range(value, 0, 999, "Spawn protection non valida"),
+        "level-name" if !valid_level_name(value) => Err("Nome mondo non valido".into()),
+        "level-seed" if value.chars().count() > 128 => Err("Seed non valido".into()),
+        _ => Ok(()),
+    }
+}
+
+fn parse_range(value: &str, min: u32, max: u32, message: &str) -> Result<(), String> {
+    let parsed: u32 = value.parse().map_err(|_| message.to_string())?;
+    if (min..=max).contains(&parsed) {
+        Ok(())
+    } else {
+        Err(message.into())
+    }
+}
+
 pub fn read_settings(root: &Path) -> Settings {
     let path = root.join("server.properties");
     let Ok(content) = std::fs::read_to_string(path) else {
@@ -250,5 +315,19 @@ mod tests {
         assert!(next.contains("custom-flag=yes"));
         assert!(next.contains("level-seed=abc"));
         assert!(next.contains("server-port=25565"));
+    }
+
+    #[test]
+    fn reads_unknown_keys_in_file_order() {
+        let content = "motd=Ciao\n# nota\nenable-command-block=true\ncustom-flag=yes\n";
+        let entries = read_entries(content);
+        assert_eq!(
+            entries,
+            vec![
+                ("motd".into(), "Ciao".into()),
+                ("enable-command-block".into(), "true".into()),
+                ("custom-flag".into(), "yes".into()),
+            ]
+        );
     }
 }

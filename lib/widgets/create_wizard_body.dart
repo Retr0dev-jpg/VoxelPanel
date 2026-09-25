@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:voxel_panel/src/rust/api/types.dart';
+import 'package:voxel_panel/src/theme.dart';
 
 class CreateInput {
   const CreateInput({
@@ -117,79 +118,159 @@ class _CreateWizardBodyState extends State<CreateWizardBody> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        TextField(
-          controller: _name,
-          decoration: const InputDecoration(labelText: 'Nome del server', border: OutlineInputBorder()),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _root,
-          decoration: const InputDecoration(
-            labelText: 'Cartella',
-            hintText: 'Vuota: VoxelPanel ne crea una nei dati locali',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton(
-            onPressed: widget.busy
-                ? null
-                : () async {
-                    final path = await widget.pickDirectory();
-                    if (path != null) {
-                      setState(() => _root.text = path);
-                    }
-                  },
-            child: const Text('Sfoglia'),
-          ),
-        ),
-        SegmentedButton<bool>(
-          segments: const [
-            ButtonSegment(value: true, label: Text('Automatica')),
-            ButtonSegment(value: false, label: Text('Manuale')),
-          ],
-          selected: {_automatic},
-          onSelectionChanged: widget.busy
-              ? null
-              : (value) => setState(() => _automatic = value.first),
-        ),
-        const SizedBox(height: 16),
-        if (_automatic) _paperDropdown() else ..._manualFields(),
-        const SizedBox(height: 12),
-        CheckboxListTile(
-          contentPadding: EdgeInsets.zero,
-          value: _eula,
-          onChanged: widget.busy ? null : (value) => setState(() => _eula = value ?? false),
-          title: const Text("Accetto l'EULA di Minecraft (eula=true)"),
-        ),
-        if (_error.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(_error, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-          ),
-        FilledButton(
-          onPressed: widget.busy ? null : _submit,
-          child: Text(widget.busy ? 'Installazione...' : 'Crea server'),
-        ),
-        if (widget.progress.isNotEmpty) ...[
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: panelCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: panelCardBorder),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('Nome del server', style: TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          TextField(controller: _name, decoration: const InputDecoration(prefixIcon: Icon(Icons.view_in_ar), hintText: 'Es. Il mio server')),
+          const SizedBox(height: 4),
+          const Text('Scegli un nome per identificare il tuo server.', style: TextStyle(color: panelMuted, fontSize: 12)),
           const SizedBox(height: 16),
-          for (final line in widget.progress) Text(line),
+          const Text('Cartella di destinazione', style: TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _root,
+                  decoration: const InputDecoration(prefixIcon: Icon(Icons.folder_outlined), hintText: 'Vuota: VoxelPanel ne crea una nei dati locali'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: widget.busy
+                    ? null
+                    : () async {
+                        final path = await widget.pickDirectory();
+                        if (path != null) {
+                          setState(() => _root.text = path);
+                        }
+                      },
+                icon: const Icon(Icons.folder_open_outlined),
+                label: const Text('Sfoglia'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Text('Metodo di installazione', style: TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(child: _methodButton(automatic: true, icon: Icons.auto_awesome, title: 'Automatica', subtitle: 'Scarica e configura tutto per te')),
+              const SizedBox(width: 12),
+              Expanded(child: _methodButton(automatic: false, icon: Icons.tune, title: 'Manuale', subtitle: 'Scegli ogni opzione manualmente')),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (_automatic) ...[
+            Row(
+              children: [
+                const Expanded(child: _FixedField(label: 'Software', value: 'Paper')),
+                const SizedBox(width: 12),
+                Expanded(child: _paperDropdown()),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Text('Memoria RAM', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final choice in widget.ramChoices)
+                  ChoiceChip(
+                    label: Text(choice.label),
+                    selected: _ramMax == choice.value,
+                    onSelected: widget.busy
+                        ? null
+                        : (_) => setState(() {
+                            _ramMax = choice.value;
+                            if (_ramMin.isEmpty) {
+                              _ramMin = widget.suggestedMin;
+                            }
+                          }),
+                  ),
+              ],
+            ),
+          ] else
+            ..._manualFields(),
+          const SizedBox(height: 8),
+          Material(
+            type: MaterialType.transparency,
+            child: CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _eula,
+            onChanged: widget.busy ? null : (value) => setState(() => _eula = value ?? false),
+            title: const Text("Accetto l'EULA di Minecraft (eula=true)"),
+            subtitle: const Text('È necessario accettare l\'EULA di Minecraft per creare il server.'),
+          ),
+          ),
+          if (_error.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(_error, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ),
+          FilledButton.icon(
+            onPressed: widget.busy ? null : _submit,
+            icon: const Icon(Icons.play_arrow),
+            label: Text(widget.busy ? 'Installazione...' : 'Crea server'),
+          ),
+          if (widget.progress.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            for (final line in widget.progress) Text(line),
+          ],
         ],
-      ],
+      ),
+    );
+  }
+
+  Widget _methodButton({required bool automatic, required IconData icon, required String title, required String subtitle}) {
+    final selected = _automatic == automatic;
+    return Material(
+      color: selected ? panelAccent : const Color(0xFF201E2C),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: widget.busy ? null : () => setState(() => _automatic = automatic),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Icon(icon, color: Colors.white),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    Text(subtitle, style: TextStyle(color: selected ? Colors.white70 : panelMuted, fontSize: 12)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
   Widget _paperDropdown() {
+    final latest = widget.paperVersions.isEmpty ? null : widget.paperVersions.first;
     return DropdownButtonFormField<String>(
       initialValue: _paper.isEmpty ? null : _paper,
-      decoration: const InputDecoration(labelText: 'Versione Paper', border: OutlineInputBorder()),
+      decoration: const InputDecoration(labelText: 'Versione'),
       items: [
         for (final version in widget.paperVersions)
-          DropdownMenuItem(value: version, child: Text(version)),
+          DropdownMenuItem(value: version, child: Text(version == latest ? '$version (Ultima)' : version)),
       ],
       onChanged: widget.busy ? null : (value) => setState(() => _paper = value ?? ''),
     );
@@ -341,6 +422,21 @@ class _CreateWizardBodyState extends State<CreateWizardBody> {
         jvmFlags: _flags.toList(),
         acceptEula: true,
       ),
+    );
+  }
+}
+
+class _FixedField extends StatelessWidget {
+  const _FixedField({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return InputDecorator(
+      decoration: InputDecoration(labelText: label),
+      child: Text(value),
     );
   }
 }

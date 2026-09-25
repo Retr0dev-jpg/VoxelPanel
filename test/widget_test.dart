@@ -87,6 +87,8 @@ void main() {
               ramMin: '2G',
               ramMax: '4G',
               port: 25565,
+              onlinePlayers: 0,
+              maxPlayers: 20,
               status: ServerStatus.stopped,
             ),
           ],
@@ -105,7 +107,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: CreateWizardBody(
+          body: ListView(
+            children: [
+              CreateWizardBody(
             paperVersions: const ['1.21.1'],
             ramChoices: const [RamChoice(megabytes: 2048, label: '2 GB', value: '2G')],
             jvmFlags: const [JvmFlagChoice(flag: '-XX:+UseG1GC', recommended: true)],
@@ -120,11 +124,15 @@ void main() {
             pickDirectory: () async => null,
             pickJar: () async => null,
             installJava: (_) async {},
+              ),
+            ],
           ),
         ),
       ),
     );
-    await tester.tap(find.text('Crea server'));
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Crea server'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Crea server'));
     await tester.pump();
     expect(find.text('Inserisci un nome.'), findsOneWidget);
   });

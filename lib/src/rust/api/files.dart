@@ -9,7 +9,16 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'types.dart';
 
-// These functions are ignored because they are not marked as `pub`: `from_settings`, `to_settings`
+// These functions are ignored because they are not marked as `pub`: `from_settings`, `open_directory`, `to_settings`
+
+Future<List<PropertyEntry>> listProperties({required String id}) =>
+    RustLib.instance.api.crateApiFilesListProperties(id: id);
+
+Future<void> saveProperties({
+  required String id,
+  required List<PropertyEntry> entries,
+}) =>
+    RustLib.instance.api.crateApiFilesSaveProperties(id: id, entries: entries);
 
 Future<ServerSettings> getSettings({required String id}) =>
     RustLib.instance.api.crateApiFilesGetSettings(id: id);
