@@ -9,6 +9,8 @@ mod frb_generated;
 mod install;
 mod java_runtime;
 mod jvm;
+mod launcher_settings;
+mod logging;
 mod net;
 mod paper;
 mod paths;

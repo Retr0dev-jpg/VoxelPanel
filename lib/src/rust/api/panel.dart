@@ -34,9 +34,6 @@ List<RamChoice> ramPresets() => RustLib.instance.api.crateApiPanelRamPresets();
 
 RamSuggestion suggestRam() => RustLib.instance.api.crateApiPanelSuggestRam();
 
-List<JvmFlagChoice> jvmFlagChoices() =>
-    RustLib.instance.api.crateApiPanelJvmFlagChoices();
-
 Future<List<JavaRuntimeInfo>> listRuntimes() =>
     RustLib.instance.api.crateApiPanelListRuntimes();
 

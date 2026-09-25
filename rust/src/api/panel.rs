@@ -127,6 +127,8 @@ pub fn app_paths() -> AppPaths {
         servers: text(layout.servers()),
         runtimes: text(layout.runtimes()),
         backups: text(layout.backups_root()),
+        cache: text(layout.cache()),
+        logs: text(layout.logs()),
         data: text(layout.root),
     }
 }
@@ -153,22 +155,13 @@ pub fn suggest_ram() -> RamSuggestion {
     }
 }
 
-#[flutter_rust_bridge::frb(sync)]
-pub fn jvm_flag_choices() -> Vec<JvmFlagChoice> {
-    crate::jvm::JVM_FLAG_CHOICES
-        .iter()
-        .map(|flag| JvmFlagChoice {
-            recommended: crate::jvm::DEFAULT_JVM_FLAGS.contains(flag),
-            flag: (*flag).to_string(),
-        })
-        .collect()
-}
-
 pub async fn list_runtimes() -> PanelResult<Vec<JavaRuntimeInfo>> {
     Ok(crate::java_runtime::collect(&Layout::app())
         .into_iter()
         .map(|runtime| JavaRuntimeInfo {
             major: runtime.major.unwrap_or(0),
+            managed: runtime.source == crate::java_runtime::RuntimeSource::Managed,
+            system: runtime.source == crate::java_runtime::RuntimeSource::System,
             name: runtime.name,
             path: runtime.home.to_string_lossy().to_string(),
         })
@@ -253,12 +246,12 @@ pub async fn start_server(id: String) -> PanelResult<()> {
 }
 
 pub async fn stop_server(id: String) -> PanelResult<()> {
-    process::stop(&id, process::DEFAULT_STOP_TIMEOUT).await
+    process::stop(&id, process::stop_timeout()).await
 }
 
 pub async fn restart_server(id: String) -> PanelResult<()> {
     if process::is_running(&id) {
-        process::stop(&id, process::DEFAULT_STOP_TIMEOUT).await?;
+        process::stop(&id, process::stop_timeout()).await?;
     }
     install::launch(&Layout::app(), &id).await
 }
@@ -268,7 +261,7 @@ pub async fn send_command(id: String, command: String) -> PanelResult<()> {
 }
 
 pub async fn shutdown_all() -> PanelResult<()> {
-    process::shutdown_all(process::DEFAULT_STOP_TIMEOUT).await;
+    process::shutdown_all(process::stop_timeout()).await;
     Ok(())
 }
 

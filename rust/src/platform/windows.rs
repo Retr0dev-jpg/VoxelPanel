@@ -97,3 +97,40 @@ pub fn open_directory(path: &Path) -> PanelResult<()> {
     }
     Ok(())
 }
+
+const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
+const RUN_VALUE: &str = "VoxelPanel";
+
+fn wide(value: &str) -> Vec<u16> {
+    value.encode_utf16().chain(std::iter::once(0)).collect()
+}
+
+/// Registers VoxelPanel in the per-user `Run` key.
+pub fn set_launch_at_startup(enabled: bool) -> PanelResult<()> {
+    use windows::core::PCWSTR;
+    use windows::Win32::System::Registry::{RegDeleteKeyValueW, RegSetKeyValueW, HKEY_CURRENT_USER, REG_SZ};
+
+    let key = wide(RUN_KEY);
+    let name = wide(RUN_VALUE);
+    if !enabled {
+        // Missing values are fine: the goal is that VoxelPanel does not start.
+        let _ = unsafe { RegDeleteKeyValueW(HKEY_CURRENT_USER, PCWSTR(key.as_ptr()), PCWSTR(name.as_ptr())) };
+        return Ok(());
+    }
+    let exe = std::env::current_exe()?;
+    let command = wide(&format!("\"{}\"", exe.display()));
+    let status = unsafe {
+        RegSetKeyValueW(
+            HKEY_CURRENT_USER,
+            PCWSTR(key.as_ptr()),
+            PCWSTR(name.as_ptr()),
+            REG_SZ.0,
+            Some(command.as_ptr() as *const core::ffi::c_void),
+            (command.len() * 2) as u32,
+        )
+    };
+    if status.is_err() {
+        return Err(PanelError::io(format!("Impossibile registrare l'avvio automatico ({})", status.0)));
+    }
+    Ok(())
+}

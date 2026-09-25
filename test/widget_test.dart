@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:voxel_panel/screens/server/console_tab.dart';
 import 'package:voxel_panel/src/providers.dart';
 import 'package:voxel_panel/src/rust/api/types.dart';
+import 'package:voxel_panel/src/settings.dart';
 import 'package:voxel_panel/widgets/create_wizard_body.dart';
 import 'package:voxel_panel/widgets/server_list_view.dart';
 
@@ -94,7 +95,8 @@ void main() {
           CreateWizardBody(
             paperVersions: const ['1.21.1'],
             ramChoices: const [RamChoice(megabytes: 2048, label: '2 GB', value: '2G')],
-            jvmFlags: const [JvmFlagChoice(flag: '-XX:+UseG1GC', recommended: true)],
+            jvmPresets: const [JvmPresetInfo(preset: JvmPreset.g1, flags: ['-XX:+UseG1GC'])],
+            defaultPreset: JvmPreset.g1,
             runtimes: const [],
             javaReleases: const [],
             suggestedMin: '2G',

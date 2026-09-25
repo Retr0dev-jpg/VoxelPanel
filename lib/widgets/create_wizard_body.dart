@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:voxel_panel/src/l10n.dart';
 import 'package:voxel_panel/src/rust/api/types.dart';
+import 'package:voxel_panel/src/settings.dart';
 import 'package:voxel_panel/src/theme.dart';
 import 'package:voxel_panel/widgets/common/panel_card.dart';
 
@@ -62,7 +63,8 @@ class CreateWizardBody extends StatefulWidget {
     super.key,
     required this.paperVersions,
     required this.ramChoices,
-    required this.jvmFlags,
+    required this.jvmPresets,
+    required this.defaultPreset,
     required this.runtimes,
     required this.javaReleases,
     required this.suggestedMin,
@@ -78,7 +80,8 @@ class CreateWizardBody extends StatefulWidget {
 
   final List<String> paperVersions;
   final List<RamChoice> ramChoices;
-  final List<JvmFlagChoice> jvmFlags;
+  final List<JvmPresetInfo> jvmPresets;
+  final JvmPreset defaultPreset;
   final List<JavaRuntimeInfo> runtimes;
   final List<JavaReleaseInfo> javaReleases;
   final String suggestedMin;
@@ -107,7 +110,10 @@ class _CreateWizardBodyState extends State<CreateWizardBody> {
   var _ramMax = '';
   var _eula = false;
   CreateIssue? _issue;
-  final _flags = <String>{};
+  late JvmPreset _preset = widget.defaultPreset;
+  late final _flags = TextEditingController(text: _presetFlags(widget.defaultPreset).join('\n'));
+
+  List<String> _presetFlags(JvmPreset preset) => widget.jvmPresets.where((info) => info.preset == preset).map((info) => info.flags).firstOrNull ?? const [];
 
   @override
   void initState() {
@@ -115,17 +121,13 @@ class _CreateWizardBodyState extends State<CreateWizardBody> {
     _ramMin = widget.suggestedMin;
     _ramMax = widget.suggestedMax;
     _paper = widget.paperVersions.isEmpty ? '' : widget.paperVersions.first;
-    for (final flag in widget.jvmFlags) {
-      if (flag.recommended) {
-        _flags.add(flag.flag);
-      }
-    }
   }
 
   @override
   void dispose() {
     _name.dispose();
     _root.dispose();
+    _flags.dispose();
     super.dispose();
   }
 
@@ -285,14 +287,31 @@ class _CreateWizardBodyState extends State<CreateWizardBody> {
       const SizedBox(height: 12),
       _ramDropdown(l.ramMax, _ramMax, (value) => _ramMax = value),
       const SizedBox(height: 12),
-      Text(l.jvmFlags),
-      for (final flag in widget.jvmFlags)
-        CheckboxListTile(
-          contentPadding: EdgeInsets.zero,
-          value: _flags.contains(flag.flag),
-          title: Text(flag.flag, style: const TextStyle(fontFamily: 'monospace')),
-          onChanged: widget.busy ? null : (checked) => setState(() => (checked ?? false) ? _flags.add(flag.flag) : _flags.remove(flag.flag)),
-        ),
+      DropdownButtonFormField<JvmPreset>(
+        initialValue: _preset,
+        decoration: InputDecoration(labelText: l.settingJvmPreset),
+        items: [
+          DropdownMenuItem(value: JvmPreset.aikar, child: Text(l.jvmPresetAikar)),
+          DropdownMenuItem(value: JvmPreset.g1, child: Text(l.jvmPresetG1)),
+          DropdownMenuItem(value: JvmPreset.zgc, child: Text(l.jvmPresetZgc)),
+          DropdownMenuItem(value: JvmPreset.none, child: Text(l.jvmPresetNone)),
+        ],
+        onChanged: widget.busy
+            ? null
+            : (value) => setState(() {
+                _preset = value ?? _preset;
+                _flags.text = _presetFlags(_preset).join('\n');
+              }),
+      ),
+      const SizedBox(height: 12),
+      TextField(
+        controller: _flags,
+        enabled: !widget.busy,
+        minLines: 3,
+        maxLines: 8,
+        style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+        decoration: InputDecoration(labelText: l.jvmFlags, helperText: l.jvmFlagsHint),
+      ),
     ];
   }
 
@@ -360,7 +379,7 @@ class _CreateWizardBodyState extends State<CreateWizardBody> {
         javaHome: _javaHome,
         ramMin: _ramMin,
         ramMax: _ramMax,
-        jvmFlags: _flags.toList(),
+        jvmFlags: _flags.text.split(RegExp(r'\s+')).where((flag) => flag.isNotEmpty).toList(),
         acceptEula: true,
       ),
     );

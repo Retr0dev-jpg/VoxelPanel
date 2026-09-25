@@ -56,16 +56,13 @@ pub struct RamSuggestion {
 }
 
 #[derive(Debug, Clone)]
-pub struct JvmFlagChoice {
-    pub flag: String,
-    pub recommended: bool,
-}
-
-#[derive(Debug, Clone)]
 pub struct JavaRuntimeInfo {
     pub name: String,
     pub major: u32,
     pub path: String,
+    /// Only managed runtimes can be deleted from the launcher.
+    pub managed: bool,
+    pub system: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -183,4 +180,6 @@ pub struct AppPaths {
     pub servers: String,
     pub runtimes: String,
     pub backups: String,
+    pub cache: String,
+    pub logs: String,
 }

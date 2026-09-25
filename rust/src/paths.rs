@@ -4,23 +4,54 @@
 
 use std::path::PathBuf;
 
+/// Resolved folders used by VoxelPanel. Folders can be moved from the launcher settings.
 pub struct Layout {
     pub root: PathBuf,
+    servers: Option<PathBuf>,
+    backups: Option<PathBuf>,
+    runtimes: Option<PathBuf>,
+    cache: Option<PathBuf>,
 }
 
 impl Layout {
     pub fn app() -> Self {
+        let paths = crate::launcher_settings::current().paths;
+        let custom = |value: &str| (!value.trim().is_empty()).then(|| PathBuf::from(value.trim()));
         Self {
             root: app_data_root(),
+            servers: custom(&paths.servers_dir),
+            backups: custom(&paths.backups_dir),
+            runtimes: custom(&paths.runtimes_dir),
+            cache: custom(&paths.cache_dir),
+        }
+    }
+
+    /// Default layout rooted at `root`, ignoring the settings.
+    #[cfg(test)]
+    pub fn at(root: PathBuf) -> Self {
+        Self {
+            root,
+            servers: None,
+            backups: None,
+            runtimes: None,
+            cache: None,
         }
     }
 
     pub fn runtimes(&self) -> PathBuf {
-        self.root.join("runtimes")
+        self.runtimes.clone().unwrap_or_else(|| self.root.join("runtimes"))
     }
 
     pub fn servers(&self) -> PathBuf {
-        self.root.join("servers")
+        self.servers.clone().unwrap_or_else(|| self.root.join("servers"))
+    }
+
+    pub fn cache(&self) -> PathBuf {
+        self.cache.clone().unwrap_or_else(|| self.root.join("cache"))
+    }
+
+    pub fn logs(&self) -> PathBuf {
+        self.root.join("logs")
     }
 
     pub fn catalog_file(&self) -> PathBuf {
@@ -28,7 +59,7 @@ impl Layout {
     }
 
     pub fn backups_root(&self) -> PathBuf {
-        self.root.join("backups")
+        self.backups.clone().unwrap_or_else(|| self.root.join("backups"))
     }
 
     pub fn backups(&self, server_id: &str) -> PathBuf {

@@ -167,9 +167,7 @@ mod tests {
 
     #[test]
     fn saves_and_lists_a_server() {
-        let layout = Layout {
-            root: std::env::temp_dir().join(format!("voxel-catalog-{}", uuid::Uuid::new_v4())),
-        };
+        let layout = Layout::at(std::env::temp_dir().join(format!("voxel-catalog-{}", uuid::Uuid::new_v4())));
         let root = layout.root.join("srv");
         let record = ServerRecord {
             id: "abc".into(),

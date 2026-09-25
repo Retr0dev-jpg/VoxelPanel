@@ -11,12 +11,12 @@ use std::sync::{Mutex, OnceLock};
 #[cfg(unix)]
 mod unix;
 #[cfg(unix)]
-pub use unix::{attach_child, configure_command, init, kill_tree, open_directory};
+pub use unix::{attach_child, configure_command, init, kill_tree, open_directory, set_launch_at_startup};
 
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]
-pub use windows::{attach_child, configure_command, init, kill_tree, open_directory};
+pub use windows::{attach_child, configure_command, init, kill_tree, open_directory, set_launch_at_startup};
 
 pub const JAVA_BINARY: &str = if cfg!(windows) { "java.exe" } else { "java" };
 

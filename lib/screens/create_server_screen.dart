@@ -4,10 +4,12 @@
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxel_panel/src/l10n.dart';
 import 'package:voxel_panel/src/labels.dart';
 import 'package:voxel_panel/src/rust/api/panel.dart';
 import 'package:voxel_panel/src/rust/api/types.dart';
+import 'package:voxel_panel/src/settings.dart';
 import 'package:voxel_panel/src/theme.dart';
 import 'package:voxel_panel/widgets/app_sidebar.dart';
 import 'package:voxel_panel/widgets/common/feedback.dart';
@@ -15,19 +17,20 @@ import 'package:voxel_panel/widgets/common/panel_card.dart';
 import 'package:voxel_panel/widgets/common/section_header.dart';
 import 'package:voxel_panel/widgets/create_wizard_body.dart';
 
-class CreateServerScreen extends StatefulWidget {
+class CreateServerScreen extends ConsumerStatefulWidget {
   const CreateServerScreen({super.key, this.startOnImport = false});
 
   final bool startOnImport;
 
   @override
-  State<CreateServerScreen> createState() => _CreateServerScreenState();
+  ConsumerState<CreateServerScreen> createState() => _CreateServerScreenState();
 }
 
-class _CreateServerScreenState extends State<CreateServerScreen> {
+class _CreateServerScreenState extends ConsumerState<CreateServerScreen> {
   List<String> _versions = [];
   List<RamChoice> _ram = [];
-  List<JvmFlagChoice> _flags = [];
+  List<JvmPresetInfo> _presets = [];
+  var _defaultPreset = JvmPreset.aikar;
   List<JavaRuntimeInfo> _runtimes = [];
   List<JavaReleaseInfo> _releases = [];
   var _min = '2G';
@@ -62,6 +65,7 @@ class _CreateServerScreenState extends State<CreateServerScreen> {
     try {
       final results = await Future.wait([listPaperVersions(), listJavaReleases(), listRuntimes()]);
       final suggestion = suggestRam();
+      final defaults = (await ref.read(launcherSettingsProvider.future)).defaults;
       if (!mounted) {
         return;
       }
@@ -70,9 +74,10 @@ class _CreateServerScreenState extends State<CreateServerScreen> {
         _releases = results[1] as List<JavaReleaseInfo>;
         _runtimes = results[2] as List<JavaRuntimeInfo>;
         _ram = ramPresets();
-        _flags = jvmFlagChoices();
-        _min = suggestion.ramMin;
-        _max = suggestion.ramMax;
+        _presets = jvmPresets();
+        _defaultPreset = defaults.jvmPreset;
+        _min = defaults.ramMin.isEmpty ? suggestion.ramMin : defaults.ramMin;
+        _max = defaults.ramMax.isEmpty ? suggestion.ramMax : defaults.ramMax;
         _ready = true;
       });
     } catch (error) {
@@ -138,7 +143,8 @@ class _CreateServerScreenState extends State<CreateServerScreen> {
     return CreateWizardBody(
       paperVersions: _versions,
       ramChoices: _ram,
-      jvmFlags: _flags,
+      jvmPresets: _presets,
+      defaultPreset: _defaultPreset,
       runtimes: _runtimes,
       javaReleases: _releases,
       suggestedMin: _min,

@@ -10,11 +10,22 @@ use crate::platform;
 use crate::scan::derive_java_version;
 use crate::{PanelError, PanelResult, ProgressTx};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RuntimeSource {
+    /// Downloaded by VoxelPanel into the runtimes folder.
+    Managed,
+    /// Bundled inside a server folder (`runtime/`) or referenced by a server.
+    Server,
+    /// Installed on the system (JAVA_HOME, PATH or the usual install folders).
+    System,
+}
+
 #[derive(Debug, Clone)]
 pub struct JavaRuntime {
     pub name: String,
     pub major: Option<u32>,
     pub home: PathBuf,
+    pub source: RuntimeSource,
 }
 
 #[derive(Debug, Deserialize)]
@@ -76,6 +87,10 @@ pub fn parse_release_file(content: &str) -> Option<u32> {
 }
 
 pub fn scan_runtime_dir(runtime_root: &Path) -> Vec<JavaRuntime> {
+    scan_dir(runtime_root, RuntimeSource::Managed)
+}
+
+fn scan_dir(runtime_root: &Path, source: RuntimeSource) -> Vec<JavaRuntime> {
     let mut runtimes = Vec::new();
     let Ok(entries) = std::fs::read_dir(runtime_root) else {
         return runtimes;
@@ -92,6 +107,7 @@ pub fn scan_runtime_dir(runtime_root: &Path) -> Vec<JavaRuntime> {
             major: derive_from_home(&home),
             name: entry.file_name().to_string_lossy().to_string(),
             home,
+            source,
         });
     }
     sort_runtimes(&mut runtimes);
@@ -106,23 +122,76 @@ pub fn collect(layout: &crate::paths::Layout) -> Vec<JavaRuntime> {
     let mut runtimes = scan_runtime_dir(&layout.runtimes());
     if let Ok(records) = crate::catalog::list(layout) {
         for record in records {
-            push_unique(&mut runtimes, scan_runtime_dir(&record.root.join("runtime")));
+            push_unique(&mut runtimes, scan_dir(&record.root.join("runtime"), RuntimeSource::Server));
             if let Some(home) = record.java_home {
                 if java_executable(&home).exists() {
-                    push_unique(
-                        &mut runtimes,
-                        vec![JavaRuntime {
-                            major: derive_from_home(&home),
-                            name: home.file_name().and_then(|name| name.to_str()).unwrap_or("java").to_string(),
-                            home,
-                        }],
-                    );
+                    push_unique(&mut runtimes, vec![runtime_at(home, RuntimeSource::Server)]);
                 }
             }
         }
     }
+    push_unique(&mut runtimes, detect_system());
     sort_runtimes(&mut runtimes);
     runtimes
+}
+
+fn runtime_at(home: PathBuf, source: RuntimeSource) -> JavaRuntime {
+    let name = home
+        .ancestors()
+        .filter_map(|path| path.file_name().and_then(|name| name.to_str()))
+        .find(|name| !matches!(*name, "Home" | "Contents"))
+        .unwrap_or("java")
+        .to_string();
+    JavaRuntime {
+        major: derive_from_home(&home),
+        name,
+        home,
+        source,
+    }
+}
+
+/// Folders where Java installers usually put JDKs on each system.
+fn system_roots() -> Vec<PathBuf> {
+    let home = dirs::home_dir().unwrap_or_default();
+    if cfg!(windows) {
+        let program_files = std::env::var_os("ProgramFiles").map(PathBuf::from).unwrap_or_else(|| PathBuf::from(r"C:\Program Files"));
+        ["Java", "Eclipse Adoptium", "Microsoft", "Zulu", "Amazon Corretto", "BellSoft"]
+            .iter()
+            .map(|vendor| program_files.join(vendor))
+            .collect()
+    } else if cfg!(target_os = "macos") {
+        vec![PathBuf::from("/Library/Java/JavaVirtualMachines"), home.join("Library/Java/JavaVirtualMachines")]
+    } else {
+        vec![PathBuf::from("/usr/lib/jvm"), PathBuf::from("/opt/java"), home.join(".sdkman/candidates/java"), home.join(".jdks")]
+    }
+}
+
+/// Java runtimes already installed on the machine (JAVA_HOME, PATH, vendor folders).
+pub fn detect_system() -> Vec<JavaRuntime> {
+    let mut found: Vec<JavaRuntime> = Vec::new();
+    let mut homes: Vec<PathBuf> = Vec::new();
+    if let Some(java_home) = std::env::var_os("JAVA_HOME") {
+        homes.push(PathBuf::from(java_home));
+    }
+    if let Some(path) = std::env::var_os("PATH") {
+        for dir in std::env::split_paths(&path) {
+            let candidate = dir.join(platform::JAVA_BINARY);
+            if let Ok(real) = std::fs::canonicalize(&candidate) {
+                if let Some(home) = real.parent().and_then(Path::parent) {
+                    homes.push(home.to_path_buf());
+                }
+            }
+        }
+    }
+    for home in homes {
+        if let Some(home) = platform::resolve_java_home(&home) {
+            push_unique(&mut found, vec![runtime_at(home, RuntimeSource::System)]);
+        }
+    }
+    for root in system_roots() {
+        push_unique(&mut found, scan_dir(&root, RuntimeSource::System));
+    }
+    found
 }
 
 fn push_unique(target: &mut Vec<JavaRuntime>, incoming: Vec<JavaRuntime>) {

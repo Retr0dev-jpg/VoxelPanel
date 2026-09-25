@@ -7,12 +7,15 @@ import 'dart:ui' show AppExitResponse;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:local_notifier/local_notifier.dart';
 import 'package:voxel_panel/screens/home_screen.dart';
-import 'package:voxel_panel/screens/launcher_settings_screen.dart';
+import 'package:voxel_panel/screens/settings/launcher_settings_screen.dart';
+import 'package:voxel_panel/src/desktop_integration.dart';
 import 'package:voxel_panel/src/l10n.dart';
-import 'package:voxel_panel/src/theme.dart';
 import 'package:voxel_panel/src/rust/api/panel.dart';
 import 'package:voxel_panel/src/rust/frb_generated.dart';
+import 'package:voxel_panel/src/settings.dart';
+import 'package:voxel_panel/src/theme.dart';
 import 'package:voxel_panel/widgets/window_title_bar.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -25,17 +28,18 @@ Future<void> main() async {
     await windowManager.focus();
   });
   await RustLib.init();
+  await localNotifier.setup(appName: 'VoxelPanel').catchError((_) {});
   runApp(const ProviderScope(child: VoxelApp()));
 }
 
-class VoxelApp extends StatefulWidget {
+class VoxelApp extends ConsumerStatefulWidget {
   const VoxelApp({super.key});
 
   @override
-  State<VoxelApp> createState() => _VoxelAppState();
+  ConsumerState<VoxelApp> createState() => _VoxelAppState();
 }
 
-class _VoxelAppState extends State<VoxelApp> with WidgetsBindingObserver {
+class _VoxelAppState extends ConsumerState<VoxelApp> with WidgetsBindingObserver {
   final _navigatorKey = GlobalKey<NavigatorState>();
 
   @override
@@ -50,42 +54,41 @@ class _VoxelAppState extends State<VoxelApp> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  /// Exits not triggered by the window (logout, system shutdown) still stop the servers.
   @override
   Future<AppExitResponse> didRequestAppExit() async {
-    if (!anyServerRunning()) {
-      return AppExitResponse.exit;
+    await shutdownAll();
+    return AppExitResponse.exit;
+  }
+
+  void _openSettings() {
+    final navigator = _navigatorKey.currentState;
+    if (navigator == null) {
+      return;
     }
-    final context = _navigatorKey.currentContext;
-    if (context == null || !context.mounted) {
-      await shutdownAll();
-      return AppExitResponse.exit;
+    var open = false;
+    navigator.popUntil((route) {
+      open = open || route.settings.name == LauncherSettingsScreen.routeName;
+      return true;
+    });
+    if (!open) {
+      navigator.push(MaterialPageRoute(settings: const RouteSettings(name: LauncherSettingsScreen.routeName), builder: (_) => const LauncherSettingsScreen()));
     }
-    final l = context.l10n;
-    final leave = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l.exitTitle),
-        content: Text(l.exitMessage),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.cancel)),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(l.exitConfirm)),
-        ],
-      ),
-    );
-    if (leave == true) {
-      await shutdownAll();
-      return AppExitResponse.exit;
-    }
-    return AppExitResponse.cancel;
   }
 
   @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(settingsValueProvider);
+    final appearance = settings?.appearance;
+    final accent = appearance == null ? defaultAccent : Color(appearance.accentColor);
+    final density = appearance?.compact == true ? VisualDensity.compact : VisualDensity.standard;
     return MaterialApp(
       navigatorKey: _navigatorKey,
       title: 'VoxelPanel',
       debugShowCheckedModeBanner: false,
-      theme: voxelTheme(),
+      theme: voxelTheme(brightness: Brightness.light, accent: accent, density: density),
+      darkTheme: voxelTheme(brightness: Brightness.dark, accent: accent, density: density),
+      themeMode: appearance == null ? ThemeMode.dark : themeModeOf(appearance.theme),
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -93,69 +96,23 @@ class _VoxelAppState extends State<VoxelApp> with WidgetsBindingObserver {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('it'),
-      builder: (context, child) => _LauncherShell(child: child ?? const SizedBox.shrink()),
-      home: const HomeScreen(),
-    );
-  }
-}
-
-class _LauncherShell extends StatefulWidget {
-  const _LauncherShell({required this.child});
-
-  final Widget child;
-
-  @override
-  State<_LauncherShell> createState() => _LauncherShellState();
-}
-
-class _LauncherShellState extends State<_LauncherShell> {
-  final _overlayKey = GlobalKey<OverlayState>();
-  OverlayEntry? _settings;
-
-  void _toggleSettings() {
-    final overlay = _overlayKey.currentState;
-    if (overlay == null) {
-      return;
-    }
-    if (_settings != null) {
-      _settings!.remove();
-      _settings = null;
-      return;
-    }
-    _settings = OverlayEntry(
-      builder: (context) => Positioned.fill(
-        top: 40,
-        child: Material(
-          color: context.voxel.background,
-          child: LauncherSettingsScreen(onClose: _toggleSettings),
-        ),
-      ),
-    );
-    overlay.insert(_settings!);
-  }
-
-  @override
-  void dispose() {
-    _settings?.remove();
-    _settings = null;
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Overlay(
-      key: _overlayKey,
-      initialEntries: [
-        OverlayEntry(
-          builder: (context) => Column(
-            children: [
-              WindowTitleBar(onSettings: _toggleSettings),
-              Expanded(child: widget.child),
-            ],
+      locale: settings == null ? null : localeOf(settings.general.language),
+      builder: (context, child) {
+        final media = MediaQuery.of(context);
+        return MediaQuery(
+          data: media.copyWith(textScaler: TextScaler.linear(appearance?.textScale ?? 1.0)),
+          child: DesktopIntegration(
+            navigatorKey: _navigatorKey,
+            child: Column(
+              children: [
+                WindowTitleBar(onSettings: _openSettings),
+                Expanded(child: child ?? const SizedBox.shrink()),
+              ],
+            ),
           ),
-        ),
-      ],
+        );
+      },
+      home: const HomeScreen(),
     );
   }
 }

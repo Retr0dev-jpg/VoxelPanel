@@ -7,13 +7,15 @@ import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxel_panel/src/l10n.dart';
 import 'package:voxel_panel/src/rust/api/panel.dart';
+import 'package:voxel_panel/src/settings.dart';
 import 'package:voxel_panel/src/theme.dart';
 import 'package:voxel_panel/widgets/common/feedback.dart';
 import 'package:voxel_panel/widgets/minecraft_log.dart';
 
-const consoleMaxLines = 2000;
+const defaultConsoleMaxLines = 2000;
 const _historyLimit = 100;
 
 enum LogLevel { info, warn, error }
@@ -31,21 +33,42 @@ LogLevel levelOf(String line) {
   return LogLevel.info;
 }
 
+class ConsoleLine {
+  ConsoleLine(this.text, this.time);
+
+  final String text;
+  final DateTime time;
+
+  String get timestamp {
+    String two(int value) => value.toString().padLeft(2, '0');
+    return '[${two(time.hour)}:${two(time.minute)}:${two(time.second)}]';
+  }
+}
+
 /// Fixed-size buffer: the oldest lines are dropped once [capacity] is reached.
 class LineBuffer {
-  LineBuffer(this.capacity);
+  LineBuffer(this._capacity);
 
-  final int capacity;
-  final _lines = ListQueue<String>();
+  int _capacity;
+  final _lines = ListQueue<ConsoleLine>();
 
   int get length => _lines.length;
-  Iterable<String> get lines => _lines;
+  int get capacity => _capacity;
+  Iterable<String> get lines => _lines.map((line) => line.text);
+  Iterable<ConsoleLine> get entries => _lines;
 
-  void add(String line) {
-    if (_lines.length >= capacity) {
+  set capacity(int value) {
+    _capacity = value;
+    while (_lines.length > _capacity) {
       _lines.removeFirst();
     }
-    _lines.addLast(line);
+  }
+
+  void add(String line, [DateTime? time]) {
+    if (_lines.length >= _capacity) {
+      _lines.removeFirst();
+    }
+    _lines.addLast(ConsoleLine(line, time ?? DateTime.now()));
   }
 
   void clear() => _lines.clear();
@@ -83,18 +106,18 @@ class CommandHistory {
   }
 }
 
-class ConsoleTab extends StatefulWidget {
+class ConsoleTab extends ConsumerStatefulWidget {
   const ConsoleTab({super.key, required this.serverId, required this.running});
 
   final String serverId;
   final bool running;
 
   @override
-  State<ConsoleTab> createState() => _ConsoleTabState();
+  ConsumerState<ConsoleTab> createState() => _ConsoleTabState();
 }
 
-class _ConsoleTabState extends State<ConsoleTab> {
-  final _buffer = LineBuffer(consoleMaxLines);
+class _ConsoleTabState extends ConsumerState<ConsoleTab> {
+  final _buffer = LineBuffer(defaultConsoleMaxLines);
   final _history = CommandHistory();
   final _input = TextEditingController();
   final _search = TextEditingController();
@@ -156,13 +179,13 @@ class _ConsoleTabState extends State<ConsoleTab> {
     }
   }
 
-  List<String> get _visible {
+  List<ConsoleLine> get _visible {
     final query = _search.text.trim().toLowerCase();
-    return _buffer.lines.where((line) {
-      if (!_levels.contains(levelOf(line))) {
+    return _buffer.entries.where((line) {
+      if (!_levels.contains(levelOf(line.text))) {
         return false;
       }
-      return query.isEmpty || line.toLowerCase().contains(query);
+      return query.isEmpty || line.text.toLowerCase().contains(query);
     }).toList();
   }
 
@@ -198,6 +221,8 @@ class _ConsoleTabState extends State<ConsoleTab> {
   Widget build(BuildContext context) {
     final l = context.l10n;
     final colors = context.voxel;
+    final console = ref.watch(settingsValueProvider.select((settings) => settings?.console));
+    _buffer.capacity = console?.maxLines ?? defaultConsoleMaxLines;
     final visible = _visible;
     return Padding(
       padding: const EdgeInsets.fromLTRB(28, 12, 28, 20),
@@ -230,7 +255,7 @@ class _ConsoleTabState extends State<ConsoleTab> {
               IconButton(
                 tooltip: l.consoleCopy,
                 onPressed: () async {
-                  await Clipboard.setData(ClipboardData(text: visible.join('\n')));
+                  await Clipboard.setData(ClipboardData(text: visible.map((line) => line.text).join('\n')));
                   if (context.mounted) {
                     showMessage(context, l.copied);
                   }
@@ -261,7 +286,15 @@ class _ConsoleTabState extends State<ConsoleTab> {
                         itemCount: visible.length,
                         itemBuilder: (context, index) => Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 1),
-                          child: DefaultTextStyle.merge(style: const TextStyle(color: Color(0xFFDDDDDD)), child: MinecraftLogLine(visible[index])),
+                          child: DefaultTextStyle.merge(
+                            style: const TextStyle(color: Color(0xFFDDDDDD)),
+                            child: MinecraftLogLine(
+                              visible[index].text,
+                              fontSize: console?.fontSize ?? 13,
+                              wrap: console?.wrap ?? true,
+                              prefix: console?.timestamps == true ? visible[index].timestamp : null,
+                            ),
+                          ),
                         ),
                       ),
                     ),

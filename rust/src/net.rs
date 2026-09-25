@@ -6,13 +6,33 @@ use crate::Progress;
 use std::path::Path;
 use std::time::Duration;
 
+fn client_cache() -> &'static std::sync::Mutex<Option<reqwest::Client>> {
+    static CLIENT: std::sync::OnceLock<std::sync::Mutex<Option<reqwest::Client>>> = std::sync::OnceLock::new();
+    CLIENT.get_or_init(|| std::sync::Mutex::new(None))
+}
+
+/// Shared client honouring the proxy and timeout from the launcher settings.
 pub fn http() -> reqwest::Client {
-    reqwest::Client::builder()
-        .user_agent("VoxelPanel/1.0")
-        .connect_timeout(Duration::from_secs(30))
-        .timeout(Duration::from_secs(600))
-        .build()
-        .expect("client http")
+    let mut cached = client_cache().lock().unwrap_or_else(|error| error.into_inner());
+    if let Some(client) = cached.as_ref() {
+        return client.clone();
+    }
+    let network = crate::launcher_settings::current().network;
+    let mut builder = reqwest::Client::builder()
+        .user_agent(concat!("VoxelPanel/", env!("CARGO_PKG_VERSION"), " (+https://github.com/Retr0dev-jpg/VoxelPanel)"))
+        .connect_timeout(Duration::from_secs(u64::from(network.timeout_secs)))
+        .read_timeout(Duration::from_secs(u64::from(network.timeout_secs) * 4));
+    if let Ok(proxy) = reqwest::Proxy::all(network.proxy.trim()) {
+        builder = builder.proxy(proxy);
+    }
+    let client = builder.build().unwrap_or_default();
+    *cached = Some(client.clone());
+    client
+}
+
+/// Called when the network settings change.
+pub fn reset_client() {
+    *client_cache().lock().unwrap_or_else(|error| error.into_inner()) = None;
 }
 
 pub async fn download(

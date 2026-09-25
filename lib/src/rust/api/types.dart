@@ -7,24 +7,33 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 class AppPaths {
   final String data;
   final String servers;
   final String runtimes;
   final String backups;
+  final String cache;
+  final String logs;
 
   const AppPaths({
     required this.data,
     required this.servers,
     required this.runtimes,
     required this.backups,
+    required this.cache,
+    required this.logs,
   });
 
   @override
   int get hashCode =>
-      data.hashCode ^ servers.hashCode ^ runtimes.hashCode ^ backups.hashCode;
+      data.hashCode ^
+      servers.hashCode ^
+      runtimes.hashCode ^
+      backups.hashCode ^
+      cache.hashCode ^
+      logs.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -34,7 +43,9 @@ class AppPaths {
           data == other.data &&
           servers == other.servers &&
           runtimes == other.runtimes &&
-          backups == other.backups;
+          backups == other.backups &&
+          cache == other.cache &&
+          logs == other.logs;
 }
 
 class AutoInstallRequest {
@@ -193,14 +204,25 @@ class JavaRuntimeInfo {
   final int major;
   final String path;
 
+  /// Only managed runtimes can be deleted from the launcher.
+  final bool managed;
+  final bool system;
+
   const JavaRuntimeInfo({
     required this.name,
     required this.major,
     required this.path,
+    required this.managed,
+    required this.system,
   });
 
   @override
-  int get hashCode => name.hashCode ^ major.hashCode ^ path.hashCode;
+  int get hashCode =>
+      name.hashCode ^
+      major.hashCode ^
+      path.hashCode ^
+      managed.hashCode ^
+      system.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -209,25 +231,9 @@ class JavaRuntimeInfo {
           runtimeType == other.runtimeType &&
           name == other.name &&
           major == other.major &&
-          path == other.path;
-}
-
-class JvmFlagChoice {
-  final String flag;
-  final bool recommended;
-
-  const JvmFlagChoice({required this.flag, required this.recommended});
-
-  @override
-  int get hashCode => flag.hashCode ^ recommended.hashCode;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is JvmFlagChoice &&
-          runtimeType == other.runtimeType &&
-          flag == other.flag &&
-          recommended == other.recommended;
+          path == other.path &&
+          managed == other.managed &&
+          system == other.system;
 }
 
 class ManualInstallRequest {

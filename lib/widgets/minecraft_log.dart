@@ -220,15 +220,28 @@ void _applySection(String code, _Style style) {
 }
 
 class MinecraftLogLine extends StatelessWidget {
-  const MinecraftLogLine(this.line, {super.key});
+  const MinecraftLogLine(this.line, {super.key, this.fontSize = 13, this.wrap = true, this.prefix});
 
   final String line;
+  final double fontSize;
+  final bool wrap;
+
+  /// Shown before the line in a muted color (e.g. a timestamp).
+  final String? prefix;
 
   @override
   Widget build(BuildContext context) {
     return Text.rich(
-      TextSpan(children: minecraftLogSpans(line)),
-      style: const TextStyle(fontFamily: 'monospace', fontFamilyFallback: ['Consolas', 'Menlo', 'DejaVu Sans Mono'], fontSize: 13, height: 1.3),
+      TextSpan(
+        children: [
+          if (prefix != null) TextSpan(text: '$prefix ', style: const TextStyle(color: Color(0xFF888888))),
+          ...minecraftLogSpans(line),
+        ],
+      ),
+      softWrap: wrap,
+      overflow: wrap ? TextOverflow.clip : TextOverflow.ellipsis,
+      maxLines: wrap ? null : 1,
+      style: TextStyle(fontFamily: 'monospace', fontFamilyFallback: const ['Consolas', 'Menlo', 'DejaVu Sans Mono'], fontSize: fontSize, height: 1.3),
     );
   }
 }

@@ -14,6 +14,7 @@ L’interfaccia è in Flutter (Material 3, italiano e inglese). Il motore è in 
 - Console con cronologia dei comandi (frecce su e giù), ricerca, filtro per livello, copia e limite di righe.
 - Modifica `server.properties`, gestisce plugin locali e da Modrinth, mondi, backup e ripristino.
 - Rinomina ed elimina i server (anche più server insieme), con scelta se cancellare file e backup.
+- Impostazioni del launcher: lingua, tema chiaro o scuro con colore di accento, avvio con il sistema, chiusura nel tray, cartelle di server, backup, runtime e cache (spostabili con migrazione guidata), runtime Java installati e di sistema con versione preferita, valori predefiniti per i nuovi server (RAM, preset JVM Aikar/G1/ZGC, porta), console, backup (conservazione, compressione, esclusioni), proxy e timeout di rete, chiave CurseForge, notifiche desktop, log dell'app, esportazione e importazione.
 
 La rete serve solo per installare o aggiornare Java, Paper o un plugin. Stato, console e file restano sul disco.
 
@@ -33,7 +34,7 @@ Su Linux la scelta delle cartelle usa `zenity` o `kdialog`. L’app per macOS no
 
 ## Dati locali
 
-Nella cartella dati l’indice sta in `catalog.json` e i JDK condivisi in `runtimes/`. Ogni server è una cartella scelta dall’utente (di default `servers/<id>/`) con `server.json`, jar Paper, `eula.txt`, `server.properties`, `plugins/`, mondi e `logs/`.
+Nella cartella dati ci sono `settings.json` (impostazioni del launcher, con numero di schema e migrazioni automatiche) e `logs/` (log giornalieri dell’app, conservati 7 giorni). L’indice dei server sta in `catalog.json` e i JDK condivisi in `runtimes/`. Ogni server è una cartella scelta dall’utente (di default `servers/<id>/`) con `server.json`, jar Paper, `eula.txt`, `server.properties`, `plugins/`, mondi e `logs/`.
 
 I backup stanno in `backups/`, fuori dalla cartella del server.
 
@@ -42,7 +43,10 @@ I backup stanno in `backups/`, fuori dalla cartella del server.
 - `rust/src/api/`: funzioni esposte a Flutter. Gli errori sono `PanelError` (codice più messaggio), le operazioni lunghe inviano `ProgressEvent` in tempo reale, `watch_events` trasmette lo stato di runtime di ogni server.
 - `rust/src/process.rs`: supervisor dei processi (stato, giocatori, uscita, campionamento CPU e RAM).
 - `rust/src/platform/`: codice specifico per sistema operativo (eseguibile Java, gruppi di processi e job object, arresto forzato, script di avvio, apertura cartelle).
-- `lib/src/providers.dart`: stato Riverpod (lista dei server, dettagli, runtime).
+- `rust/src/launcher_settings.rs`: lettura, migrazione, validazione e salvataggio delle impostazioni; spostamento delle cartelle gestite.
+- `lib/src/providers.dart`, `lib/src/settings.dart`: stato Riverpod (server, runtime, impostazioni).
+- `lib/src/desktop_integration.dart`: chiusura della finestra, tray, notifiche e controllo aggiornamenti.
+- `lib/screens/settings/`: schermata delle impostazioni divisa per sezioni.
 - `lib/screens/server/`: una tab per file (panoramica, console, proprietà, plugin, mondi, backup).
 - `lib/widgets/common/`: widget condivisi.
 - `lib/l10n/`: testi dell’interfaccia (`app_it.arb` è il modello, `app_en.arb` la traduzione).
@@ -54,7 +58,7 @@ flutter pub get
 flutter run -d windows   # oppure linux, macos
 ```
 
-Su Linux servono `clang cmake ninja-build pkg-config libgtk-3-dev`.
+Su Linux servono `clang cmake ninja-build pkg-config libgtk-3-dev libnotify-dev libayatana-appindicator3-dev`.
 
 Dopo ogni modifica alle funzioni in `rust/src/api/` vanno rigenerati i binding:
 

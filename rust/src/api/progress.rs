@@ -34,6 +34,7 @@ where
     match operation(tx).await {
         Ok(value) => {
             let (message, server_id) = done_message(&value);
+            tracing::info!(stage = done_stage, "{message}");
             let _ = sink.add(ProgressEvent {
                 stage: done_stage.to_string(),
                 message,
@@ -45,6 +46,7 @@ where
             Ok(())
         }
         Err(error) => {
+            tracing::error!(stage = done_stage, "{}", error.message);
             let _ = sink.add(ProgressEvent {
                 stage: "Errore".into(),
                 message: error.message.clone(),

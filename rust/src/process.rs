@@ -16,7 +16,6 @@ use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System};
 
 use crate::{PanelError, PanelResult};
 
-pub const DEFAULT_STOP_TIMEOUT: Duration = Duration::from_secs(30);
 const LOG_CAPACITY: usize = 5000;
 const SAMPLE_INTERVAL: Duration = Duration::from_secs(2);
 
@@ -101,6 +100,10 @@ fn lock() -> std::sync::MutexGuard<'static, Supervisor> {
 fn events() -> &'static broadcast::Sender<RuntimeSnapshot> {
     static EVENTS: OnceLock<broadcast::Sender<RuntimeSnapshot>> = OnceLock::new();
     EVENTS.get_or_init(|| broadcast::channel(256).0)
+}
+
+pub fn stop_timeout() -> Duration {
+    Duration::from_secs(u64::from(crate::launcher_settings::current().general.stop_timeout_secs))
 }
 
 pub fn subscribe_events() -> broadcast::Receiver<RuntimeSnapshot> {
@@ -313,6 +316,7 @@ pub async fn start(id: &str, program: &Path, args: &[String], cwd: &Path) -> Pan
         runtime.pid = Some(spawned.pid);
         runtime.started_unix = Some(crate::paths::unix_now());
     });
+    tracing::info!(server = id, pid = spawned.pid, "server avviato");
     LogHub::push(&logs, format!("Processo avviato, PID {}.", spawned.pid));
     Ok(())
 }
@@ -335,6 +339,12 @@ fn mark_exited(id: &str, pid: u32, code: Option<i32>) {
         runtime.memory_bytes = 0;
     });
     if matched {
+        let crashed = snapshot(id).crashed;
+        if crashed {
+            tracing::warn!(server = id, pid, ?code, "server terminato in modo inatteso");
+        } else {
+            tracing::info!(server = id, pid, ?code, "server fermato");
+        }
         let text = match code {
             Some(code) => format!("Processo {pid} terminato (codice {code})."),
             None => format!("Processo {pid} terminato."),
@@ -382,6 +392,7 @@ pub async fn stop(id: &str, timeout: Duration) -> PanelResult<()> {
     if wait_exit(id, pid, timeout).await {
         return Ok(());
     }
+    tracing::warn!(server = id, pid, "arresto oltre il timeout, chiusura forzata");
     LogHub::push(&ensure_logs(id), "Arresto oltre il timeout: chiusura forzata.".into());
     crate::platform::kill_tree(pid).await;
     if !wait_exit(id, pid, Duration::from_secs(5)).await {

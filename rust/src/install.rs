@@ -49,9 +49,9 @@ pub async fn install_auto(
     emit(progress, "Java", format!("Versione Paper {}.", request.paper_version), None);
     let required = crate::paper::required_java(&request.paper_version).await?;
     emit(progress, "Java", format!("Java richiesto: {required}."), None);
-    let java_home = crate::java_runtime::ensure_major(&layout.runtimes(), required, progress).await?;
+    let java_home = java_for_major(layout, required, progress).await?;
     let jar = crate::paper::download_paper(&request.paper_version, &root, progress).await?;
-    let (auto_min, auto_max, total) = crate::ram::suggest();
+    let (auto_min, auto_max, total) = default_ram();
     let ram_min = choose_ram(&request.ram_min, &auto_min)?;
     let ram_max = choose_ram(&request.ram_max, &auto_max)?;
     emit(
@@ -92,8 +92,9 @@ pub async fn install_manual(
     if !request.accept_eula {
         return Err("Devi accettare l'EULA di Minecraft per creare il server.".into());
     }
-    let ram_min = choose_ram(&request.ram_min, "2G")?;
-    let ram_max = choose_ram(&request.ram_max, "4G")?;
+    let (auto_min, auto_max, _) = default_ram();
+    let ram_min = choose_ram(&request.ram_min, &auto_min)?;
+    let ram_max = choose_ram(&request.ram_max, &auto_max)?;
     let jvm_flags = crate::jvm::sanitize_flags(&request.jvm_flags)?;
     let id = Uuid::new_v4().to_string();
     let root = prepare_root(layout, &request.root, &id)?;
@@ -137,6 +138,30 @@ pub async fn install_manual(
 pub async fn install_java(layout: &Layout, major: u32, progress: &crate::ProgressTx) -> crate::PanelResult<String> {
     let home = crate::java_runtime::ensure_major(&layout.runtimes(), major, progress).await?;
     Ok(home.to_string_lossy().to_string())
+}
+
+/// Uses the runtime chosen in the launcher settings for this major, otherwise a managed one.
+async fn java_for_major(layout: &Layout, major: u32, progress: &crate::ProgressTx) -> crate::PanelResult<PathBuf> {
+    let preferred = crate::launcher_settings::current()
+        .java
+        .preferred
+        .into_iter()
+        .find(|entry| entry.major == major)
+        .map(|entry| PathBuf::from(entry.path))
+        .filter(|home| crate::java_runtime::java_executable(home).is_file());
+    if let Some(home) = preferred {
+        progress.emit("Java", format!("Uso il Java {major} scelto nelle impostazioni."), Some(1.0));
+        return Ok(home);
+    }
+    crate::java_runtime::ensure_major(&layout.runtimes(), major, progress).await
+}
+
+/// RAM defaults from the launcher settings, or suggested from the system memory.
+fn default_ram() -> (String, String, String) {
+    let (auto_min, auto_max, total) = crate::ram::suggest();
+    let defaults = crate::launcher_settings::current().defaults;
+    let pick = |value: String, fallback: String| if value.is_empty() { fallback } else { value };
+    (pick(defaults.ram_min, auto_min), pick(defaults.ram_max, auto_max), total)
 }
 
 pub fn import_folder(
@@ -293,7 +318,7 @@ fn persist(layout: &Layout, record: &ServerRecord, settings: &crate::properties:
 
 fn free_port(layout: &Layout, id: &str) -> u32 {
     let used = crate::catalog::used_ports(layout, id);
-    let mut port = 25565u32;
+    let mut port = crate::launcher_settings::current().defaults.port;
     while used.contains(&port) {
         port = port.saturating_add(1);
     }
@@ -314,7 +339,7 @@ async fn resolve_java(
         return Ok((home, major));
     }
     let major = request.java_major.ok_or("Seleziona un runtime Java")?;
-    let home = crate::java_runtime::ensure_major(&layout.runtimes(), major, progress).await?;
+    let home = java_for_major(layout, major, progress).await?;
     Ok((home, Some(major)))
 }
 
@@ -407,9 +432,7 @@ mod tests {
 
     #[test]
     fn imports_an_existing_folder_in_place() {
-        let layout = Layout {
-            root: std::env::temp_dir().join(format!("voxel-import-{}", uuid::Uuid::new_v4())),
-        };
+        let layout = Layout::at(std::env::temp_dir().join(format!("voxel-import-{}", uuid::Uuid::new_v4())));
         let server = layout.root.join("old-server");
         let runtime = server.join("runtime").join("jdk-21.0.2").join("bin");
         fs::create_dir_all(&runtime).unwrap();

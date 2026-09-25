@@ -6,5 +6,6 @@ pub mod error;
 pub mod files;
 pub mod panel;
 pub mod progress;
+pub mod settings;
 pub mod simple;
 pub mod types;

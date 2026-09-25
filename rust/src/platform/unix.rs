@@ -57,3 +57,40 @@ pub fn open_directory(path: &Path) -> PanelResult<()> {
         .map_err(|error| PanelError::io(format!("Impossibile aprire la cartella: {error}")))?;
     Ok(())
 }
+
+#[cfg(target_os = "macos")]
+fn autostart_file() -> Option<std::path::PathBuf> {
+    dirs::home_dir().map(|home| home.join("Library/LaunchAgents/dev.voxelpanel.VoxelPanel.plist"))
+}
+
+#[cfg(not(target_os = "macos"))]
+fn autostart_file() -> Option<std::path::PathBuf> {
+    dirs::config_dir().map(|config| config.join("autostart/voxelpanel.desktop"))
+}
+
+fn autostart_content(exe: &Path) -> String {
+    let exe = exe.display();
+    if cfg!(target_os = "macos") {
+        format!(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n  <key>Label</key>\n  <string>dev.voxelpanel.VoxelPanel</string>\n  <key>ProgramArguments</key>\n  <array>\n    <string>{exe}</string>\n  </array>\n  <key>RunAtLoad</key>\n  <true/>\n</dict>\n</plist>\n"
+        )
+    } else {
+        format!("[Desktop Entry]\nType=Application\nName=VoxelPanel\nExec=\"{exe}\"\nX-GNOME-Autostart-enabled=true\n")
+    }
+}
+
+/// XDG autostart entry on Linux, LaunchAgent on macOS.
+pub fn set_launch_at_startup(enabled: bool) -> PanelResult<()> {
+    let file = autostart_file().ok_or_else(|| PanelError::not_found("Cartella di configurazione non trovata"))?;
+    if !enabled {
+        if file.exists() {
+            std::fs::remove_file(&file)?;
+        }
+        return Ok(());
+    }
+    if let Some(parent) = file.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&file, autostart_content(&std::env::current_exe()?))?;
+    Ok(())
+}

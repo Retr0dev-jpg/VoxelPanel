@@ -182,8 +182,14 @@ pub async fn create_backup(id: String, sink: StreamSink<ProgressEvent>) -> Panel
             let destination = directory.join(&file_name);
             let manifest = manifest_of(&record);
             let root = record.root.clone();
-            tokio::task::spawn_blocking(move || crate::backup::create_zip(&root, &manifest, &destination))
+            let options = crate::backup::BackupOptions::from_settings();
+            tokio::task::spawn_blocking(move || crate::backup::create_zip(&root, &manifest, &destination, &options))
                 .await??;
+            let retention = crate::launcher_settings::current().backup.retention;
+            let removed = crate::backup::prune(&directory, retention)?;
+            if removed > 0 {
+                tx.emit("Backup", format!("Rimossi {removed} backup più vecchi."), None);
+            }
             Ok(file_name)
         },
     )
@@ -205,7 +211,8 @@ pub async fn restore_backup(id: String, file_name: String, sink: StreamSink<Prog
                 .join(format!("pre-restore-{}.zip", crate::paths::unix_now()));
             let manifest = manifest_of(&record);
             let root = record.root.clone();
-            tokio::task::spawn_blocking(move || crate::backup::create_zip(&root, &manifest, &safety)).await??;
+            let options = crate::backup::BackupOptions::from_settings();
+            tokio::task::spawn_blocking(move || crate::backup::create_zip(&root, &manifest, &safety, &options)).await??;
             tx.emit("Backup", "Ripristino in corso...", None);
             let root = record.root.clone();
             tokio::task::spawn_blocking(move || crate::backup::restore_zip(&root, &archive)).await??;

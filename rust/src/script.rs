@@ -90,7 +90,7 @@ pub fn parse_start_text(root: &Path, content: &str) -> Option<ParsedStart> {
                 info.jar_path = Some(resolve_script_path(root, jar));
             }
             index += 1;
-        } else if token.starts_with("-XX:") {
+        } else if is_safe_flag(token) {
             info.jvm_flags.push(token.clone());
         }
         index += 1;

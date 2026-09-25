@@ -12,7 +12,13 @@
   "selectServers": "Seleziona più server",
   "selectAll": "Seleziona tutti",
   "selectedCount": "{count, plural, =0{Nessun server selezionato} =1{1 server selezionato} other{{count} server selezionati}}",
-  "@selectedCount": {"placeholders": {"count": {"type": "int"}}},
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "importServer": "Importa server",
   "newServer": "Nuovo server",
   "noServers": "Nessun server. Creane uno o importa una cartella esistente.",
@@ -28,15 +34,7 @@
   "notAvailable": "n/d",
   "notDetected": "non rilevato",
   "settings": "Impostazioni",
-  "settingsSubtitle": "Cartelle locali di VoxelPanel e informazioni sull'applicazione.",
-  "settingsLocalData": "Dati locali",
-  "settingsLocalDataSubtitle": "Catalogo, server creati da VoxelPanel, runtime Java e backup.",
   "settingsAbout": "Informazioni",
-  "settingsAboutSubtitle": "Versione e licenza.",
-  "openDataFolder": "Apri cartella dati",
-  "openServersFolder": "Apri cartella server",
-  "openRuntimesFolder": "Apri runtime Java",
-  "openBackupsFolder": "Apri cartella backup",
   "windowMinimize": "Riduci",
   "windowMaximize": "Ingrandisci",
   "windowClose": "Chiudi",
@@ -56,13 +54,58 @@
   "renameServer": "Rinomina server",
   "deleteServer": "Elimina server",
   "serverCardLine": "{version}  ·  :{port}  ·  {online}/{max} giocatori",
-  "@serverCardLine": {"placeholders": {"version": {"type": "String"}, "port": {"type": "int"}, "online": {"type": "int"}, "max": {"type": "int"}}},
+  "@serverCardLine": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "port": {
+        "type": "int"
+      },
+      "online": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
   "serverInfoLine": "Versione {version}  ·  Java {java}  ·  RAM {ramMin} / {ramMax}  ·  Porta {port}",
-  "@serverInfoLine": {"placeholders": {"version": {"type": "String"}, "java": {"type": "String"}, "ramMin": {"type": "String"}, "ramMax": {"type": "String"}, "port": {"type": "int"}}},
+  "@serverInfoLine": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "java": {
+        "type": "String"
+      },
+      "ramMin": {
+        "type": "String"
+      },
+      "ramMax": {
+        "type": "String"
+      },
+      "port": {
+        "type": "int"
+      }
+    }
+  },
   "deleteServerTitle": "Eliminare {name}?",
-  "@deleteServerTitle": {"placeholders": {"name": {"type": "String"}}},
+  "@deleteServerTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "deleteServersTitle": "Eliminare {count} server?",
-  "@deleteServersTitle": {"placeholders": {"count": {"type": "int"}}},
+  "@deleteServersTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "deleteServerMessage": "Il server viene rimosso dall'elenco di VoxelPanel. Scegli se eliminare anche i file.",
   "deleteServerFiles": "Elimina anche la cartella del server",
   "deleteServerFilesHint": "Mondi, plugin e configurazioni verranno cancellati definitivamente.",
@@ -74,7 +117,13 @@
   "tabWorlds": "Mondi",
   "tabBackups": "Backup",
   "crashBanner": "Il server si è chiuso in modo inatteso (codice {code}). Controlla la console per i dettagli.",
-  "@crashBanner": {"placeholders": {"code": {"type": "int"}}},
+  "@crashBanner": {
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
   "eulaMissing": "L'EULA di Minecraft non è stata accettata: il server non può avviarsi.",
   "acceptEula": "Accetta l'EULA",
   "statPlayers": "Giocatori",
@@ -83,7 +132,13 @@
   "statCpuHint": "Utilizzo del processo",
   "statMemory": "Memoria",
   "statMemoryHint": "Limite {max}",
-  "@statMemoryHint": {"placeholders": {"max": {"type": "String"}}},
+  "@statMemoryHint": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
   "statUptime": "Uptime",
   "statUptimeHint": "Dall'ultimo avvio",
   "liveStats": "Statistiche live",
@@ -133,14 +188,33 @@
   "pluginJarTitle": "Jar del plugin",
   "searchPlugins": "Cerca plugin",
   "downloadsCount": "{count} download",
-  "@downloadsCount": {"placeholders": {"count": {"type": "int", "format": "compact"}}},
+  "@downloadsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "compact"
+      }
+    }
+  },
   "noWorlds": "Nessun mondo. Verrà creato al primo avvio.",
   "worldActive": "{name} (attivo)",
-  "@worldActive": {"placeholders": {"name": {"type": "String"}}},
+  "@worldActive": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "setActiveWorld": "Imposta come mondo attivo",
   "restartToApply": "Fatto. Riavvia il server per applicare la modifica.",
   "deleteWorldTitle": "Eliminare il mondo {name}?",
-  "@deleteWorldTitle": {"placeholders": {"name": {"type": "String"}}},
+  "@deleteWorldTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "deleteWorldMessage": "La cartella del mondo verrà cancellata definitivamente. Crea prima un backup se vuoi conservarla.",
   "createBackup": "Crea backup",
   "backupRunningHint": "Un backup a server fermo è più coerente.",
@@ -155,13 +229,43 @@
   "serverFolder": "Cartella del server",
   "serverJarTitle": "Jar del server",
   "importDetectedPaper": "Paper: {value}",
-  "@importDetectedPaper": {"placeholders": {"value": {"type": "String"}}},
+  "@importDetectedPaper": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "importDetectedJava": "Java: {value}",
-  "@importDetectedJava": {"placeholders": {"value": {"type": "String"}}},
+  "@importDetectedJava": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "importDetectedRam": "RAM: {min} / {max}",
-  "@importDetectedRam": {"placeholders": {"min": {"type": "String"}, "max": {"type": "String"}}},
+  "@importDetectedRam": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
   "importDetectedContent": "Plugin: {plugins} · Mondi: {worlds}",
-  "@importDetectedContent": {"placeholders": {"plugins": {"type": "int"}, "worlds": {"type": "int"}}},
+  "@importDetectedContent": {
+    "placeholders": {
+      "plugins": {
+        "type": "int"
+      },
+      "worlds": {
+        "type": "int"
+      }
+    }
+  },
   "eulaCheckbox": "Accetto l'EULA di Minecraft (eula=true)",
   "eulaHint": "È necessario accettare l'EULA di Minecraft per creare il server.",
   "serverName": "Nome del server",
@@ -174,7 +278,13 @@
   "memoryRam": "Memoria RAM",
   "paperVersion": "Versione Paper",
   "latestVersion": "{version} (ultima)",
-  "@latestVersion": {"placeholders": {"version": {"type": "String"}}},
+  "@latestVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "installedJava": "Runtime Java installato",
   "downloadOtherJava": "Scarica un altro Java",
   "noLocalJar": "Nessun jar locale",
@@ -194,5 +304,205 @@
   "errorServerStopped": "Il server non è in esecuzione.",
   "errorEulaRequired": "Accetta l'EULA di Minecraft prima di avviare il server.",
   "errorNetwork": "Errore di rete: {details}",
-  "@errorNetwork": {"placeholders": {"details": {"type": "String"}}}
+  "@errorNetwork": {
+    "placeholders": {
+      "details": {
+        "type": "String"
+      }
+    }
+  },
+  "back": "Indietro",
+  "reset": "Ripristina",
+  "settingsGeneral": "Generale",
+  "settingsAppearance": "Aspetto",
+  "settingsPaths": "Percorsi",
+  "settingsJava": "Java",
+  "settingsDefaults": "Nuovi server",
+  "settingsDefaultsHint": "Valori proposti quando crei un server. Si possono sempre cambiare nel wizard.",
+  "settingsConsole": "Console",
+  "settingsBackup": "Backup",
+  "settingsNetwork": "Rete",
+  "settingsNotifications": "Notifiche",
+  "settingsNotificationsHint": "Notifiche desktop sugli eventi dei server.",
+  "settingsAdvanced": "Avanzate",
+  "settingsWindowAndServers": "Finestra e server",
+  "settingLanguage": "Lingua",
+  "languageSystem": "Lingua del sistema",
+  "settingCheckUpdates": "Controlla gli aggiornamenti",
+  "settingCheckUpdatesHint": "All'avvio confronta la versione con le release su GitHub.",
+  "settingLaunchAtStartup": "Avvia VoxelPanel all'accesso al sistema",
+  "settingCloseBehavior": "Alla chiusura della finestra",
+  "closeAsk": "Chiedi se ci sono server attivi",
+  "closeStop": "Ferma i server e chiudi",
+  "closeTray": "Riduci nell'area di notifica",
+  "settingAutostartServers": "Avvio automatico dei server",
+  "settingAutostartServersHint": "All'apertura avvia i server contrassegnati per l'avvio automatico.",
+  "settingStopTimeout": "Timeout di arresto",
+  "settingStopTimeoutHint": "Dopo questo tempo un server che non si ferma viene chiuso forzatamente.",
+  "settingTheme": "Tema",
+  "themeSystem": "Sistema",
+  "themeLight": "Chiaro",
+  "themeDark": "Scuro",
+  "settingAccent": "Colore di accento",
+  "settingTextScale": "Dimensione del testo",
+  "settingCompact": "Layout compatto",
+  "settingCompactHint": "Riduce spaziature e altezza dei controlli.",
+  "dataFolder": "Cartella dati",
+  "dataFolderHint": "Catalogo, impostazioni e log. Si può cambiare con la variabile VOXELPANEL_DATA_DIR.",
+  "serversFolder": "Cartella dei server",
+  "serversFolderHint": "Dove vengono creati i nuovi server. I server già presenti vengono spostati insieme alla cartella.",
+  "backupsFolder": "Cartella dei backup",
+  "backupsFolderHint": "Archivi zip dei backup, una sottocartella per server.",
+  "runtimesFolder": "Cartella dei runtime Java",
+  "runtimesFolderHint": "JDK scaricati da VoxelPanel. I server che li usano vengono aggiornati allo spostamento.",
+  "cacheFolder": "Cartella della cache",
+  "cacheFolderHint": "Elenchi delle versioni e file temporanei scaricati.",
+  "changeFolder": "Cambia cartella",
+  "restoreDefaultFolder": "Usa la cartella predefinita",
+  "chooseFolder": "Scegli una cartella",
+  "defaultFolder": "la cartella predefinita",
+  "moveFolderTitle": "Spostare la cartella?",
+  "moveFolderMessage": "Il contenuto attuale verrà spostato in {path}. I server devono essere fermi.",
+  "@moveFolderMessage": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "moveFolderConfirm": "Sposta",
+  "moveFolderDone": "Cartella spostata.",
+  "javaInstalled": "Runtime installati",
+  "javaInstalledHint": "Java scaricati da VoxelPanel, inclusi nei server o già presenti nel sistema.",
+  "javaInstall": "Installa Java",
+  "javaDetect": "Rileva di nuovo",
+  "javaNone": "Nessun runtime Java trovato.",
+  "javaManaged": "Installato da VoxelPanel",
+  "javaSystem": "Java di sistema",
+  "javaServer": "Usato da un server",
+  "javaDeleteTitle": "Eliminare questo runtime?",
+  "javaPreferred": "Runtime predefinito per versione",
+  "javaPreferredHint": "Usato quando un server richiede quella versione di Java, al posto di scaricarne una nuova.",
+  "javaAutomatic": "Automatico",
+  "ramAutomatic": "Automatica (in base alla RAM del sistema)",
+  "settingJvmPreset": "Preset dei flag JVM",
+  "jvmPresetAikar": "Aikar (consigliato per Paper)",
+  "jvmPresetG1": "G1 di base",
+  "jvmPresetZgc": "ZGC (Java 21 o superiore)",
+  "jvmPresetNone": "Nessuno",
+  "jvmPresetFlags": "{count} flag",
+  "@jvmPresetFlags": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "jvmPresetNoneHint": "Solo -Xms e -Xmx",
+  "jvmFlagsHint": "Uno per riga. Sono ammessi -XX:, -D e -Xss.",
+  "settingFirstPort": "Porta iniziale",
+  "settingFirstPortHint": "I nuovi server usano la prima porta libera a partire da questa.",
+  "settingMaxLines": "Righe massime",
+  "settingMaxLinesHint": "Le righe più vecchie vengono scartate.",
+  "settingFontSize": "Dimensione del carattere",
+  "settingTimestamps": "Mostra l'ora di ricezione",
+  "settingTimestampsHint": "Aggiunge l'ora locale davanti a ogni riga.",
+  "settingWrap": "A capo automatico",
+  "settingRetention": "Backup da conservare per server",
+  "settingRetentionHint": "0 conserva tutti i backup.",
+  "settingCompression": "Livello di compressione",
+  "compressionNone": "Nessuna compressione",
+  "settingExclusions": "Esclusioni",
+  "settingExclusionsHint": "Percorsi relativi alla cartella del server o schemi *.estensione, separati da virgole.",
+  "settingProxy": "Proxy HTTP",
+  "settingProxyHint": "Vuoto per la connessione diretta.",
+  "settingParallelDownloads": "Download paralleli",
+  "settingTimeout": "Timeout di connessione",
+  "settingCurseforgeKey": "Chiave API",
+  "settingCurseforgeHint": "Necessaria per cercare mod e modpack su CurseForge. Non viene mai esportata.",
+  "notifyOnCrash": "Crash di un server",
+  "notifyOnReady": "Server pronto dopo l'avvio",
+  "notifyOnPlayer": "Ingresso di un giocatore",
+  "notificationsSystemHint": "Le notifiche usano il sistema operativo e rispettano le sue impostazioni (non disturbare).",
+  "appLogs": "Log dell'applicazione",
+  "appLogsHint": "File giornalieri conservati per 7 giorni, utili per segnalare problemi.",
+  "appLogsEnabled": "Scrivi i log su file",
+  "appLogLevel": "Livello di dettaglio",
+  "openLogs": "Apri cartella log",
+  "maintenance": "Manutenzione",
+  "clearCache": "Svuota la cache",
+  "cacheCleared": "Cache svuotata.",
+  "exportSettings": "Esporta impostazioni",
+  "importSettings": "Importa impostazioni",
+  "settingsExported": "Impostazioni esportate.",
+  "settingsImported": "Impostazioni importate.",
+  "resetSettings": "Ripristina i valori predefiniti",
+  "resetSettingsTitle": "Ripristinare le impostazioni?",
+  "resetSettingsMessage": "Tutte le impostazioni del launcher tornano ai valori predefiniti. Server e backup non vengono toccati.",
+  "aboutDescription": "Creazione e gestione locale di server Minecraft.",
+  "aboutVersion": "Versione {version}",
+  "@aboutVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutRepository": "Codice sorgente",
+  "aboutLicenses": "Licenze",
+  "checkUpdatesNow": "Controlla aggiornamenti",
+  "upToDate": "Stai usando l'ultima versione.",
+  "updateAvailable": "È disponibile VoxelPanel {version}.",
+  "@updateAvailable": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateOpen": "Apri",
+  "trayShow": "Mostra VoxelPanel",
+  "trayStopAll": "Ferma tutti i server",
+  "trayQuit": "Esci",
+  "notifyCrashTitle": "{name} si è chiuso in modo inatteso",
+  "@notifyCrashTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notifyCrashBody": "Codice di uscita {code}. Apri la console per i dettagli.",
+  "@notifyCrashBody": {
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "notifyReadyTitle": "{name} è online",
+  "@notifyReadyTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notifyReadyBody": "Il server ha finito di avviarsi.",
+  "notifyPlayerTitle": "{name}",
+  "@notifyPlayerTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notifyPlayerBody": "{player} è entrato nel server.",
+  "@notifyPlayerBody": {
+    "placeholders": {
+      "player": {
+        "type": "String"
+      }
+    }
+  }
 }
