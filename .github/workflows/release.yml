@@ -1,9 +1,14 @@
 name: Build and Release
 
 on:
+  pull_request:
   push:
     branches: [main, master]
   workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: write
@@ -73,6 +78,8 @@ jobs:
 
   release:
     needs: build
+    # Pull requests only verify that every platform builds and packages.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
